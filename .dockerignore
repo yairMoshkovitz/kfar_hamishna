@@ -6,7 +6,6 @@ README.md
 calibrate_paths.html
 Dockerfile
 .dockerignore
-nginx.conf.template
 
 # תמונות שאינן בשימוש באתר
 Generated Image*.jpg

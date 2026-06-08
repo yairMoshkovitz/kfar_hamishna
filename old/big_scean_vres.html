@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>כפר המשנה - דמו חוויה שלמה</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;700;900&display=swap');
+
+        body {
+            background-color: #1a202c; display: flex; justify-content: center; align-items: center; 
+            height: 100vh; margin: 0; font-family: 'Rubik', sans-serif; overflow: hidden;
+        }
+
+        /* סביבת הקונסולה */
+        .console-wrapper { position: relative; margin-top: 20px;}
+
+        /* כפתורי כתף L ו-R */
+        .shoulder-buttons {
+            display: flex; justify-content: space-between; position: absolute; width: 840px; top: -20px; left: 30px; z-index: 0;
+        }
+        .shoulder-btn {
+            width: 150px; height: 40px; background: #993d00; border-radius: 20px 20px 0 0;
+            color: rgba(255,255,255,0.5); font-weight: 900; font-size: 20px; display: flex; align-items: flex-start; justify-content: center; padding-top: 5px; cursor: pointer; box-shadow: inset 0 5px 10px rgba(255,255,255,0.2), 0 -5px 10px rgba(0,0,0,0.5); transition: transform 0.1s;
+        }
+        .shoulder-btn:active, .shoulder-btn.pressed { transform: translateY(5px); background: #cc5200;}
+
+        /* הקונסולה הפיזית */
+        .console-device {
+            width: 900px; height: 420px; background: linear-gradient(135deg, #FF7B00, #CC5200); border-radius: 60px;
+            box-shadow: inset -5px -10px 20px rgba(0,0,0,0.4), inset 5px 10px 20px rgba(255,255,255,0.3), 0 20px 40px rgba(0,0,0,0.6);
+            display: flex; align-items: center; justify-content: space-between; padding: 0 40px; position: relative; z-index: 10;
+        }
+
+        /* רמקולים */
+        .speaker { position: absolute; bottom: 40px; display: flex; gap: 6px; }
+        .speaker.left { left: 80px; } .speaker.right { right: 80px; }
+        .speaker-hole { width: 6px; height: 25px; background: #993d00; border-radius: 10px; box-shadow: inset 2px 2px 5px rgba(0,0,0,0.5); }
+
+        /* חצים */
+        .d-pad-container { position: relative; width: 120px; height: 120px; flex-shrink: 0; }
+        .d-pad-center { position: absolute; top: 40px; left: 40px; width: 40px; height: 40px; background: #2d3748; z-index: 2; }
+        .d-btn { position: absolute; width: 40px; height: 40px; background: #2d3748; border-radius: 5px; cursor: pointer; box-shadow: inset 0 0 10px rgba(0,0,0,0.8), 0 4px 0 #1a202c; display: flex; align-items: center; justify-content: center; color: #718096; font-size: 20px; user-select: none;}
+        .d-btn:active, .d-btn.pressed { transform: translateY(4px); box-shadow: inset 0 0 10px rgba(0,0,0,0.8), 0 0 0 #1a202c; }
+        .d-up { top: 0; left: 40px; border-radius: 10px 10px 0 0; } .d-down { top: 80px; left: 40px; border-radius: 0 0 10px 10px; }
+        .d-left { top: 40px; left: 0; border-radius: 10px 0 0 10px; } .d-right { top: 40px; left: 80px; border-radius: 0 10px 10px 0; }
+
+        /* כפתורי A/B */
+        .action-buttons-container { position: relative; width: 140px; height: 140px; flex-shrink: 0; }
+        .action-btn { position: absolute; width: 55px; height: 55px; border-radius: 50%; cursor: pointer; font-weight: 900; font-size: 22px; color: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; box-shadow: inset -2px -4px 6px rgba(0,0,0,0.3), inset 2px 4px 6px rgba(255,255,255,0.5), 0 6px 0 #1a202c, 0 10px 15px rgba(0,0,0,0.4); transition: transform 0.1s; user-select: none;}
+        .action-btn:active, .action-btn.pressed { transform: translateY(6px); box-shadow: inset -2px -4px 6px rgba(0,0,0,0.3), inset 2px 4px 6px rgba(255,255,255,0.5), 0 0 0 #1a202c; }
+        .btn-a { top: 40px; left: 85px; background: #38a169; } .btn-b { top: 85px; left: 0; background: #e53e3e; }
+        .btn-label { position: absolute; color: white; font-weight: bold; font-size: 14px; text-shadow: 1px 1px 0 rgba(0,0,0,0.5);}
+        .label-a { top: 15px; left: 105px; } .label-b { top: 60px; left: 20px; }
+
+        /* מסך המשחק הכללי */
+        .screen-bezel { width: 480px; height: 320px; background: #111; border-radius: 15px; padding: 15px; box-shadow: inset 0 0 20px rgba(0,0,0,1); position: relative; }
+        .screen-display { width: 100%; height: 100%; background: #000; border-radius: 5px; overflow: hidden; position: relative; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+        .game-header { background: rgba(0,0,0,0.8); color: white; padding: 5px 10px; font-size: 12px; font-weight: bold; display: flex; justify-content: space-between; position: absolute; top:0; width: 100%; z-index: 10; box-sizing: border-box;}
+        
+        .game-view { display: none; width: 100%; height: 100%; position: absolute; top:0; left:0; }
+        .game-view.active { display: block; }
+
+        /* מכשיר קשר (לחצן R) */
+        .walkie-talkie-overlay {
+            display: none; position: absolute; top: 30%; left: 10%; width: 80%; background: #2b6cb0; color: white; border-radius: 15px; padding: 20px; box-sizing: border-box; text-align: center; border: 3px solid white; z-index: 100; box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+        .recording-dot { display: inline-block; width: 15px; height: 15px; background: red; border-radius: 50%; animation: blink 1s infinite; margin-left: 10px;}
+        @keyframes blink { 0%, 100% {opacity: 1;} 50% {opacity: 0.3;} }
+
+        /* ================= 1. מפה ================= */
+        #map-view { 
+            background: linear-gradient(180deg, #87CEEB 0%, #E8F4F8 40%, #D4E8D4 100%); 
+            overflow: hidden; position: relative; display: flex; justify-content: center; align-items: center;
+            image-rendering: pixelated;
+        }
+        #world-map { 
+            position: absolute; 
+            width: 2400px; 
+            height: 2400px; 
+            transition: transform 0.15s ease-out;
+            background: 
+                /* דשא בסגנון פיקסל ארט */
+                repeating-linear-gradient(0deg, #6B8E23 0px, #6B8E23 16px, #7A9D54 16px, #7A9D54 32px),
+                repeating-linear-gradient(90deg, #6B8E23 0px, #6B8E23 16px, #7A9D54 16px, #7A9D54 32px);
+            background-size: 32px 32px;
+            background-color: #6B8E23;
+            transform-origin: center;
+            image-rendering: pixelated;
+        }
+        
+        /* שבילים */
+        .path {
+            position: absolute;
+            background: repeating-linear-gradient(
+                45deg,
+                #C4A57B 0px,
+                #C4A57B 8px,
+                #B8956A 8px,
+                #B8956A 16px
+            );
+            z-index: 1;
+        }
+        
+        /* דמות השחקן - ספרייט מקצועי */
+        #player { 
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 48px; 
+            height: 48px; 
+            z-index: 10;
+            image-rendering: pixelated;
+            filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.4));
+        }
+        
+        #player-sprite {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            border-radius: 50% 50% 0 0;
+            border: 2px solid rgba(255,255,255,0.8);
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        
+        /* ראש */
+        #player-sprite::before {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 16px;
+            height: 16px;
+            background: #FFE4B5;
+            border-radius: 50%;
+            border: 2px solid #8B4513;
+        }
+        
+        /* גוף ורגליים */
+        #player-sprite::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 20px;
+            background: #4169E1;
+            border-radius: 4px 4px 0 0;
+            border: 2px solid #000080;
+        }
+        
+        /* אנימציית הליכה מקצועית */
+        .walking-down { animation: walk-down 0.4s steps(2) infinite; }
+        .walking-up { animation: walk-up 0.4s steps(2) infinite; }
+        .walking-left { animation: walk-left 0.4s steps(2) infinite; }
+        .walking-right { animation: walk-right 0.4s steps(2) infinite; }
+        
+        @keyframes walk-down {
+            0% { transform: translateY(0) scaleY(1); }
+            50% { transform: translateY(-3px) scaleY(0.95); }
+            100% { transform: translateY(0) scaleY(1); }
+        }
+        @keyframes walk-up {
+            0% { transform: translateY(0) scaleY(1); }
+            50% { transform: translateY(3px) scaleY(0.95); }
+            100% { transform: translateY(0) scaleY(1); }
+        }
+        @keyframes walk-left {
+            0% { transform: translateX(0) scaleX(1); }
+            50% { transform: translateX(3px) scaleX(0.95); }
+            100% { transform: translateX(0) scaleX(1); }
+        }
+        @keyframes walk-right {
+            0% { transform: translateX(0) scaleX(1); }
+            50% { transform: translateX(-3px) scaleX(0.95); }
+            100% { transform: translateX(0) scaleX(1); }
+        }
+        .building { 
+            position: absolute; 
+            font-size: 64px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            filter: drop-shadow(0 6px 8px rgba(0,0,0,0.4));
+            z-index: 3;
+            image-rendering: pixelated;
+            transition: transform 0.2s;
+        }
+        .building:hover { transform: scale(1.1); }
+        .building span { 
+            font-size: 13px; 
+            background: linear-gradient(135deg, #FFF9E6, #FFE4B5); 
+            padding: 4px 8px; 
+            border-radius: 8px; 
+            font-weight: bold; 
+            margin-top: -8px; 
+            border: 2px solid #8B4513;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            white-space: nowrap;
+        }
+        .interaction-bubble { position: absolute; background: white; color: black; font-size: 14px; font-weight: bold; padding: 5px 15px; border-radius: 10px; display: none; top: -40px; left: -20px; width: max-content; animation: bounce-small 1s infinite; border: 2px solid #2b6cb0; z-index: 10;}
+        @keyframes bounce-small { 0%, 100% {transform: translateY(0);} 50% {transform: translateY(-3px);} }
+        
+        .scenery { 
+            position: absolute; 
+            font-size: 48px; 
+            filter: drop-shadow(0 3px 4px rgba(0,0,0,0.3)); 
+            z-index: 2;
+            image-rendering: pixelated;
+            animation: sway 3s ease-in-out infinite;
+        }
+        @keyframes sway {
+            0%, 100% { transform: rotate(-2deg); }
+            50% { transform: rotate(2deg); }
+        }
+        .npc { 
+            position: absolute; 
+            width: 44px; 
+            height: 44px; 
+            border-radius: 8px; 
+            background-size: cover; 
+            background-position: center; 
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4)); 
+            z-index: 4; 
+            border: 3px solid rgba(255,255,255,0.9);
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.2);
+            animation: npc-idle 2.5s ease-in-out infinite;
+            image-rendering: pixelated;
+            transition: transform 0.2s;
+        }
+        .npc:hover { transform: scale(1.15); cursor: pointer; }
+        @keyframes npc-idle { 
+            0%, 100% {transform: translateY(0) scale(1);} 
+            50% {transform: translateY(-6px) scale(1.02);} 
+        }
+
+        /* ================= 2. פודקאסט ================= */
+        #podcast-view { background: linear-gradient(135deg, #1a365d, #2b6cb0); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center;}
+        .podcast-art { width: 120px; height: 120px; background: url('https://via.placeholder.com/120/FFD700/000000?text=ארנק') center/cover; border-radius: 15px; border: 4px solid white; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);}
+        .audio-wave { display: flex; gap: 4px; height: 30px; align-items: flex-end; margin: 15px 0;}
+        .bar { width: 8px; background: #4fd1c5; animation: wave 0.6s infinite alternate; }
+        .bar:nth-child(2) { animation-delay: 0.1s; } .bar:nth-child(3) { animation-delay: 0.2s; } .bar:nth-child(4) { animation-delay: 0.3s; }
+        @keyframes wave { 0% {height: 5px;} 100% {height: 30px;} }
+
+        /* ================= 3. מיני משחק (הבלש) ================= */
+        #minigame-view { background: #dcdcdc; position: relative; overflow: hidden;}
+        .wallet-bg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 250px; height: 150px; background: #8B4513; border-radius: 20px; border: 4px solid #5A2E0B;}
+        .siman-target { position: absolute; top: 100px; left: 180px; width: 15px; height: 15px; background: red; border-radius: 50%;} /* החוט האדום! */
+        #magnifier { position: absolute; top: 120px; left: 200px; font-size: 50px; transition: top 0.1s, left 0.1s; pointer-events: none; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5)); z-index: 10;}
+        .minigame-hint { position: absolute; bottom: 10px; width: 100%; text-align: center; color: #2d3748; font-weight: bold; font-size: 14px; background: rgba(255,255,255,0.8); padding: 5px 0;}
+
+        /* ================= 4. דילמה ומשנה ================= */
+        #qa-view { background: #fdf5e6; display: flex; flex-direction: column;}
+        .qa-text { padding: 40px 15px 15px; font-size: 16px; font-weight: bold; color: #2d3748; text-align: center; background: white; border-bottom: 3px solid #e2e8f0;}
+        .qa-options { padding: 15px; display: flex; flex-direction: column; gap: 8px;}
+        .qa-opt { background: white; padding: 10px; border-radius: 8px; font-size: 14px; font-weight: bold; color: #4a5568; border: 2px solid transparent;}
+        .qa-opt.selected { background: #ebf8ff; color: #2b6cb0; border-color: #3182ce; box-shadow: 0 2px 5px rgba(0,0,0,0.1);}
+
+        #mishnah-view { background: #FFFAF0; padding: 40px 20px 20px; text-align: center;}
+        .mishnah-title { color: #dd6b20; font-weight: 900; font-size: 20px; margin-bottom: 15px;}
+        .mishnah-text { font-size: 18px; line-height: 1.6; font-weight: bold; color: #2d3748; background: white; padding: 15px; border-radius: 10px; border: 2px solid #ecc94b;}
+
+    </style>
+</head>
+<body>
+
+    <div class="console-wrapper">
+        <!-- כפתורי כתף L / R -->
+        <div class="shoulder-buttons">
+            <div class="shoulder-btn" id="btn-l" onclick="animateShoulder('btn-l')">L</div>
+            <div class="shoulder-btn" id="btn-r" onclick="triggerWalkieTalkie()">R (קהילה)</div>
+        </div>
+
+        <div class="console-device">
+            <div class="speaker left"><div class="speaker-hole"></div><div class="speaker-hole"></div><div class="speaker-hole"></div></div>
+
+            <div class="d-pad-container">
+                <div class="d-pad-center"></div>
+                <div class="d-btn d-up" onmousedown="pressDpad('up')" onmouseup="releaseDpad()">▲</div>
+                <div class="d-btn d-down" onmousedown="pressDpad('down')" onmouseup="releaseDpad()">▼</div>
+                <div class="d-btn d-left" onmousedown="pressDpad('left')" onmouseup="releaseDpad()">◄</div>
+                <div class="d-btn d-right" onmousedown="pressDpad('right')" onmouseup="releaseDpad()">►</div>
+            </div>
+
+            <div class="screen-bezel">
+                <div class="screen-display">
+                    <div class="game-header">
+                        <span id="location-name">📍 מפת הכפר</span>
+                        <span id="points">⭐ 450</span>
+                    </div>
+
+                    <!-- פופאפ מכשיר קשר (R) -->
+                    <div class="walkie-talkie-overlay" id="walkie-talkie">
+                        <div class="recording-dot"></div>
+                        <h3 style="margin:0 0 10px;">מכשיר קשר קהילתי</h3>
+                        <p style="font-size: 14px;">מקליט את השאלה שלך לחכמי הכפר... דבר עכשיו!</p>
+                        <div style="font-size: 10px; margin-top:15px; color:#a0aec0;">לחץ B כדי לבטל</div>
+                    </div>
+
+                    <!-- 1. מפה -->
+                    <div id="map-view" class="game-view active">
+                        <div id="world-map">
+                            <!-- עשרות אלמנטים למפה ענקית - מפוזרים על פני 2400x2400 -->
+                            <!-- עצים ונוף בפריסה רחבה -->
+                            <div class="scenery" style="top: 200px; left: 300px;">🌲</div>
+                            <div class="scenery" style="top: 250px; left: 400px;">🌳</div>
+                            <div class="scenery" style="top: 600px; left: 200px;">🌳</div>
+                            <div class="scenery" style="top: 800px; left: 350px;">🌲</div>
+                            <div class="scenery" style="top: 300px; left: 1200px;">🌲</div>
+                            <div class="scenery" style="top: 400px; left: 1400px;">🌳</div>
+                            <div class="scenery" style="top: 900px; left: 1600px;">🌲</div>
+                            <div class="scenery" style="top: 1200px; left: 700px;">🌳</div>
+                            <div class="scenery" style="top: 1400px; left: 400px;">🌲</div>
+                            <div class="scenery" style="top: 1700px; left: 1000px;">🌳</div>
+                            <div class="scenery" style="top: 2000px; left: 1600px;">🌲</div>
+                            <div class="scenery" style="top: 2200px; left: 500px;">🌳</div>
+                            <div class="scenery" style="top: 1000px; left: 2000px;">🌲</div>
+                            <div class="scenery" style="top: 500px; left: 2000px;">🌳</div>
+                            <div class="scenery" style="top: 1500px; left: 1800px;">🌲</div>
+                            <div class="scenery" style="top: 700px; left: 900px;">🌳</div>
+
+                            <!-- מבנים פזורים ברחבי העולם -->
+                            <div class="building" id="building-synagogue" style="top: 800px; left: 1000px;">
+                                🕍<span>בית המדרש הגדול</span>
+                                <div class="interaction-bubble">לחץ A</div>
+                            </div>
+                            
+                            <div class="building" id="building-house1" style="top: 1000px; left: 700px;">
+                                🛖<span>בית משפחת כהן</span>
+                                <div class="interaction-bubble">לחץ A</div>
+                            </div>
+
+                            <div class="building" id="building-ruin" style="top: 1400px; left: 600px;">
+                                🏚️<span>החורבה העתיקה</span>
+                                <div class="interaction-bubble">לחץ A</div>
+                            </div>
+
+                            <div class="building" id="building-market" style="top: 1800px; left: 1300px;">
+                                🎪<span>השוק המרכזי</span>
+                                <div class="interaction-bubble">לחץ A</div>
+                            </div>
+                            
+                            <div class="building" id="building-well" style="top: 900px; left: 1500px;">
+                                🪣<span>באר המים</span>
+                                <div class="interaction-bubble">לחץ A</div>
+                            </div>
+
+                            <div class="building" id="building-house2" style="top: 1300px; left: 1700px;">
+                                🛖<span>בית משפחת לוי</span>
+                                <div class="interaction-bubble">לחץ A</div>
+                            </div>
+
+                            <!-- דמויות NPC מפוזרות במפה עם תמונת רפרנס -->
+                            <div class="npc" style="top: 850px; left: 1100px; background-image: url('WIN_20260608_00_44_00_Pro.jpg');"></div>
+                            <div class="npc" style="top: 500px; left: 1600px; background-image: url('WIN_20260608_00_44_08_Pro.jpg');"></div>
+                            <div class="npc" style="top: 1500px; left: 1200px; background-image: url('WIN_20260608_00_44_00_Pro.jpg');"></div>
+                            <div class="npc" style="top: 1100px; left: 800px; background-image: url('WIN_20260608_00_44_08_Pro.jpg');"></div>
+                            <div class="npc" style="top: 1900px; left: 1500px; background-image: url('WIN_20260608_00_44_00_Pro.jpg');"></div>
+                            
+                        </div>
+                        
+                        <!-- השחקן נשאר במרכז המסך (העולם יזוז מסביבו) -->
+                        <div id="player">
+                            <div id="player-sprite"></div>
+                        </div>
+                    </div>
+
+                    <!-- 2. פודקאסט -->
+                    <div id="podcast-view" class="game-view">
+                        <div class="podcast-art"></div>
+                        <div style="font-size: 18px; font-weight: 900; margin-bottom: 5px;">תעלומת הארנק</div>
+                        <div style="font-size: 14px; color: #a0aec0;">פרק 2 | בבא מציעא</div>
+                        <div class="audio-wave">
+                            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                        </div>
+                        <div style="font-size: 12px; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 10px; margin-top: 15px;">לחץ A כשסיימת להאזין</div>
+                    </div>
+
+                    <!-- 3. מיני משחק (הבלש) -->
+                    <div id="minigame-view" class="game-view">
+                        <div class="wallet-bg">
+                            <div class="siman-target" id="target"></div>
+                        </div>
+                        <div id="magnifier">🔍</div>
+                        <div class="minigame-hint">הזז את הזכוכית וחפש סימן מיוחד. מצאת? לחץ A</div>
+                    </div>
+
+                    <!-- 4. דילמה ומשנה -->
+                    <div id="qa-view" class="game-view">
+                        <div class="qa-text">מצאת חוט אדום קשור לארנק! אלי מגיע ואומר "הארנק שלי, יש בו חוט אדום". מה פוסקים?</div>
+                        <div class="qa-options">
+                            <div class="qa-opt selected" id="opt-0">▶ א. הכסף של מי שמצא אותו.</div>
+                            <div class="qa-opt" id="opt-1">▶ ב. חולקים את הכסף חצי-חצי.</div>
+                            <div class="qa-opt" id="opt-2">▶ ג. מחזירים לאלי, החוט הוא סימן!</div>
+                        </div>
+                    </div>
+
+                    <div id="mishnah-view" class="game-view">
+                        <div class="mishnah-title">🎉 פסקת נכון! +50 נקודות</div>
+                        <div class="mishnah-text">
+                            "אֵלּוּ מְצִיאוֹת שֶׁלּוֹ, וְאֵלּוּ חַיָּב לְהַכְרִיז... כָּל דָּבָר שֶׁיֶּשׁ בּוֹ שִׁנּוּי (סימן) - חַיָּב לְהַכְרִיז."<br>
+                            <span style="font-size: 12px; color: #718096;">(בבא מציעא ב, א)</span>
+                        </div>
+                        <div style="margin-top:20px; font-size: 14px; font-weight: bold; color: #dd6b20;">לחץ A להמשך המסע</div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="action-buttons-container">
+                <div class="btn-label label-a">A</div>
+                <div class="action-btn btn-a" id="btn-a" onclick="handleAButton()">A</div>
+                <div class="btn-label label-b">B</div>
+                <div class="action-btn btn-b" id="btn-b" onclick="handleBButton()">B</div>
+            </div>
+
+            <div class="speaker right"><div class="speaker-hole"></div><div class="speaker-hole"></div><div class="speaker-hole"></div></div>
+        </div>
+    </div>
+
+    <script>
+        // ניהול המצבים (State Machine)
+        let currentState = 'MAP'; // MAP, PODCAST, MINIGAME, QA, MISHNAH
+        let walkieTalkieActive = false;
+        
+        // --- פונקציות עזר ויזואליות ---
+        function setView(viewId, title) {
+            document.querySelectorAll('.game-view').forEach(v => {
+                v.classList.remove('active');
+                v.style.display = 'none'; // כפיה של הסתרה
+            });
+            const activeView = document.getElementById(viewId);
+            activeView.classList.add('active');
+            activeView.style.display = viewId === 'qa-view' ? 'flex' : 'block';
+            document.getElementById('location-name').innerText = title;
+        }
+        function animateButton(id) { const btn = document.getElementById(id); btn.classList.add('pressed'); setTimeout(() => btn.classList.remove('pressed'), 150); }
+        function animateShoulder(id) { const btn = document.getElementById(id); btn.classList.add('pressed'); setTimeout(() => btn.classList.remove('pressed'), 150); }
+
+        // --- כפתור R (קהילה) ---
+        function triggerWalkieTalkie() {
+            animateShoulder('btn-r');
+            const wt = document.getElementById('walkie-talkie');
+            if(!walkieTalkieActive) {
+                wt.style.display = 'block';
+                walkieTalkieActive = true;
+                // סגירה אוטומטית אחרי 3 שניות (כאילו סיים לשלוח)
+                setTimeout(() => {
+                    if(walkieTalkieActive) {
+                        wt.innerHTML = "<h3>✅ ההקלטה נשלחה!</h3><p>תקבל תשובה בבית המדרש.</p>";
+                        setTimeout(() => { wt.style.display = 'none'; walkieTalkieActive = false; wt.innerHTML=`<div class="recording-dot"></div><h3 style="margin:0 0 10px;">מכשיר קשר קהילתי</h3><p style="font-size: 14px;">מקליט את השאלה שלך לחכמי הכפר... דבר עכשיו!</p><div style="font-size: 10px; margin-top:15px; color:#a0aec0;">לחץ B כדי לבטל</div>`;}, 1500);
+                    }
+                }, 3000);
+            }
+        }
+
+        // --- תנועה במפה (MAP) בעולם גדול מגודל המסך ---
+        // השחקן עצמו במרכז הפיזי של המסך. מה שזז הוא המפה סביבו (הפוך מהכיוון).
+        let worldX = 1200; // מיקום השחקן בעולם (אמצע המפה מתוך 2400)
+        let worldY = 1200;
+        let movementInterval = null;
+        let isMoving = false;
+        let activeBuilding = null;
+
+        // מיקומים מוחלטים בעולם (מעודכן ל-2400x2400)
+        const buildings = [
+            { id: 'building-synagogue', x: 1000, y: 800 },
+            { id: 'building-house1', x: 700, y: 1000 },
+            { id: 'building-ruin', x: 600, y: 1400 },
+            { id: 'building-market', x: 1300, y: 1800 },
+            { id: 'building-well', x: 1500, y: 900 },
+            { id: 'building-house2', x: 1700, y: 1300 }
+        ];
+
+        function checkProximity() {
+            activeBuilding = null;
+            document.querySelectorAll('.interaction-bubble').forEach(b => b.style.display = 'none');
+            
+            for (let b of buildings) {
+                // המרחק מחושב בין המיקום העולמי של השחקן (worldX, worldY) למיקום הבניין בעולם.
+                let dist = Math.sqrt(Math.pow(worldX - b.x, 2) + Math.pow(worldY - b.y, 2));
+                if (dist < 100) { // מרחק אינטראקציה
+                    activeBuilding = b.id;
+                    const bubble = document.querySelector(`#${b.id} .interaction-bubble`);
+                    if (bubble) bubble.style.display = 'block';
+                    break;
+                }
+            }
+        }
+
+        function renderMap() {
+            const mapEl = document.getElementById('world-map');
+            // אנחנו שמים את השחקן במרכז המסך (240x160)
+            // ולכן המפה צריכה לזוז בכיוון ההפוך למיקום השחקן
+            const screenCenterX = 240;
+            const screenCenterY = 160;
+            
+            const offsetX = screenCenterX - worldX;
+            const offsetY = screenCenterY - worldY;
+
+            mapEl.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+            checkProximity();
+        }
+
+        function movePlayer(dir) {
+            const speed = 15;
+            if(dir === 'up') worldY -= speed;
+            if(dir === 'down') worldY += speed;
+            if(dir === 'left') worldX -= speed;
+            if(dir === 'right') worldX += speed;
+            
+            // גבולות העולם (2400x2400)
+            if(worldX < 50) worldX = 50;
+            if(worldX > 2350) worldX = 2350;
+            if(worldY < 50) worldY = 50;
+            if(worldY > 2350) worldY = 2350;
+            
+            renderMap();
+        }
+
+        let currentDirection = 'down';
+        
+        function startPlayerMovement(dir) {
+            if (currentState !== 'MAP') return;
+            if (isMoving) return;
+            isMoving = true;
+            currentDirection = dir;
+            
+            // הסרת כל אנימציות הליכה קודמות
+            const sprite = document.getElementById('player-sprite');
+            sprite.classList.remove('walking-down', 'walking-up', 'walking-left', 'walking-right');
+            
+            // הוספת אנימציית הליכה לפי הכיוון
+            sprite.classList.add(`walking-${dir}`);
+            
+            movePlayer(dir);
+            movementInterval = setInterval(() => {
+                movePlayer(dir);
+            }, 100);
+        }
+
+        function stopPlayerMovement() {
+            if (movementInterval) {
+                clearInterval(movementInterval);
+                movementInterval = null;
+            }
+            isMoving = false;
+            
+            // הסרת אנימציית הליכה
+            const sprite = document.getElementById('player-sprite');
+            sprite.classList.remove('walking-down', 'walking-up', 'walking-left', 'walking-right');
+        }
+
+        // --- מיני משחק: הבלש ---
+        let magX = 200; let magY = 120;
+        const targetX = 180; const targetY = 100;
+
+        function moveMagnifier(dir) {
+            if(dir === 'up') magY -= 15; if(dir === 'down') magY += 15;
+            if(dir === 'left') magX -= 15; if(dir === 'right') magX += 15;
+            // גבולות המסך בערך
+            if(magX<0) magX=0; if(magX>400) magX=400;
+            if(magY<0) magY=0; if(magY>250) magY=250;
+            
+            document.getElementById('magnifier').style.left = magX + 'px';
+            document.getElementById('magnifier').style.top = magY + 'px';
+        }
+
+        function checkMiniGameWin() {
+            // האם הזכוכית קרובה למטרה? (מרחק קטן מ-30 פיקסלים)
+            let dist = Math.sqrt(Math.pow(magX - targetX, 2) + Math.pow(magY - targetY, 2));
+            if(dist < 40) {
+                document.querySelector('.minigame-hint').innerHTML = "⭐ מצאת את החוט האדום! עובר לשלב הבא...";
+                document.querySelector('.minigame-hint').style.color = "green";
+                setTimeout(() => {
+                    currentState = 'QA'; listIndex = 0;
+                    setView('qa-view', '⚖️ בית הדין');
+                }, 1500);
+            } else {
+                document.querySelector('.minigame-hint').innerHTML = "❌ לא מצאת פה כלום. המשך לחפש!";
+                document.querySelector('.minigame-hint').style.color = "red";
+                setTimeout(() => { document.querySelector('.minigame-hint').innerHTML = "הזז את הזכוכית וחפש סימן מיוחד. מצאת? לחץ A"; document.querySelector('.minigame-hint').style.color = "#2d3748";}, 1500);
+            }
+        }
+
+        // --- שאלות דילמה ---
+        let listIndex = 0;
+        function moveQASelection(dir) {
+            if(dir === 'up') listIndex--; if(dir === 'down') listIndex++;
+            if(listIndex < 0) listIndex = 0; if(listIndex > 2) listIndex = 2;
+            for(let i=0; i<=2; i++) document.getElementById('opt-'+i).classList.remove('selected');
+            document.getElementById('opt-'+listIndex).classList.add('selected');
+        }
+
+        // --- כפתורים ראשיים ---
+        function pressDpad(dir) {
+            document.querySelector('.d-'+dir).classList.add('pressed');
+            if(currentState === 'MAP') startPlayerMovement(dir);
+            if(currentState === 'MINIGAME') moveMagnifier(dir);
+            if(currentState === 'QA') moveQASelection(dir);
+        }
+        function releaseDpad() { 
+            document.querySelectorAll('.d-btn').forEach(b => b.classList.remove('pressed')); 
+            stopPlayerMovement();
+        }
+
+        function handleAButton() {
+            animateButton('btn-a');
+            
+            if(currentState === 'MAP') {
+                if (activeBuilding) {
+                    currentState = 'PODCAST'; setView('podcast-view', '🎧 מאזין לסיפור');
+                }
+            } 
+            else if(currentState === 'PODCAST') {
+                currentState = 'MINIGAME'; setView('minigame-view', '🔍 משימת חיפוש');
+            }
+            else if(currentState === 'MINIGAME') {
+                checkMiniGameWin();
+            }
+            else if(currentState === 'QA') {
+                if(listIndex === 2) { // תשובה ג' נכונה (סימן)
+                    currentState = 'MISHNAH'; setView('mishnah-view', '📜 המשנה');
+                    document.getElementById('points').innerText = "⭐ 500";
+                } else {
+                    document.getElementById('opt-'+listIndex).innerHTML = "❌ טעות. נסה שוב (או לחץ R לעזרה!)";
+                    document.getElementById('opt-'+listIndex).style.color = "red";
+                }
+            }
+            else if(currentState === 'MISHNAH') {
+                // חזרה להתחלה (במערכת אמיתית - חזרה למפה ופתיחת שלב חדש)
+                alert("כל הכבוד! סיימת את המודול של השבת אבדה.");
+                currentState = 'MAP'; setView('map-view', '📍 מפת הכפר');
+            }
+        }
+
+        function handleBButton() {
+            animateButton('btn-b');
+            if(walkieTalkieActive) {
+                document.getElementById('walkie-talkie').style.display = 'none';
+                walkieTalkieActive = false;
+            } else if(currentState !== 'MAP') {
+                // חזרה שלב אחורה (רק לשם הדגמה)
+                currentState = 'MAP'; setView('map-view', '📍 מפת הכפר');
+            }
+        }
+
+        // אתחול המשחק
+        document.addEventListener("DOMContentLoaded", () => {
+            setView('map-view', '📍 מפת הכפר');
+            renderMap();
+        });
+
+        // קישור למקלדת
+        document.addEventListener('keydown', (e) => {
+            if(e.key === 'ArrowUp') pressDpad('up');
+            if(e.key === 'ArrowDown') pressDpad('down');
+            if(e.key === 'ArrowLeft') pressDpad('left');
+            if(e.key === 'ArrowRight') pressDpad('right');
+            if(e.key === 'Enter' || e.key.toLowerCase() === 'a') handleAButton();
+            if(e.key === 'Escape' || e.key === 'Backspace' || e.key.toLowerCase() === 'b') handleBButton();
+            if(e.key.toLowerCase() === 'r') triggerWalkieTalkie(); // מקש R להפעלת קהילה
+        });
+        document.addEventListener('keyup', (e) => {
+            if(e.key.startsWith('Arrow')) releaseDpad();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>כיול שבילים - כפר המשנה</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a202c;
+            color: white;
+            padding: 20px;
+            margin: 0;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #4299e1;
+        }
+        
+        .controls {
+            background: #2d3748;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: inline-block;
+            width: 200px;
+            font-weight: bold;
+        }
+        
+        input[type="range"] {
+            width: 300px;
+            vertical-align: middle;
+        }
+        
+        .value-display {
+            display: inline-block;
+            width: 100px;
+            text-align: center;
+            background: #4a5568;
+            padding: 5px 10px;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        
+        .canvas-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .canvas-wrapper {
+            background: #2d3748;
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        canvas {
+            border: 2px solid #4a5568;
+            display: block;
+            max-width: 100%;
+        }
+        
+        .canvas-title {
+            text-align: center;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #4299e1;
+        }
+        
+        .code-output {
+            background: #2d3748;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        pre {
+            background: #1a202c;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            direction: ltr;
+            text-align: left;
+        }
+        
+        button {
+            background: #4299e1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #3182ce;
+        }
+        
+        .stats {
+            background: #2d3748;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .stat-item {
+            display: inline-block;
+            margin: 0 20px;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #48bb78;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 כיול זיהוי שבילים</h1>
+        
+        <div class="controls">
+            <h2>⚙️ הגדרות צבע (HSL)</h2>
+            
+            <div class="control-group">
+                <label>גוון מינימלי (Hue Min):</label>
+                <span class="value-display" id="hue-min-val">30</span>
+                <input type="range" id="hue-min" min="0" max="360" value="30">
+            </div>
+            
+            <div class="control-group">
+                <label>גוון מקסימלי (Hue Max):</label>
+                <span class="value-display" id="hue-max-val">50</span>
+                <input type="range" id="hue-max" min="0" max="360" value="50">
+            </div>
+            
+            <div class="control-group">
+                <label>רוויה מינימלית (Saturation Min):</label>
+                <span class="value-display" id="sat-min-val">20</span>
+                <input type="range" id="sat-min" min="0" max="100" value="20">
+            </div>
+            
+            <div class="control-group">
+                <label>רוויה מקסימלית (Saturation Max):</label>
+                <span class="value-display" id="sat-max-val">60</span>
+                <input type="range" id="sat-max" min="0" max="100" value="60">
+            </div>
+            
+            <div class="control-group">
+                <label>בהירות מינימלית (Lightness Min):</label>
+                <span class="value-display" id="light-min-val">50</span>
+                <input type="range" id="light-min" min="0" max="100" value="50">
+            </div>
+            
+            <div class="control-group">
+                <label>בהירות מקסימלית (Lightness Max):</label>
+                <span class="value-display" id="light-max-val">75</span>
+                <input type="range" id="light-max" min="0" max="100" value="75">
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <button onclick="loadImage()">📁 טען תמונה</button>
+                <button onclick="copyConfig()">📋 העתק תצורה</button>
+                <input type="file" id="file-input" accept="image/*" style="display: none;">
+            </div>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <div>פיקסלים מותרים</div>
+                <div class="stat-value" id="walkable-pixels">0</div>
+            </div>
+            <div class="stat-item">
+                <div>אחוז מהתמונה</div>
+                <div class="stat-value" id="walkable-percent">0%</div>
+            </div>
+        </div>
+        
+        <div class="canvas-container">
+            <div class="canvas-wrapper">
+                <div class="canvas-title">תמונה מקורית</div>
+                <canvas id="original-canvas"></canvas>
+            </div>
+            
+            <div class="canvas-wrapper">
+                <div class="canvas-title">מפת שבילים (ירוק = מותר, אדום = אסור)</div>
+                <canvas id="walkability-canvas"></canvas>
+            </div>
+        </div>
+        
+        <div class="code-output">
+            <h2>📝 קוד לשימוש ב-map-config.js</h2>
+            <button onclick="copyConfig()">📋 העתק</button>
+            <pre id="config-code">pathColors: {
+    hueRange: [30, 50],
+    saturationRange: [20, 60],
+    lightnessRange: [50, 75]
+}</pre>
+        </div>
+    </div>
+    
+    <script>
+        let image = null;
+        let imageData = null;
+        
+        const originalCanvas = document.getElementById('original-canvas');
+        const walkabilityCanvas = document.getElementById('walkability-canvas');
+        const originalCtx = originalCanvas.getContext('2d');
+        const walkabilityCtx = walkabilityCanvas.getContext('2d');
+        
+        // טעינת תמונה
+        document.getElementById('file-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    image = new Image();
+                    image.onload = () => {
+                        setupCanvases();
+                        analyze();
+                    };
+                    image.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        function loadImage() {
+            document.getElementById('file-input').click();
+        }
+        
+        // ניסיון לטעון את התמונה הקיימת
+        window.onload = () => {
+            image = new Image();
+            image.crossOrigin = "anonymous";
+            image.onload = () => {
+                setupCanvases();
+                analyze();
+            };
+            image.onerror = () => {
+                alert('לא נמצאה תמונה. אנא טען תמונה ידנית.');
+            };
+            image.src = 'מפה-חדשה-אבנים.jpg';
+        };
+        
+        function setupCanvases() {
+            const maxWidth = 600;
+            const scale = Math.min(1, maxWidth / image.width);
+            
+            originalCanvas.width = image.width * scale;
+            originalCanvas.height = image.height * scale;
+            walkabilityCanvas.width = image.width * scale;
+            walkabilityCanvas.height = image.height * scale;
+            
+            originalCtx.drawImage(image, 0, 0, originalCanvas.width, originalCanvas.height);
+            
+            // קריאת פיקסלים
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = image.width;
+            tempCanvas.height = image.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(image, 0, 0);
+            imageData = tempCtx.getImageData(0, 0, image.width, image.height);
+        }
+        
+        function rgbToHsl(r, g, b) {
+            r /= 255;
+            g /= 255;
+            b /= 255;
+            
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+            
+            if (max === min) {
+                h = s = 0;
+            } else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                
+                switch (max) {
+                    case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+                    case g: h = ((b - r) / d + 2) / 6; break;
+                    case b: h = ((r - g) / d + 4) / 6; break;
+                }
+            }
+            
+            return {
+                h: Math.round(h * 360),
+                s: Math.round(s * 100),
+                l: Math.round(l * 100)
+            };
+        }
+        
+        function analyze() {
+            if (!imageData) return;
+            
+            const hueMin = parseInt(document.getElementById('hue-min').value);
+            const hueMax = parseInt(document.getElementById('hue-max').value);
+            const satMin = parseInt(document.getElementById('sat-min').value);
+            const satMax = parseInt(document.getElementById('sat-max').value);
+            const lightMin = parseInt(document.getElementById('light-min').value);
+            const lightMax = parseInt(document.getElementById('light-max').value);
+            
+            const scale = walkabilityCanvas.width / image.width;
+            walkabilityCtx.clearRect(0, 0, walkabilityCanvas.width, walkabilityCanvas.height);
+            
+            let walkableCount = 0;
+            const totalPixels = image.width * image.height;
+            
+            for (let y = 0; y < image.height; y++) {
+                for (let x = 0; x < image.width; x++) {
+                    const index = (y * image.width + x) * 4;
+                    const r = imageData.data[index];
+                    const g = imageData.data[index + 1];
+                    const b = imageData.data[index + 2];
+                    
+                    const hsl = rgbToHsl(r, g, b);
+                    
+                    const isWalkable = (
+                        hsl.h >= hueMin && hsl.h <= hueMax &&
+                        hsl.s >= satMin && hsl.s <= satMax &&
+                        hsl.l >= lightMin && hsl.l <= lightMax
+                    );
+                    
+                    if (isWalkable) {
+                        walkableCount++;
+                        walkabilityCtx.fillStyle = 'rgba(0, 255, 0, 0.5)';
+                    } else {
+                        walkabilityCtx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+                    }
+                    
+                    walkabilityCtx.fillRect(x * scale, y * scale, scale, scale);
+                }
+            }
+            
+            // עדכון סטטיסטיקות
+            document.getElementById('walkable-pixels').textContent = walkableCount.toLocaleString();
+            document.getElementById('walkable-percent').textContent = 
+                ((walkableCount / totalPixels) * 100).toFixed(1) + '%';
+            
+            // עדכון קוד
+            updateConfigCode();
+        }
+        
+        function updateConfigCode() {
+            const hueMin = document.getElementById('hue-min').value;
+            const hueMax = document.getElementById('hue-max').value;
+            const satMin = document.getElementById('sat-min').value;
+            const satMax = document.getElementById('sat-max').value;
+            const lightMin = document.getElementById('light-min').value;
+            const lightMax = document.getElementById('light-max').value;
+            
+            const code = `pathColors: {
+    hueRange: [${hueMin}, ${hueMax}],
+    saturationRange: [${satMin}, ${satMax}],
+    lightnessRange: [${lightMin}, ${lightMax}]
+}`;
+            
+            document.getElementById('config-code').textContent = code;
+        }
+        
+        function copyConfig() {
+            const code = document.getElementById('config-code').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                alert('✅ הקוד הועתק ללוח! הדבק אותו ב-map-config.js');
+            });
+        }
+        
+        // עדכון תצוגת ערכים
+        ['hue-min', 'hue-max', 'sat-min', 'sat-max', 'light-min', 'light-max'].forEach(id => {
+            const input = document.getElementById(id);
+            const display = document.getElementById(id + '-val');
+            
+            input.addEventListener('input', () => {
+                display.textContent = input.value;
+                analyze();
+            });
+        });
+    </script>
+</body>
+</html>

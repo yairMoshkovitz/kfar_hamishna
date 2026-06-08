@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>כפר המשנה - גיימבוי</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #1a202c;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Press Start 2P', monospace;
+        }
+
+        .gameboy {
+            width: 600px;
+            background: linear-gradient(135deg, #9B59B6, #8E44AD);
+            border-radius: 20px 20px 40px 40px;
+            padding: 40px 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+
+        .screen-container {
+            background: #2C3E50;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        #game-screen {
+            width: 100%;
+            height: 400px;
+            background: #9BBC0F;
+            border: 4px solid #0F380F;
+            position: relative;
+            overflow: hidden;
+            image-rendering: pixelated;
+        }
+
+        .game-view {
+            display: none;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .game-view.active {
+            display: block;
+        }
+
+        /* מפה */
+        #map-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* HUD */
+        .hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            background: rgba(15, 56, 15, 0.8);
+            color: #9BBC0F;
+            padding: 8px;
+            font-size: 10px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 100;
+        }
+
+        .interaction-hint {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #0F380F;
+            color: #9BBC0F;
+            padding: 10px 20px;
+            font-size: 10px;
+            display: none;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* משחק זיכרון */
+        #memory-game {
+            padding: 20px;
+            background: #9BBC0F;
+        }
+
+        .memory-title {
+            color: #0F380F;
+            font-size: 12px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .memory-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .memory-card {
+            aspect-ratio: 1;
+            background: #0F380F;
+            border: 3px solid #306230;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all 0.3s;
+        }
+
+        .memory-card.flipped {
+            background: #8BAC0F;
+        }
+
+        .memory-card.matched {
+            background: #306230;
+            opacity: 0.5;
+        }
+
+        /* משחק טריוויה */
+        #trivia-game {
+            padding: 20px;
+            background: #9BBC0F;
+        }
+
+        .trivia-question {
+            color: #0F380F;
+            font-size: 11px;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .trivia-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .trivia-option {
+            background: #0F380F;
+            color: #9BBC0F;
+            padding: 12px;
+            font-size: 10px;
+            cursor: pointer;
+            border: 3px solid #306230;
+        }
+
+        .trivia-option.selected {
+            background: #306230;
+        }
+
+        .trivia-option.correct {
+            background: #8BAC0F;
+        }
+
+        .trivia-option.wrong {
+            background: #0F380F;
+            opacity: 0.5;
+        }
+
+        /* בקרים */
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .dpad {
+            position: relative;
+            width: 120px;
+            height: 120px;
+        }
+
+        .dpad-btn {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: #2C3E50;
+            border: 3px solid #34495E;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #7F8C8D;
+            font-size: 16px;
+            user-select: none;
+        }
+
+        .dpad-btn:active {
+            background: #34495E;
+        }
+
+        .dpad-up { top: 0; left: 40px; }
+        .dpad-down { bottom: 0; left: 40px; }
+        .dpad-left { top: 40px; left: 0; }
+        .dpad-right { top: 40px; right: 0; }
+        .dpad-center { top: 40px; left: 40px; background: #1A252F; }
+
+        .action-btns {
+            display: flex;
+            gap: 20px;
+        }
+
+        .action-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #E74C3C;
+            border: 4px solid #C0392B;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            user-select: none;
+        }
+
+        .action-btn:active {
+            background: #C0392B;
+        }
+
+        .btn-b {
+            background: #3498DB;
+            border-color: #2980B9;
+        }
+
+        .btn-b:active {
+            background: #2980B9;
+        }
+    </style>
+</head>
+<body>
+    <div class="gameboy">
+        <div class="screen-container">
+            <div id="game-screen">
+                <!-- HUD -->
+                <div class="hud">
+                    <span id="location">📍 כפר המשנה</span>
+                    <span id="score">⭐ 0</span>
+                </div>
+
+                <!-- מפה -->
+                <div id="map-view" class="game-view active">
+                    <canvas id="map-canvas"></canvas>
+                    <div class="interaction-hint" id="hint">לחץ A להיכנס</div>
+                </div>
+
+                <!-- משחק זיכרון -->
+                <div id="memory-game" class="game-view">
+                    <div class="memory-title">משחק זיכרון - מצא זוגות</div>
+                    <div class="memory-grid" id="memory-grid"></div>
+                    <div style="text-align: center; color: #0F380F; font-size: 10px;">
+                        <div>מהלכים: <span id="moves">0</span></div>
+                        <div style="margin-top: 10px;">לחץ B לחזור</div>
+                    </div>
+                </div>
+
+                <!-- משחק טריוויה -->
+                <div id="trivia-game" class="game-view">
+                    <div class="trivia-question" id="trivia-question"></div>
+                    <div class="trivia-options" id="trivia-options"></div>
+                    <div style="text-align: center; color: #0F380F; font-size: 10px; margin-top: 15px;">
+                        לחץ B לחזור
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="dpad">
+                <div class="dpad-btn dpad-up" data-key="up">▲</div>
+                <div class="dpad-btn dpad-down" data-key="down">▼</div>
+                <div class="dpad-btn dpad-left" data-key="left">◄</div>
+                <div class="dpad-btn dpad-right" data-key="right">►</div>
+                <div class="dpad-center"></div>
+            </div>
+
+            <div class="action-btns">
+                <div class="action-btn btn-b" data-key="b">B</div>
+                <div class="action-btn" data-key="a">A</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // משתני משחק
+        const canvas = document.getElementById('map-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 540;
+        canvas.height = 360;
+
+        let currentView = 'map';
+        let score = 0;
+        let keys = {};
+
+        // שחקן
+        let player = {
+            x: 10,
+            y: 10,
+            speed: 0.1,
+            isMoving: false
+        };
+
+        // מפה
+        const TILE = 20;
+        const buildings = [
+            { x: 5, y: 5, w: 3, h: 3, name: 'בית המדרש', game: 'trivia' },
+            { x: 15, y: 8, w: 2, h: 2, name: 'השוק', game: 'memory' },
+            { x: 8, y: 15, w: 2, h: 2, name: 'בית כהן', game: 'trivia' }
+        ];
+
+        let nearBuilding = null;
+
+        // ציור מפה
+        function drawMap() {
+            ctx.fillStyle = '#9BBC0F';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // שבילים
+            ctx.fillStyle = '#8BAC0F';
+            for (let i = 0; i < 27; i++) {
+                if (i % 3 === 0) {
+                    ctx.fillRect(i * TILE, 0, TILE, canvas.height);
+                    ctx.fillRect(0, i * TILE, canvas.width, TILE);
+                }
+            }
+
+            // בניינים
+            buildings.forEach(b => {
+                ctx.fillStyle = '#0F380F';
+                ctx.fillRect(b.x * TILE, b.y * TILE, b.w * TILE, b.h * TILE);
+                ctx.fillStyle = '#306230';
+                ctx.fillRect(b.x * TILE + 4, b.y * TILE + 4, b.w * TILE - 8, b.h * TILE - 8);
+                
+                // שם
+                ctx.fillStyle = '#0F380F';
+                ctx.font = '8px "Press Start 2P"';
+                ctx.textAlign = 'center';
+                ctx.fillText(b.name, (b.x + b.w/2) * TILE, (b.y - 0.5) * TILE);
+            });
+
+            // שחקן
+            ctx.fillStyle = '#0F380F';
+            ctx.fillRect(player.x * TILE + 6, player.y * TILE + 6, 8, 8);
+        }
+
+        // בדיקת קרבה
+        function checkNearBuilding() {
+            nearBuilding = null;
+            buildings.forEach(b => {
+                if (player.x >= b.x - 1 && player.x <= b.x + b.w &&
+                    player.y >= b.y - 1 && player.y <= b.y + b.h) {
+                    nearBuilding = b;
+                }
+            });
+            document.getElementById('hint').style.display = nearBuilding ? 'block' : 'none';
+        }
+
+        // תנועה
+        function update() {
+            let moved = false;
+            if (keys.up && player.y > 0) { player.y -= player.speed; moved = true; }
+            if (keys.down && player.y < 17) { player.y += player.speed; moved = true; }
+            if (keys.left && player.x > 0) { player.x -= player.speed; moved = true; }
+            if (keys.right && player.x < 26) { player.x += player.speed; moved = true; }
+            
+            if (moved) {
+                checkNearBuilding();
+                drawMap();
+            }
+        }
+
+        // משחק זיכרון
+        const memorySymbols = ['🕍', '📖', '🕯️', '🍷', '🍞', '⭐', '🌙', '🎺'];
+        let memoryCards = [];
+        let flippedCards = [];
+        let moves = 0;
+
+        function initMemoryGame() {
+            const grid = document.getElementById('memory-grid');
+            grid.innerHTML = '';
+            memoryCards = [...memorySymbols, ...memorySymbols].sort(() => Math.random() - 0.5);
+            flippedCards = [];
+            moves = 0;
+            document.getElementById('moves').textContent = moves;
+
+            memoryCards.forEach((symbol, index) => {
+                const card = document.createElement('div');
+                card.className = 'memory-card';
+                card.dataset.index = index;
+                card.dataset.symbol = symbol;
+                card.onclick = () => flipCard(card);
+                grid.appendChild(card);
+            });
+        }
+
+        function flipCard(card) {
+            if (flippedCards.length >= 2 || card.classList.contains('flipped')) return;
+            
+            card.classList.add('flipped');
+            card.textContent = card.dataset.symbol;
+            flippedCards.push(card);
+
+            if (flippedCards.length === 2) {
+                moves++;
+                document.getElementById('moves').textContent = moves;
+                
+                setTimeout(() => {
+                    if (flippedCards[0].dataset.symbol === flippedCards[1].dataset.symbol) {
+                        flippedCards.forEach(c => c.classList.add('matched'));
+                        flippedCards = [];
+                        
+                        if (document.querySelectorAll('.memory-card.matched').length === memoryCards.length) {
+                            setTimeout(() => {
+                                alert('כל הכבוד! סיימת את המשחק!');
+                                score += 50;
+                                updateScore();
+                                switchView('map');
+                            }, 500);
+                        }
+                    } else {
+                        flippedCards.forEach(c => {
+                            c.classList.remove('flipped');
+                            c.textContent = '';
+                        });
+                        flippedCards = [];
+                    }
+                }, 1000);
+            }
+        }
+
+        // משחק טריוויה
+        const triviaQuestions = [
+            {
+                q: 'מה אומרים בברכת כהנים?',
+                options: ['יברכך ה\' וישמרך', 'שמע ישראל', 'ברוך אתה ה\'', 'מודה אני'],
+                correct: 0
+            },
+            {
+                q: 'כמה ימים בשבוע?',
+                options: ['5', '6', '7', '8'],
+                correct: 2
+            },
+            {
+                q: 'מה אוכלים בשבת?',
+                options: ['חלה', 'פיתה', 'לחם רגיל', 'מצה'],
+                correct: 0
+            }
+        ];
+
+        let currentQuestion = 0;
+
+        function initTriviaGame() {
+            currentQuestion = Math.floor(Math.random() * triviaQuestions.length);
+            const q = triviaQuestions[currentQuestion];
+            
+            document.getElementById('trivia-question').textContent = q.q;
+            const optionsDiv = document.getElementById('trivia-options');
+            optionsDiv.innerHTML = '';
+            
+            q.options.forEach((opt, i) => {
+                const btn = document.createElement('div');
+                btn.className = 'trivia-option';
+                btn.textContent = opt;
+                btn.onclick = () => checkAnswer(i, btn);
+                optionsDiv.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selected, btn) {
+            const q = triviaQuestions[currentQuestion];
+            const allOptions = document.querySelectorAll('.trivia-option');
+            
+            allOptions.forEach(opt => opt.onclick = null);
+            
+            if (selected === q.correct) {
+                btn.classList.add('correct');
+                score += 20;
+                updateScore();
+                setTimeout(() => {
+                    alert('תשובה נכונה! +20 נקודות');
+                    switchView('map');
+                }, 1000);
+            } else {
+                btn.classList.add('wrong');
+                allOptions[q.correct].classList.add('correct');
+                setTimeout(() => {
+                    alert('תשובה שגויה. נסה שוב!');
+                    switchView('map');
+                }, 2000);
+            }
+        }
+
+        // החלפת מסכים
+        function switchView(view) {
+            document.querySelectorAll('.game-view').forEach(v => v.classList.remove('active'));
+            currentView = view;
+            
+            if (view === 'map') {
+                document.getElementById('map-view').classList.add('active');
+                drawMap();
+            } else if (view === 'memory') {
+                document.getElementById('memory-game').classList.add('active');
+                initMemoryGame();
+            } else if (view === 'trivia') {
+                document.getElementById('trivia-game').classList.add('active');
+                initTriviaGame();
+            }
+        }
+
+        function updateScore() {
+            document.getElementById('score').textContent = `⭐ ${score}`;
+        }
+
+        // בקרים
+        document.querySelectorAll('.dpad-btn, .action-btn').forEach(btn => {
+            btn.addEventListener('mousedown', () => {
+                const key = btn.dataset.key;
+                if (key === 'a' && currentView === 'map' && nearBuilding) {
+                    switchView(nearBuilding.game);
+                } else if (key === 'b' && currentView !== 'map') {
+                    switchView('map');
+                } else if (['up', 'down', 'left', 'right'].includes(key)) {
+                    keys[key] = true;
+                }
+            });
+            
+            btn.addEventListener('mouseup', () => {
+                const key = btn.dataset.key;
+                if (['up', 'down', 'left', 'right'].includes(key)) {
+                    keys[key] = false;
+                }
+            });
+        });
+
+        // מקלדת
+        window.addEventListener('keydown', e => {
+            if (e.key.startsWith('Arrow')) {
+                keys[e.key.replace('Arrow', '').toLowerCase()] = true;
+            } else if (e.key === ' ' || e.key.toLowerCase() === 'a') {
+                if (currentView === 'map' && nearBuilding) switchView(nearBuilding.game);
+            } else if (e.key === 'Escape' || e.key.toLowerCase() === 'b') {
+                if (currentView !== 'map') switchView('map');
+            }
+        });
+
+        window.addEventListener('keyup', e => {
+            if (e.key.startsWith('Arrow')) {
+                keys[e.key.replace('Arrow', '').toLowerCase()] = false;
+            }
+        });
+
+        // לולאה
+        function gameLoop() {
+            if (currentView === 'map') {
+                update();
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        // התחלה
+        drawMap();
+        gameLoop();
+    </script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+server {
+    listen       ${PORT};
+    server_name  _;
+
+    root   /usr/share/nginx/html;
+    index  main.html;
+
+    # ברירת המחדל היא main.html (ולא index.html)
+    location / {
+        try_files $uri $uri/ /main.html;
+    }
+
+    # קידוד עברית נכון לקבצי טקסט
+    charset utf-8;
+
+    # מטמון לנכסים סטטיים
+    location ~* \.(?:jpg|jpeg|png|gif|svg|webp|ico)$ {
+        expires 7d;
+        add_header Cache-Control "public";
+    }
+}

@@ -93,21 +93,11 @@ class InteriorEngine {
     
     /**
      * בדיקה אם מיקום ניתן להליכה
+     * ⚠️ זיהוי שבילים מושהה כרגע - כל שטח הבניין ניתן להליכה.
+     * הגבלת הגבולות לתמונה נעשית בנפרד ב-main.html (clamp).
      */
     isWalkable(x, y) {
-        if (!this.walkabilityMap || this.walkabilityMap.length === 0) {
-            return false;
-        }
-        
-        const tx = Math.floor(x / this.tileSize);
-        const ty = Math.floor(y / this.tileSize);
-        
-        if (ty < 0 || ty >= this.walkabilityMap.length ||
-            tx < 0 || tx >= this.walkabilityMap[0].length) {
-            return false;
-        }
-        
-        return this.walkabilityMap[ty][tx];
+        return true;
     }
     
     /**

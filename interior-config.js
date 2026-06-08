@@ -1,45 +1,89 @@
 /**
  * תצורת מסכים פנימיים - בניינים שאפשר להיכנס אליהם
  * כל בניין יכול להכיל נקודות אינטראקציה שונות
+ *
+ * ⚠️ גודל התמונות האמיתי הוא 1195×896. כל הקואורדינטות חייבות להיות בתוך הגבולות האלה.
+ * הערה: זיהוי שבילים (walkability) מושהה כרגע - כל שטח הבניין ניתן להליכה.
  */
 
 const interiorConfig = {
+    // בית כנסת
+    'building-1': {
+        id: 'building-1',
+        name: 'בית כנסת',
+        imagePath: 'בית-מדרש.jpg', // זמנית משתמש באותה תמונה או תמונה חלופית אם יש, אך לפחות שייפתח ולא יקרוס
+
+        imageWidth: 1195,
+        imageHeight: 896,
+
+        playerStartX: 597,
+        playerStartY: 650,
+
+        exitPoint: {
+            worldX: 597,
+            worldY: 850,
+            radius: 60,
+            label: 'יציאה'
+        },
+
+        pathColors: {
+            hueRange: [0, 360],
+            saturationRange: [0, 100],
+            lightnessRange: [30, 90]
+        },
+
+        interactionPoints: [
+            {
+                id: 'syn-sefer-1',
+                type: 'info',
+                worldX: 597,
+                worldY: 300,
+                icon: '🕍',
+                label: 'ארון קודש',
+                content: {
+                    title: 'ספר תורה קהילתי',
+                    text: 'ברוכים הבאים לבית הכנסת של כפר המשנה.\nזמני תפילות ושעורי תורה מתקיימים כאן יום-יום.'
+                }
+            }
+        ]
+    },
+
     // בית מדרש
     'building-2': {
         id: 'building-2',
         name: 'בית מדרש',
         imagePath: 'בית-מדרש.jpg',
-        
+
         // הגדרות מפה
-        imageWidth: 1920,
-        imageHeight: 1440,
-        
+        imageWidth: 1195,
+        imageHeight: 896,
+
         // מיקום התחלתי של השחקן בכניסה לבניין
-        playerStartX: 960,
-        playerStartY: 1200,
-        
+        playerStartX: 597,
+        playerStartY: 650,
+
         // נקודת יציאה (חזרה למפה הראשית)
         exitPoint: {
-            worldX: 960,
-            worldY: 1300,
-            radius: 50,
+            worldX: 597,
+            worldY: 850,
+            radius: 60,
             label: 'יציאה'
         },
-        
+
         // זיהוי שבילים (אם יש רצפה שאפשר ללכת עליה)
         pathColors: {
             hueRange: [0, 360],        // כל הצבעים
             saturationRange: [0, 100],
             lightnessRange: [30, 90]
         },
-        
+
         // נקודות אינטראקציה בבניין
         interactionPoints: [
             {
                 id: 'bm-sefer-1',
                 type: 'game',  // משחק/חידון
-                worldX: 600,
-                worldY: 600,
+                worldX: 350,
+                worldY: 400,
                 icon: '📚',
                 label: 'ספר תורה',
                 content: {
@@ -52,8 +96,8 @@ const interiorConfig = {
             {
                 id: 'bm-podcast-1',
                 type: 'podcast',  // פודקאסט
-                worldX: 1300,
-                worldY: 600,
+                worldX: 850,
+                worldY: 400,
                 icon: '🎧',
                 label: 'שיעור',
                 content: {
@@ -66,8 +110,8 @@ const interiorConfig = {
             {
                 id: 'bm-info-1',
                 type: 'info',  // מידע/טקסט
-                worldX: 960,
-                worldY: 400,
+                worldX: 597,
+                worldY: 250,
                 icon: '📜',
                 label: 'לוח מודעות',
                 content: {
@@ -83,38 +127,42 @@ const interiorConfig = {
             }
         ]
     },
-    
+
     // בית פרטי
     'building-private': {
         id: 'building-private',
         name: 'בית פרטי',
         imagePath: 'בית-פרטי1.jpg',
-        
-        imageWidth: 1920,
-        imageHeight: 1440,
-        
-        playerStartX: 960,
-        playerStartY: 1200,
-        
+
+        // הגדרות מפה
+        imageWidth: 1195,
+        imageHeight: 896,
+
+        // מיקום התחלתי של השחקן בכניסה לבניין
+        playerStartX: 597,
+        playerStartY: 650,
+
+        // נקודת יציאה (חזרה למפה הראשית)
         exitPoint: {
-            worldX: 960,
-            worldY: 1300,
-            radius: 50,
+            worldX: 597,
+            worldY: 850,
+            radius: 60,
             label: 'יציאה'
         },
-        
+
+        // זיהוי שבילים (אם יש רצפה שאפשר ללכת עליה)
         pathColors: {
-            hueRange: [0, 360],
+            hueRange: [0, 360],        // כל הצבעים
             saturationRange: [0, 100],
             lightnessRange: [30, 90]
         },
-        
+
         interactionPoints: [
             {
                 id: 'home-game-1',
                 type: 'game',
-                worldX: 700,
-                worldY: 700,
+                worldX: 350,
+                worldY: 450,
                 icon: '🕯️',
                 label: 'נרות שבת',
                 content: {
@@ -127,8 +175,8 @@ const interiorConfig = {
             {
                 id: 'home-info-1',
                 type: 'info',
-                worldX: 1200,
-                worldY: 700,
+                worldX: 850,
+                worldY: 450,
                 icon: '📖',
                 label: 'ספר',
                 content: {
@@ -145,8 +193,8 @@ const interiorConfig = {
             {
                 id: 'home-podcast-1',
                 type: 'podcast',
-                worldX: 960,
-                worldY: 500,
+                worldX: 597,
+                worldY: 280,
                 icon: '📻',
                 label: 'רדיו',
                 content: {

@@ -372,6 +372,14 @@
                             <div class="marker">🔹</div>
                             🏠<span>בית פרטי</span>
                         </div>
+                        <div class="building" id="building-psachim-1">
+                            <div class="marker">🔹</div>
+                            📜<span>פסחים פרק א</span>
+                        </div>
+                        <div class="building" id="building-psachim-10">
+                            <div class="marker">🔹</div>
+                            🍷<span>פסחים פרק י</span>
+                        </div>
 
                         <!-- דמויות / היתקלויות במפה -->
                         <div class="wild-encounter" id="wild-1">👳‍♂️</div>
@@ -391,24 +399,26 @@
 
                     <!-- 3. מסך פודקאסט -->
                     <div id="podcast-view" class="game-view">
-                        <div class="podcast-container">
-                            <div class="podcast-icon" id="podcast-icon">🎧</div>
-                            <div class="podcast-title" id="podcast-title">שיעור בהלכות שבת</div>
-                            <div class="podcast-description" id="podcast-description">הרב מסביר על דיני הדלקת נרות</div>
-                            <div class="podcast-controls">
-                                <div class="podcast-btn">⏮️</div>
-                                <div class="podcast-btn" id="podcast-play-btn">▶️</div>
-                                <div class="podcast-btn">⏭️</div>
+                        <div class="podcast-container" style="display: flex; flex-direction: column; align-items: center; max-height: 280px; overflow-y: auto;">
+                            <div class="podcast-icon" id="podcast-icon" style="margin-bottom: 5px;">🎧</div>
+                            <img id="podcast-img" style="display:none; width:100%; max-height:100px; object-fit:contain; margin-bottom:10px; border-radius:8px;" />
+                            <div class="podcast-title" id="podcast-title" style="font-size:16px; margin-bottom:5px;">שיעור בהלכות שבת</div>
+                            <div class="podcast-description" id="podcast-description" style="font-size:12px; margin-bottom:10px;">הרב מסביר על דיני הדלקת נרות</div>
+                            <div class="podcast-controls" style="margin-bottom: 10px;">
+                                <div class="podcast-btn" onclick="skipAudio(-10)" style="width:36px; height:36px; font-size:16px;">⏪</div>
+                                <div class="podcast-btn" id="podcast-play-btn" onclick="toggleAudioPlay()" style="width:44px; height:44px; font-size:20px;">▶️</div>
+                                <div class="podcast-btn" onclick="skipAudio(10)" style="width:36px; height:36px; font-size:16px;">⏩</div>
                             </div>
-                            <div class="podcast-duration" id="podcast-duration">0:00 / 15:30</div>
-                            <div class="podcast-footer">לחץ B לחזרה</div>
+                            <div class="podcast-duration" id="podcast-duration" style="font-size:12px;">0:00 / 15:30</div>
+                            <div class="podcast-footer" style="margin-top: 10px;">לחץ B לחזרה</div>
                         </div>
                     </div>
 
                     <!-- 4. מסך מידע/טקסט -->
                     <div id="info-view" class="game-view">
-                        <div class="info-container">
+                        <div class="info-container" style="max-height: 280px; overflow-y: auto;">
                             <div class="info-icon" id="info-icon">📜</div>
+                            <img id="info-img" style="display:none; width:100%; max-height:120px; object-fit:contain; margin-bottom:10px; border-radius:8px;" />
                             <div class="info-title" id="info-title">זמני התפילות</div>
                             <div class="info-text" id="info-text">שחרית: 6:30
 מנחה: 13:00
@@ -466,6 +476,10 @@
         let walkieTalkieActive = false;
         let previousState = null; // לשמירת המצב הקודם
         
+        // נגנן אודיו גלובלי
+        let currentAudio = null;
+        let audioTimer = null;
+        
         // נתוני שחקן
         let playerPoints = 0;
         let playerRankIndex = 0;
@@ -502,7 +516,9 @@
             'building-2': { worldX: 1300, worldY: 500 },
             'building-3': { worldX: 1200, worldY: 1000 },
             'building-4': { worldX: 700, worldY: 900 },
-            'building-private': { worldX: 1100, worldY: 600 }
+            'building-private': { worldX: 1100, worldY: 600 },
+            'building-psachim-1': { worldX: 850, worldY: 500 },
+            'building-psachim-10': { worldX: 1400, worldY: 750 }
         };
 
         const encounters = {
@@ -878,15 +894,79 @@
             setView('map-view', '📍 מפת הכפר');
         }
 
+        // פונקציות עזר לנגן אודיו
+        function formatTime(seconds) {
+            if (isNaN(seconds) || seconds === Infinity) return "0:00";
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return mins + ":" + (secs < 10 ? "0" : "") + secs;
+        }
+
+        function toggleAudioPlay() {
+            if (!currentAudio) return;
+            const playBtn = document.getElementById('podcast-play-btn');
+            if (currentAudio.paused) {
+                currentAudio.play().then(() => {
+                    playBtn.innerText = "⏸️";
+                }).catch(err => console.error("שגיאה בהפעלת אודיו:", err));
+            } else {
+                currentAudio.pause();
+                playBtn.innerText = "▶️";
+            }
+        }
+
+        function skipAudio(seconds) {
+            if (!currentAudio) return;
+            currentAudio.currentTime = Math.max(0, Math.min(currentAudio.duration || 0, currentAudio.currentTime + seconds));
+            updateAudioTimeDisplay();
+        }
+
+        function updateAudioTimeDisplay() {
+            if (!currentAudio) return;
+            const curStr = formatTime(currentAudio.currentTime);
+            const durStr = formatTime(currentAudio.duration || 0);
+            document.getElementById('podcast-duration').innerText = curStr + " / " + durStr;
+        }
+
         // הצגת מסך פודקאסט
         function showPodcast(content) {
             previousState = currentState;
             currentState = 'PODCAST';
             
+            // עצירת אודיו קודם אם רץ
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+                clearInterval(audioTimer);
+            }
+
             document.getElementById('podcast-icon').innerText = content.icon || '🎧';
             document.getElementById('podcast-title').innerText = content.title;
             document.getElementById('podcast-description').innerText = content.description;
+            
+            const podcastImg = document.getElementById('podcast-img');
+            if (content.imageUrl) {
+                podcastImg.src = content.imageUrl;
+                podcastImg.style.display = 'block';
+            } else {
+                podcastImg.style.display = 'none';
+            }
+            
+            document.getElementById('podcast-play-btn').innerText = "▶️";
             document.getElementById('podcast-duration').innerText = '0:00 / ' + content.duration;
+            
+            // יצירת אודיו חדש אם יש כתובת
+            if (content.audioUrl) {
+                currentAudio = new Audio(content.audioUrl);
+                currentAudio.addEventListener('loadedmetadata', updateAudioTimeDisplay);
+                currentAudio.addEventListener('timeupdate', updateAudioTimeDisplay);
+                currentAudio.addEventListener('ended', () => {
+                    document.getElementById('podcast-play-btn').innerText = "▶️";
+                });
+                
+                // התחלת מעקב זמן בטוח
+                audioTimer = setInterval(updateAudioTimeDisplay, 500);
+            }
             
             setView('podcast-view', '🎧 ' + content.title);
         }
@@ -899,6 +979,14 @@
             document.getElementById('info-icon').innerText = content.icon || '📜';
             document.getElementById('info-title').innerText = content.title;
             document.getElementById('info-text').innerText = content.text;
+            
+            const infoImg = document.getElementById('info-img');
+            if (content.imageUrl) {
+                infoImg.src = content.imageUrl;
+                infoImg.style.display = 'block';
+            } else {
+                infoImg.style.display = 'none';
+            }
             
             setView('info-view', '📜 ' + content.title);
         }
@@ -1146,6 +1234,12 @@
                 exitBuilding();
             }
             else if(currentState === 'PODCAST' || currentState === 'INFO') {
+                // עצירת אודיו
+                if (currentState === 'PODCAST' && currentAudio) {
+                    currentAudio.pause();
+                    currentAudio = null;
+                    clearInterval(audioTimer);
+                }
                 // חזרה למצב הקודם
                 if (previousState === 'INTERIOR') {
                     currentState = 'INTERIOR';

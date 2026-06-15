@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>כפר המשנה — Studio V2</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>🎬 כפר המשנה — Studio V2</h1>
+    <div class="controls">
+      <select id="mishnaSelect" title="בחר משנה"></select>
+      <label>תמונות לדקה
+        <input type="number" id="ipm" min="1" max="30" step="1" value="4" />
+      </label>
+      <button id="proposeBtn" class="primary">הרץ הצעת Claude</button>
+      <button id="generateAllBtn">צור כל התמונות</button>
+      <button id="buildBtn" class="accent">הרכב וידאו</button>
+    </div>
+  </header>
+
+  <div id="status" class="status"></div>
+
+  <nav id="wizard" class="wizard">
+    <button class="wizard-step" data-step="transcription">1. תמלול</button>
+    <span class="wizard-arrow">←</span>
+    <button class="wizard-step" data-step="content">2. משנה + Prompt</button>
+    <span class="wizard-arrow">←</span>
+    <button class="wizard-step" data-step="images">3. תמונות</button>
+    <span class="wizard-arrow">←</span>
+    <button class="wizard-step" data-step="video">4. וידאו</button>
+    <button id="nextStepBtn" class="primary">המשך לשלב הבא →</button>
+  </nav>
+
+  <main id="timeline" class="timeline"></main>
+
+  <div id="videoPanel" class="video-panel hidden">
+    <h2>וידאו מורכב</h2>
+    <video id="resultVideo" controls></video>
+  </div>
+
+  <!-- בורר רפרנסים (מודאל) -->
+  <div id="refModal" class="modal hidden">
+    <div class="modal-box">
+      <h3>בחר רפרנסים לסצנה</h3>
+      <div id="refGrid" class="ref-grid"></div>
+      <div class="modal-actions">
+        <button id="refSave" class="primary">שמור</button>
+        <button id="refCancel">ביטול</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- תבנית כרטיס דקה -->
+  <template id="minuteCardTemplate">
+    <section class="minute-card">
+      <div class="minute-header">
+        <h2 class="minute-title"></h2>
+        <span class="minute-time-range"></span>
+      </div>
+      <div class="scenes-grid"></div>
+    </section>
+  </template>
+
+  <!-- תבנית סצנה -->
+  <template id="sceneTemplate">
+    <article class="scene-card">
+      <div class="scene-header">
+        <span class="scene-number"></span>
+        <span class="scene-time"></span>
+        <span class="scene-status-badge"></span>
+      </div>
+      
+      <div class="scene-content">
+        <!-- טקסטים -->
+        <div class="scene-section">
+          <label class="section-label">טקסט המשנה</label>
+          <textarea class="mishna-text" rows="2" placeholder="טקסט המשנה..."></textarea>
+        </div>
+
+        <!-- Prompt -->
+        <div class="scene-section">
+          <label class="section-label">Prompt</label>
+          <textarea class="prompt-text" rows="3" placeholder="Prompt לתמונה..."></textarea>
+          
+          <div class="scene-controls">
+            <button class="save-scene-btn" title="שמור">💾</button>
+            <button class="ai-prompt-btn" title="בקש מ-Claude">🤖</button>
+          </div>
+        </div>
+
+        <!-- רפרנסים -->
+        <div class="scene-section refs-section">
+          <label class="section-label">רפרנסים</label>
+          <div class="ref-chips-container"></div>
+          <button class="edit-refs-btn" title="ערוך רפרנסים">+</button>
+        </div>
+
+        <!-- תמונה -->
+        <div class="scene-section image-section">
+          <div class="image-preview">
+            <img class="scene-image" alt="" />
+            <div class="no-image-placeholder">
+              <span>🖼️</span>
+            </div>
+          </div>
+          
+          <div class="image-controls">
+            <button class="generate-btn" title="צור תמונה">🎨</button>
+            <button class="approve-btn" title="אשר">✓</button>
+          </div>
+        </div>
+      </div>
+    </article>
+  </template>
+
+  <script src="/app.js"></script>
+</body>
+</html>

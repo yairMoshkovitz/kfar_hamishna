@@ -1,0 +1,69 @@
+{
+  "_comment": "אינדקס רפרנסים לעקביות דמויות וסגנון. כל ערך: id ייחודי, file (יחסי ל-base_dir), name קריא, description לבחירת Claude, category. ערוך את התיאורים כך שישקפו את הדמויות בפועל.",
+  "base_dir": "data/images",
+  "references": [
+    {
+      "id": "chars-old-generation-1",
+      "file": "דמויות כפר המשנה הדור הישן (1).jpeg",
+      "name": "דמויות הדור הישן 1",
+      "description": "גיליון דמויות מהדור הישן של כפר המשנה — לשימוש כרפרנס לעקביות מראה הדמויות",
+      "category": "characters"
+    },
+    {
+      "id": "chars-old-generation-2",
+      "file": "דמויות כפר המשנה הדור הישן (2).jpeg",
+      "name": "דמויות הדור הישן 2",
+      "description": "גיליון דמויות מהדור הישן של כפר המשנה — רפרנס דמויות",
+      "category": "characters"
+    },
+    {
+      "id": "chars-old-generation-4",
+      "file": "דמויות כפר המשנה הדור הישן (4).jpeg",
+      "name": "דמויות הדור הישן 4",
+      "description": "גיליון דמויות מהדור הישן של כפר המשנה — רפרנס דמויות",
+      "category": "characters"
+    },
+    {
+      "id": "chars-old-generation-5",
+      "file": "דמויות כפר המשנה הדור הישן (5).jpeg",
+      "name": "דמויות הדור הישן 5",
+      "description": "גיליון דמויות מהדור הישן של כפר המשנה — רפרנס דמויות",
+      "category": "characters"
+    },
+    {
+      "id": "chars-old-generation-6",
+      "file": "דמויות כפר המשנה הדור הישן (6).jpeg",
+      "name": "דמויות הדור הישן 6",
+      "description": "גיליון דמויות מהדור הישן של כפר המשנה — רפרנס דמויות",
+      "category": "characters"
+    },
+    {
+      "id": "chars-old-generation-7",
+      "file": "דמויות כפר המשנה הדור הישן (7).jpeg",
+      "name": "דמויות הדור הישן 7",
+      "description": "גיליון דמויות מהדור הישן של כפר המשנה — רפרנס דמויות",
+      "category": "characters"
+    },
+    {
+      "id": "scene-perek1-mishna1",
+      "file": "פרק א משנה א.png",
+      "name": "סצנה: פרק א משנה א",
+      "description": "תמונת סצנה שנוצרה בעבר — רפרנס לסגנון ציורי ולאווירת המקום",
+      "category": "style"
+    },
+    {
+      "id": "scene-perek1-mishna2",
+      "file": "פרק א משנה ב.png",
+      "name": "סצנה: פרק א משנה ב",
+      "description": "תמונת סצנה שנוצרה בעבר — רפרנס לסגנון ציורי",
+      "category": "style"
+    },
+    {
+      "id": "scene-perek1-mishna3",
+      "file": "פרק א משנה ג.png",
+      "name": "סצנה: פרק א משנה ג",
+      "description": "תמונת סצנה שנוצרה בעבר — רפרנס לסגנון ציורי",
+      "category": "style"
+    }
+  ]
+}

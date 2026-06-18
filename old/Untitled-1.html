@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Water Quest</title>
+
+<style>
+body{
+    margin:0;
+    background:#1f2937;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+    font-family:Arial,sans-serif;
+}
+
+.gameboy{
+    width:420px;
+    background:#d1d5db;
+    border-radius:20px;
+    padding:20px;
+    box-shadow:0 15px 40px rgba(0,0,0,.4);
+}
+
+.screen{
+    background:#b7d6a8;
+    border:10px solid #333;
+    border-radius:10px;
+    height:300px;
+    padding:15px;
+    position:relative;
+    overflow:hidden;
+}
+
+.title{
+    text-align:center;
+    font-weight:bold;
+    margin-bottom:10px;
+}
+
+.scene{
+    text-align:center;
+    margin-top:20px;
+    font-size:50px;
+}
+
+.message{
+    text-align:center;
+    margin-top:20px;
+    font-size:20px;
+}
+
+.answers{
+    margin-top:20px;
+}
+
+.answer{
+    background:white;
+    margin:8px 0;
+    padding:10px;
+    border-radius:8px;
+    cursor:pointer;
+    border:2px solid transparent;
+}
+
+.answer:hover{
+    border-color:#2563eb;
+}
+
+.controls{
+    display:flex;
+    justify-content:space-between;
+    margin-top:20px;
+    align-items:center;
+}
+
+.dpad{
+    display:grid;
+    grid-template-columns:60px 60px 60px;
+    gap:5px;
+}
+
+.dpad button,
+.action button{
+    width:60px;
+    height:60px;
+    border:none;
+    border-radius:10px;
+    font-size:20px;
+    cursor:pointer;
+}
+
+.action{
+    display:flex;
+    gap:15px;
+}
+
+.score{
+    margin-top:10px;
+    text-align:center;
+    font-weight:bold;
+}
+</style>
+</head>
+<body>
+
+<div class="gameboy">
+
+    <div class="screen">
+
+        <div class="title">WATER QUEST</div>
+
+        <div id="content">
+
+            <div class="scene">
+                ☀️<br>
+                💧
+            </div>
+
+            <div class="message">
+                השמש מחממת את המים.<br>
+                מה קורה לטיפה?
+            </div>
+
+            <div class="answers">
+                <div class="answer" onclick="choose(false)">
+                    הטיפה קופאת
+                </div>
+
+                <div class="answer" onclick="choose(true)">
+                    הטיפה מתאדה
+                </div>
+
+                <div class="answer" onclick="choose(false)">
+                    הטיפה נעלמת
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="score">
+        ניקוד: <span id="score">0</span>
+    </div>
+
+    <div class="controls">
+
+        <div class="dpad">
+            <div></div>
+            <button>↑</button>
+            <div></div>
+
+            <button>←</button>
+            <button>●</button>
+            <button>→</button>
+
+            <div></div>
+            <button>↓</button>
+            <div></div>
+        </div>
+
+        <div class="action">
+            <button>B</button>
+            <button>A</button>
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+let score = 0;
+
+function choose(correct){
+
+    if(correct){
+
+        score += 10;
+        document.getElementById("score").innerText = score;
+
+        document.getElementById("content").innerHTML = `
+            <div class="scene">
+                ☁️<br>
+                ↑<br>
+                💧
+            </div>
+
+            <div class="message">
+                כל הכבוד!<br>
+                הטיפה התאדתה ועולה לשמיים.
+            </div>
+
+            <div style="text-align:center;margin-top:20px;">
+                <button onclick="nextStage()">
+                    המשך
+                </button>
+            </div>
+        `;
+
+    }else{
+
+        alert("נסה שוב");
+    }
+}
+
+function nextStage(){
+
+    document.getElementById("content").innerHTML = `
+        <div class="scene">
+            ☁️ ☁️ ☁️
+        </div>
+
+        <div class="message">
+            בגובה רב האוויר קר.<br>
+            מה קורה לאדי המים?
+        </div>
+
+        <div class="answers">
+            <div class="answer" onclick="condensation(true)">
+                הם מתעבים לטיפות
+            </div>
+
+            <div class="answer" onclick="condensation(false)">
+                הם נשרפים
+            </div>
+
+            <div class="answer" onclick="condensation(false)">
+                הם נעלמים
+            </div>
+        </div>
+    `;
+}
+
+function condensation(correct){
+
+    if(correct){
+
+        score += 10;
+        document.getElementById("score").innerText = score;
+
+        document.getElementById("content").innerHTML = `
+            <div class="scene">
+                ☁️
+                <br>
+                🌧️
+            </div>
+
+            <div class="message">
+                מצוין!<br>
+                נוצר ענן ויורד גשם.
+                <br><br>
+                סיימת את הדמו הראשון.
+            </div>
+        `;
+
+    }else{
+        alert("לא נכון");
+    }
+}
+
+</script>
+
+</body>
+</html>

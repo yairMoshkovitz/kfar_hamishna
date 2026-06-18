@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>כפר המשנה — חמץ במחסן</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;700;900&display=swap');
+
+        body {
+            background-color: #1a120b;
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; margin: 0; font-family: 'Rubik', sans-serif; overflow: hidden;
+        }
+        .console-wrapper { position: relative; margin-top: 10px; transform-origin: center; }
+
+        .console-device {
+            width: 900px; height: 440px;
+            background: linear-gradient(135deg, #5a3a1e, #2b1a0c);
+            border-radius: 60px;
+            box-shadow: inset -5px -10px 20px rgba(0,0,0,0.4), inset 5px 10px 20px rgba(255,255,255,0.08), 0 20px 40px rgba(0,0,0,0.8);
+            display: flex; align-items: center; justify-content: space-between; padding: 0 40px; position: relative; z-index: 10;
+        }
+        .speaker { position: absolute; bottom: 40px; display: flex; gap: 6px; }
+        .speaker.left { left: 80px; } .speaker.right { right: 80px; }
+        .speaker-hole { width: 6px; height: 25px; background: #1a0f06; border-radius: 10px; box-shadow: inset 2px 2px 5px rgba(0,0,0,0.8); }
+
+        .d-pad-container { position: relative; width: 120px; height: 120px; }
+        .d-pad-center { position: absolute; top: 40px; left: 40px; width: 40px; height: 40px; background: #4a3520; z-index: 2; }
+        .d-btn { position: absolute; width: 40px; height: 40px; background: #4a3520; border-radius: 5px; cursor: pointer; box-shadow: inset 0 0 10px rgba(0,0,0,0.8), 0 4px 0 #1a0f06; display: flex; align-items: center; justify-content: center; color: #c9a06a; font-size: 20px;}
+        .d-btn:active, .d-btn.pressed { transform: translateY(4px); box-shadow: inset 0 0 10px rgba(0,0,0,0.8), 0 0 0 #1a0f06; }
+        .d-up { top: 0; left: 40px; border-radius: 10px 10px 0 0; } .d-down { bottom: 0; left: 40px; border-radius: 0 0 10px 10px; }
+        .d-left { top: 40px; left: 0; border-radius: 10px 0 0 10px; } .d-right { top: 40px; right: 0; border-radius: 0 10px 10px 0; }
+
+        .action-buttons-container { position: relative; width: 140px; height: 140px; }
+        .action-btn { position: absolute; width: 55px; height: 55px; border-radius: 50%; cursor: pointer; font-weight: 900; font-size: 22px; color: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; box-shadow: inset -2px -4px 6px rgba(0,0,0,0.5), inset 2px 4px 6px rgba(255,255,255,0.3), 0 6px 0 #111, 0 10px 15px rgba(0,0,0,0.6); transition: transform 0.1s;}
+        .action-btn:active, .action-btn.pressed { transform: translateY(6px); box-shadow: inset -2px -4px 6px rgba(0,0,0,0.5), inset 2px 4px 6px rgba(255,255,255,0.3), 0 0 0 #111; }
+        .btn-a { top: 40px; right: 0; background: #e07b39; } .btn-b { bottom: 0; left: 40px; background: #ecc94b; }
+        .btn-label { position: absolute; color: #c9a06a; font-weight: bold; font-size: 14px; text-shadow: 1px 1px 0 rgba(0,0,0,0.8);}
+        .label-a { top: 20px; right: 20px; } .label-b { bottom: 65px; left: 20px; }
+
+        .screen-bezel { width: 520px; height: 360px; background: #111; border-radius: 15px; padding: 15px; box-shadow: inset 0 0 20px rgba(0,0,0,1); position: relative; }
+        .screen-display { width: 100%; height: 100%; background: #000; border-radius: 5px; overflow: hidden; position: relative; box-shadow: inset 0 0 10px rgba(0,0,0,0.8); }
+        .game-header { background: rgba(0,0,0,0.85); color: #ffb24d; padding: 5px 10px; font-size: 12px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; position: absolute; top:0; width: 100%; z-index: 10; box-sizing: border-box; border-bottom: 1px solid #ffb24d;}
+
+        .game-view { display: none; width: 100%; height: 100%; position: absolute; top:0; left:0; }
+        .game-view.active { display: block; }
+
+        .player-sprite { position: absolute; font-size: 30px; z-index: 5; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.8)); transition: transform 0.1s;}
+        .npc { position: absolute; font-size: 32px; z-index: 4; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.8)); animation: float 2s infinite ease-in-out; }
+        @keyframes float { 0%, 100% {transform: translateY(0);} 50% {transform: translateY(-5px);} }
+
+        .interaction-bubble { position: absolute; background: black; color: #ffb24d; font-size: 11px; font-weight: bold; padding: 4px 8px; border-radius: 10px; display: none; width: max-content; animation: bounce-small 1s infinite; border: 2px solid #ffb24d; z-index: 20;}
+        @keyframes bounce-small { 0%, 100% {transform: translateY(0);} 50% {transform: translateY(-3px);} }
+
+        /* ===== מסך פתיחה ===== */
+        #area-opening { background: linear-gradient(to bottom, #3a2415, #6b4226); }
+        .torch { position: absolute; font-size: 26px; top: 40px; animation: flicker 0.4s infinite; }
+        @keyframes flicker { 0%,100%{opacity:1;} 50%{opacity:0.7;} }
+
+        /* ===== המחסן ===== */
+        #area-warehouse { background: linear-gradient(to bottom, #2f1f12, #5c3d22); }
+        .floor { position: absolute; bottom: 0; width: 100%; height: 70px; background: repeating-linear-gradient(90deg,#4a3018,#4a3018 30px,#3d2613 30px,#3d2613 60px); border-top: 4px solid #2a1a0c; }
+        .shelf-item { position: absolute; font-size: 30px; z-index: 4; cursor: pointer; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.8)); text-align:center;}
+        .shelf-item .lbl { display:block; font-size:8px; color:#ffd9a0; font-weight:bold; margin-top:-2px; white-space:nowrap; font-family:monospace;}
+        .shelf-item.done { filter: grayscale(1) brightness(0.4); }
+        .shelf-item.active { animation: glowpulse 1s infinite; }
+        @keyframes glowpulse { 0%,100%{ filter: drop-shadow(0 0 4px #ffd9a0);} 50%{ filter: drop-shadow(0 0 14px #ffb24d) brightness(1.2);} }
+        .shelf-item.locked { filter: brightness(0.5) grayscale(0.5); }
+        .shelf-item .num { display:inline-block; background:#e07b39; color:#1a0d05; font-size:8px; font-weight:900; border-radius:50%; width:12px; height:12px; line-height:12px; position:relative; top:-12px; }
+        .wood-shelf { position:absolute; height:8px; background:#3a2412; border-radius:2px; box-shadow:0 3px 6px rgba(0,0,0,0.5); z-index:3;}
+
+        /* ===== הסיום (מדורה) ===== */
+        #area-finale { background: linear-gradient(to bottom, #1a0d05, #4a1f08); display:flex; flex-direction:column; align-items:center; justify-content:center; }
+        .bonfire { font-size: 90px; animation: flicker 0.3s infinite; filter: drop-shadow(0 0 20px #ff6a00); }
+        .ember { position:absolute; width:4px; height:4px; background:#ff8a00; border-radius:50%; animation: rise 2s infinite; }
+        @keyframes rise { 0%{transform:translateY(0); opacity:1;} 100%{transform:translateY(-120px); opacity:0;} }
+        .win-text { font-size: 18px; font-weight: bold; color: #fff3e0; text-shadow: 2px 2px 6px #000; text-align: center; z-index: 10; background: rgba(60,25,5,0.8); padding: 12px; border-radius: 10px; margin: 8px 18px; line-height:1.4;}
+
+        /* ===== תיבת דיאלוג ===== */
+        .dialog-box { background: #000; border: 4px solid #ffb24d; border-radius: 10px; margin: 0 10px; min-height: 130px; padding: 10px; display: none; flex-direction: column; justify-content: space-between; box-shadow: 0 -4px 10px rgba(255,140,0,0.2); z-index: 30; position: absolute; bottom: 8px; left: 0; right: 0;}
+        .dialog-text { font-size: 12.5px; font-weight: bold; color: #ffb24d; margin-bottom: 6px; white-space: pre-wrap; font-family: monospace; line-height: 1.35;}
+        .qa-options { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+        .qa-opt { background: #1a0f06; padding: 5px; border-radius: 5px; font-size: 11.5px; font-weight: bold; color: #d99a4e; border: 2px solid #5a3a1e; text-align: right; cursor: pointer; font-family: monospace;}
+        .qa-opt.selected { background: #4a2a0e; color: #ffd9a0; border-color: #ffb24d; }
+
+        /* ===== מסך המשנה ===== */
+        .mishnah-box { background: #050505; border: 4px solid #ffd9a0; border-radius: 10px; position:absolute; inset:30px 8px 8px 8px; display:none; flex-direction:column; z-index:40; padding:8px; box-shadow:0 0 18px rgba(255,200,120,0.25);}
+        .mishnah-q { color:#ffb24d; font-size:11.5px; font-weight:bold; font-family:monospace; margin-bottom:6px; line-height:1.3; border-bottom:1px solid #5a3a1e; padding-bottom:5px;}
+        .mishnah-list { overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:3px;}
+        .m-seg { background:#140d06; color:#caa06a; font-size:11.5px; font-weight:bold; font-family:monospace; padding:5px 7px; border-radius:5px; border:2px solid #3a2412; text-align:right; line-height:1.3;}
+        .m-seg.selected { background:#4a2a0e; color:#fff3e0; border-color:#ffd9a0; }
+        .m-seg.correct { background:#1f5c1f; color:#bfffbf; border-color:#7dff7d; }
+        .mishnah-msg { color:#ff8a6a; font-size:10.5px; font-family:monospace; font-weight:bold; text-align:center; height:14px; margin-top:4px;}
+
+        /* ===== מסך העלאה ===== */
+        .upload-screen { position:absolute; inset:0; background:linear-gradient(to bottom,#1a0d05,#3a1f0c); z-index:60; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:18px; box-sizing:border-box;}
+        .upload-screen h1 { color:#ffd9a0; font-size:18px; margin:4px 0; text-shadow:2px 2px 4px #000;}
+        .upload-screen p { color:#e0b98a; font-size:11.5px; font-family:monospace; line-height:1.5; margin:6px 14px;}
+        .upload-btn { display:inline-block; margin-top:10px; background:#e07b39; color:#1a0d05; font-weight:900; font-size:13px; padding:9px 18px; border-radius:10px; cursor:pointer; border:3px solid #ffd9a0; box-shadow:0 5px 0 #8a4416;}
+        .upload-btn:active { transform:translateY(4px); box-shadow:0 1px 0 #8a4416; }
+        .skip-btn { margin-top:12px; background:none; color:#caa06a; font-size:10.5px; font-family:monospace; text-decoration:underline; cursor:pointer; border:none;}
+        #audio-status { color:#7dff7d; font-size:10.5px; font-family:monospace; margin-top:8px; min-height:14px;}
+        .listen-flag { position:absolute; top:4px; left:8px; font-size:14px; z-index:25; display:none;}
+        .listen-flag.on { display:block; animation:bounce-small 0.7s infinite;}
+
+        @media (max-height: 520px) { .console-wrapper { transform: scale(0.82); } }
+        @media (max-width: 940px) { .console-wrapper { transform: scale(0.95); } }
+    </style>
+</head>
+<body>
+    <div class="console-wrapper">
+        <div class="console-device">
+            <div class="speaker left"><div class="speaker-hole"></div><div class="speaker-hole"></div><div class="speaker-hole"></div></div>
+
+            <div class="d-pad-container">
+                <div class="d-pad-center"></div>
+                <div class="d-btn d-up" data-key="up">▲</div>
+                <div class="d-btn d-down" data-key="down">▼</div>
+                <div class="d-btn d-left" data-key="left">◄</div>
+                <div class="d-btn d-right" data-key="right">►</div>
+            </div>
+
+            <div class="screen-bezel">
+                <div class="screen-display">
+                    <div class="game-header">
+                        <span id="location-name">📍 כניסה למחסן</span>
+                        <span id="points">🔥 חמץ: 0/7</span>
+                    </div>
+                    <div class="listen-flag" id="listen-flag">🎧</div>
+
+                    <!-- פתיחה -->
+                    <div id="area-opening" class="game-view active">
+                        <div class="torch" style="right:30px;">🔥</div>
+                        <div class="torch" style="left:30px;">🔥</div>
+                        <div class="floor"></div>
+                        <div class="npc" id="ginji" style="right: 90px; top: 200px;">🧑‍🦰</div>
+                        <div class="interaction-bubble" id="bubble-opening">לחץ A</div>
+                        <div id="player-opening" class="player-sprite" style="left: 60px; top: 200px;">🧒</div>
+                    </div>
+
+                    <!-- המחסן -->
+                    <div id="area-warehouse" class="game-view">
+                        <div class="wood-shelf" style="top:150px; left:30px; width:200px;"></div>
+                        <div class="wood-shelf" style="top:150px; right:30px; width:160px;"></div>
+                        <div class="wood-shelf" style="top:235px; left:60px; width:380px;"></div>
+                        <div id="shelves"></div>
+                        <div class="npc" id="yechtziel" style="right: 30px; top: 205px; display:none;">🧔</div>
+                        <div class="interaction-bubble" id="bubble-warehouse">לחץ A</div>
+                        <div class="floor"></div>
+                        <div id="player-warehouse" class="player-sprite" style="left: 40px; top: 205px;">🧒</div>
+                    </div>
+
+                    <!-- סיום -->
+                    <div id="area-finale" class="game-view">
+                        <div class="bonfire">🔥</div>
+                        <div class="win-text" id="finale-text">יחציאל הגיע למחסן...</div>
+                        <div style="font-size:11px; color:#ffd9a0; margin-top:6px; font-family:monospace; display:none;" id="restart-msg">לחץ A כדי לשחק שוב</div>
+                    </div>
+
+                    <!-- דיאלוג -->
+                    <div class="dialog-box" id="dialog-ui">
+                        <div class="dialog-text" id="dialog-text">טקסט...</div>
+                        <div class="qa-options" id="dialog-options"></div>
+                    </div>
+
+                    <!-- מסך המשנה -->
+                    <div class="mishnah-box" id="mishnah-ui">
+                        <div class="mishnah-q" id="mishnah-q">בחר את המקטע הנכון</div>
+                        <div class="mishnah-list" id="mishnah-list"></div>
+                        <div class="mishnah-msg" id="mishnah-msg"></div>
+                    </div>
+
+                    <!-- מסך העלאת אודיו -->
+                    <div class="upload-screen" id="upload-screen">
+                        <div style="font-size:34px;">🏺🔥</div>
+                        <h1>כפר המשנה — חמץ במחסן</h1>
+                        <p>לפני שמתחילים: העלה את <b>קובץ האודיו של הפודקאסט</b><br>(פסחים פרק ג׳ משנה א׳).<br>הוא ישמש כ"זמן הקשבה" בתוך המשחק.</p>
+                        <label class="upload-btn" for="audio-upload">🎧 העלה את הפודקאסט</label>
+                        <input type="file" id="audio-upload" accept="audio/*" style="display:none;">
+                        <div id="audio-status"></div>
+                        <button class="skip-btn" id="skip-audio">המשך בלי אודיו (טקסט בלבד)</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-buttons-container">
+                <div class="btn-label label-a">A</div>
+                <div class="action-btn btn-a" id="btn-a" data-key="a">A</div>
+                <div class="btn-label label-b">B</div>
+                <div class="action-btn btn-b" id="btn-b" data-key="b">B</div>
+            </div>
+
+            <div class="speaker right"><div class="speaker-hole"></div><div class="speaker-hole"></div><div class="speaker-hole"></div></div>
+        </div>
+    </div>
+
+    <script>
+    /* =========================================================
+       חמץ במחסן — מבוסס על פסחים פרק ג' משנה א'
+       בנוי על שלד המשחקים הקיימים (קונסולה, דיאלוגים, תנועה).
+       ========================================================= */
+
+    // ----- מקטעי המשנה (לפי הנספח בתוכנית) -----
+    const MISHNAH = [
+        "אֵלּוּ עוֹבְרִין בַּפֶּסַח:",
+        "כֻּתָּח הַבַּבְלִי",
+        "וְשֵׁכָר הַמָּדִי",
+        "וְחֹמֶץ הָאֲדוֹמִי",
+        "וְזֵתוֹם הַמִּצְרִי",
+        "וְזוֹמָן שֶׁל צַבָּעִים",
+        "וַעֲמִילָן שֶׁל טַבָּחִים",
+        "וְקוֹלָן שֶׁל סוֹפְרִים",
+        "רַבִּי אֱלִיעֶזֶר אוֹמֵר, אַף תַּכְשִׁיטֵי נָשִׁים",
+        "זֶה הַכְּלָל, כָּל שֶׁהוּא מִין דָּגָן, הֲרֵי זֶה עוֹבֵר בַּפֶּסַח",
+        "הֲרֵי אֵלּוּ בְאַזְהָרָה, וְאֵין בָּהֶן מִשּׁוּם כָּרֵת"
+    ];
+
+    // ----- חותמות זמן לקטעי האודיו (שניות). אפשר לכוונן לפי הקובץ שלך. -----
+    // [התחלה, סוף]
+    const SEG = {
+        intro:   [0, 58],
+        kutach:  [66, 103],
+        zeitom:  [100, 116],
+        shechar: [113, 134],
+        zoman:   [155, 202],
+        amilan:  [202, 227],
+        kolan:   [227, 235],
+        tachshitim:[233, 247],
+        klal:    [295, 327],
+        bowl:    [347, 454]
+    };
+
+    // ----- שבעת פריטי החמץ (בסדר העלילה) -----
+    // הסדר זהה לסדר הופעת הפריטים בפודקאסט הרציף.
+    // grainOpts: type='correct' (חמץ שנמצא בפריט) | 'chametz' (חמץ אמיתי אך לא בפריט) | 'plain' (אינו דגן)
+    const ITEMS = [
+        { key:"kutach", name:"כותח הבבלי", shortName:"הכותח", emoji:"🥣", x:40, y:128, seg:SEG.kutach, target:1,
+          intro:"פיציק: \"תראה, כד! כתוב עליו 'כותח הבבלי'. הדוד שלי הכין מטבל ממי גבינה, מלח ו... פירורי לחם!\"",
+          grainOpts:[ {t:"פירורי לחם",type:"correct"}, {t:"קמח שעורים",type:"chametz"}, {t:"סובין חיטה",type:"chametz"}, {t:"מי גבינה",type:"plain"} ],
+          objection:"זה רק מטבל, לא לחם ממש!" },
+        { key:"zeitom", name:"זיתום המצרי", shortName:"הזיתום", emoji:"🫙", x:150, y:128, seg:SEG.zeitom, target:4,
+          intro:"פיציק: \"חבית של 'זיתום המצרי'. עבדתי פעם במבשלה — הוא עשוי משעורים, מים וכמון.\"",
+          grainOpts:[ {t:"שעורים",type:"correct"}, {t:"חיטים",type:"chametz"}, {t:"סובין חיטה",type:"chametz"}, {t:"כמון",type:"plain"} ],
+          objection:"אבל זו רק תערובת, זה לא לחם!" },
+        { key:"shechar", name:"שיכר המדי", shortName:"השיכר", emoji:"🍶", x:260, y:128, seg:SEG.shechar, target:2,
+          intro:"פיציק: \"'שיכר המדי' — תמרים שמתסיסים אותם עם קמח שעורים.\"",
+          grainOpts:[ {t:"קמח שעורים",type:"correct"}, {t:"סולת חיטה",type:"chametz"}, {t:"פירורי לחם",type:"chametz"}, {t:"תמרים",type:"plain"} ],
+          objection:"זה משקה, לא אוכל של חמץ!" },
+        { key:"zoman", name:"זומן של צבעים", shortName:"הזומן", emoji:"🎨", x:370, y:128, seg:SEG.zoman, target:5,
+          intro:"פיציק: \"'זומן של צבעים' — סובין של חיטה ששורים ומחמיצים כדי לצבוע בד בסגול.\"",
+          grainOpts:[ {t:"סובין חיטה",type:"correct"}, {t:"קמח שעורים",type:"chametz"}, {t:"שעורים",type:"chametz"}, {t:"צבע סגול",type:"plain"} ],
+          objection:"זה אפילו לא אוכל, זה חומר לצביעה!" },
+        { key:"amilan", name:"עמילן של טבחים", shortName:"העמילן", emoji:"🍲", x:120, y:208, seg:SEG.amilan, target:6,
+          intro:"פיציק: \"'עמילן של טבחים' — לחם מחיטים שלא הבשילו, לניקוי שאריות בשר מהמרק.\"",
+          grainOpts:[ {t:"חיטים",type:"correct"}, {t:"שעורים",type:"chametz"}, {t:"קמח שעורים",type:"chametz"}, {t:"מרק בשר",type:"plain"} ],
+          objection:"זה רק לניקוי המרק, לא לאכילה!" },
+        { key:"kolan", name:"קולן של סופרים", shortName:"הקולן", emoji:"📜", x:245, y:208, seg:SEG.kolan, target:7,
+          intro:"פיציק: \"'קולן של סופרים' — דבק מסובין חיטה שמדביקים בו ניירות.\"",
+          grainOpts:[ {t:"סובין חיטה",type:"correct"}, {t:"פירורי לחם",type:"chametz"}, {t:"קמח שעורים",type:"chametz"}, {t:"נייר",type:"plain"} ],
+          objection:"זה דבק לעבודה, לא חמץ אמיתי!" },
+        { key:"tachshitim", name:"משחת פנים (תכשיטי נשים)", shortName:"המשחה", emoji:"🧴", x:370, y:208, seg:SEG.tachshitim, target:8,
+          intro:"פיציק: \"משחה מסולת חיטה, ששימשה לניקוי הפנים. ר' אליעזר מוסיף גם אותה לרשימה.\"",
+          grainOpts:[ {t:"סולת חיטה",type:"correct"}, {t:"סובין חיטה",type:"chametz"}, {t:"קמח שעורים",type:"chametz"}, {t:"שמן",type:"plain"} ],
+          objection:"זה לא אוכל בכלל, זה חומר ניקוי!" }
+    ];
+
+    // ----- מצב המשחק -----
+    let currentArea = 'opening';
+    let gameState = 'upload'; // upload, playing, dialog, mishnah, gameover
+    let playerX = 60, playerY = 200, speed = 4;
+    let currentOptions = [], selectedOptionIndex = 0;
+    let foundCount = 0, bonusFound = false;
+    let currentStation = -1;
+    let currentItemIndex = 0; // הפריט הבא בתור (סדר רציף כמו בפודקאסט)
+
+    // משנה
+    let selMishnah = 0, mishnahTarget = 0, mishnahCallback = null;
+
+    // אודיו
+    let audioEl = null, audioReady = false, segStop = null;
+
+    let keys = { up:false, down:false, left:false, right:false, a:false, b:false };
+    let prevKeys = { a:false, right:false, left:false, up:false, down:false };
+
+    // אלמנטים
+    const elOpen = document.getElementById('player-opening');
+    const elWare = document.getElementById('player-warehouse');
+    const ginji = document.getElementById('ginji');
+    const yechtziel = document.getElementById('yechtziel');
+    const bubbleOpen = document.getElementById('bubble-opening');
+    const bubbleWare = document.getElementById('bubble-warehouse');
+    const listenFlag = document.getElementById('listen-flag');
+
+    let shelves = [];
+
+    // ================= אודיו =================
+    function setupAudio(file) {
+        const url = URL.createObjectURL(file);
+        audioEl = new Audio(url);
+        audioEl.addEventListener('loadedmetadata', () => {
+            audioReady = true;
+            document.getElementById('audio-status').innerText = "✓ האודיו נטען! לחץ 'התחל'";
+            document.getElementById('skip-audio').innerText = "▶ התחל את המשחק";
+        });
+        audioEl.addEventListener('timeupdate', () => {
+            if (segStop !== null && audioEl.currentTime >= segStop) { audioEl.pause(); segStop = null; listenFlag.classList.remove('on'); }
+        });
+        audioEl.addEventListener('ended', () => { listenFlag.classList.remove('on'); });
+    }
+    function playSegment(seg) {
+        if (!audioReady || !audioEl) return false;
+        try {
+            audioEl.pause();
+            audioEl.currentTime = seg[0];
+            segStop = seg[1];
+            audioEl.play();
+            listenFlag.classList.add('on');
+            return true;
+        } catch(e) { return false; }
+    }
+    function stopAudio() { if(audioEl){audioEl.pause();} segStop=null; listenFlag.classList.remove('on'); }
+
+    // ================= מסך פתיחה / העלאה =================
+    document.getElementById('audio-upload').addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) setupAudio(e.target.files[0]);
+    });
+    document.getElementById('skip-audio').addEventListener('click', startGame);
+
+    function startGame() {
+        document.getElementById('upload-screen').style.display = 'none';
+        gameState = 'playing';
+        createShelves();
+        startOpeningDialog();
+    }
+
+    // ================= דיאלוגים (כמו במשחקים הקיימים) =================
+    function showDialog(text, options = []) {
+        gameState = 'dialog';
+        document.getElementById('dialog-text').innerText = text;
+        const optionsBox = document.getElementById('dialog-options');
+        optionsBox.innerHTML = '';
+        currentOptions = options.length ? options : [{ text:"[המשך]", action: closeDialog }];
+        selectedOptionIndex = 0;
+        currentOptions.forEach((opt, idx) => {
+            const div = document.createElement('div');
+            div.className = 'qa-opt ' + (idx === 0 ? 'selected' : '');
+            div.innerText = opt.text;
+            optionsBox.appendChild(div);
+        });
+        document.getElementById('dialog-ui').style.display = 'flex';
+    }
+    function updateDialogSelection() {
+        document.querySelectorAll('#dialog-options .qa-opt').forEach((el, idx) => {
+            el.classList.toggle('selected', idx === selectedOptionIndex);
+        });
+    }
+    function closeDialog() {
+        document.getElementById('dialog-ui').style.display = 'none';
+        setTimeout(() => { if(gameState==='dialog') gameState = 'playing'; }, 80);
+    }
+
+    // ================= מסך המשנה =================
+    function openMishnah(targetIdx, callback) {
+        gameState = 'mishnah';
+        mishnahTarget = targetIdx;
+        mishnahCallback = callback;
+        selMishnah = 0;
+        document.getElementById('dialog-ui').style.display = 'none';
+        document.getElementById('mishnah-q').innerText =
+            "📜 המשנה (פסחים ג׳ א׳): גלול עם ▲▼ ובחר עם A את המקטע שעונה.";
+        document.getElementById('mishnah-msg').innerText = "";
+        renderMishnah();
+        document.getElementById('mishnah-ui').style.display = 'flex';
+    }
+    function renderMishnah() {
+        const list = document.getElementById('mishnah-list');
+        list.innerHTML = '';
+        MISHNAH.forEach((seg, idx) => {
+            const div = document.createElement('div');
+            div.className = 'm-seg' + (idx === selMishnah ? ' selected' : '');
+            div.id = 'mseg-' + idx;
+            div.innerText = seg;
+            list.appendChild(div);
+        });
+        const cur = document.getElementById('mseg-' + selMishnah);
+        if (cur) cur.scrollIntoView({ block:'nearest' });
+    }
+    function checkMishnah() {
+        if (selMishnah === mishnahTarget) {
+            const cur = document.getElementById('mseg-' + selMishnah);
+            if (cur) cur.classList.add('correct');
+            setTimeout(() => {
+                document.getElementById('mishnah-ui').style.display = 'none';
+                const cb = mishnahCallback; mishnahCallback = null;
+                if (cb) cb();
+            }, 650);
+        } else {
+            document.getElementById('mishnah-msg').innerText = "לא בדיוק — נסה מקטע אחר 🔎";
+        }
+    }
+
+    // ================= תחנת פריט =================
+    function startStation(i) {
+        currentStation = i;
+        stationIntro();
+    }
+    function stationIntro() {
+        const it = ITEMS[currentStation];
+        showDialog(it.intro + "\n\n(לחץ 🎧 כדי להקשיב לקטע מהפודקאסט)", [
+            { text:"🎧 הקשב לקטע", action: () => {
+                const ok = playSegment(it.seg);
+                if (!ok) { showDialog("ℹ️ לא הועלה אודיו — אפשר להמשיך עם הטקסט.", [{text:"חזור", action: stationIntro}]); }
+                else stationIntro();
+            }},
+            { text:"המשך לשאלה ◀", action: stationGrain }
+        ]);
+    }
+    function stationGrain() {
+        stopAudio();
+        const it = ITEMS[currentStation];
+        const opts = shuffle(it.grainOpts.slice());
+        showDialog("🔎 כל אלו אולי נשמעים דומים — אבל איזה מהם באמת נמצא ב" + it.shortName + " והופך אותו לחמץ?",
+            opts.map(o => ({
+                text:o.t,
+                action: o.type === 'correct' ? stationObjection : () => grainWrong(o)
+            })));
+    }
+    function grainWrong(o) {
+        const it = ITEMS[currentStation];
+        let msg;
+        if (o.type === 'chametz')
+            msg = "שים לב: '" + o.t + "' הוא אומנם חמץ אמיתי — אבל הוא לא נמצא ב" + it.shortName + "!\nאיזה דגן באמת יש בו?";
+        else
+            msg = "'" + o.t + "' אינו מין דגן בכלל.\nחפש את הדגן שנמצא ב" + it.shortName + ".";
+        showDialog(msg, [
+            { text:"🎧 הקשב שוב", action: () => { playSegment(it.seg); stationGrain(); } },
+            { text:"נסה שוב 🔄", action: stationGrain }
+        ]);
+    }
+    function stationObjection() {
+        const it = ITEMS[currentStation];
+        showDialog("ג'ינג'י מתעקש: \"" + it.objection + "\"\n\nרק אתה יכול לעזור! פתח את המשנה ובחר את המקטע שמוכיח שזה עובר בפסח.", [
+            { text:"📜 פתח את המשנה", action: () => openMishnah(it.target, stationSolved) }
+        ]);
+    }
+    function stationSolved() {
+        const it = ITEMS[currentStation];
+        showDialog("ג'ינג'י: \"אהה... עכשיו הבנתי! " + it.name + " זה באמת חמץ.\"\n\n🔥 פיציק שורף את הפריט. הוויכוח נפתר — בזכותך!", [
+            { text:"מצוין! ◀", action: () => { markDone(currentStation); closeDialog(); } }
+        ]);
+    }
+
+    function markDone(i) {
+        if (shelves[i].done) return;
+        shelves[i].done = true;
+        shelves[i].el.classList.remove('active', 'locked');
+        shelves[i].el.classList.add('done');
+        foundCount++;
+        currentItemIndex = foundCount; // הפריט הבא בתור
+        updateShelfStates();
+        document.getElementById('points').innerText = "🔥 חמץ: " + foundCount + "/7";
+        if (foundCount === 7) {
+            yechtziel.style.display = 'block';
+            showDialog("כל שבעת הפריטים זוהו, לפי הסדר! 🎉\nיחציאל חזר עם התנור — לך אליו (►) ולחץ A.", []);
+        }
+    }
+
+    function updateShelfStates() {
+        shelves.forEach((s, i) => {
+            if (s.done) return;
+            s.el.classList.remove('active', 'locked');
+            s.el.classList.add(i === currentItemIndex ? 'active' : 'locked');
+        });
+    }
+
+    // ================= פתיחה =================
+    function startOpeningDialog() {
+        showDialog("📖 תקופת הבית השני, ערב פסח בירושלים.\nתנור המצות נשבר. יחציאל הלך להביא תנור, ואתם ופיציק תפנו את המחסן הענק לליל הסדר.", [
+            { text:"🎧 הקשב לפתיחה", action: () => {
+                const ok = playSegment(SEG.intro);
+                if(!ok) showDialog("ℹ️ לא הועלה אודיו — ממשיכים עם הטקסט.", [{text:"המשך", action: openingTask}]);
+                else startOpeningDialog();
+            }},
+            { text:"קדימה לעבודה! ◀", action: openingTask }
+        ]);
+    }
+    function openingTask() {
+        stopAudio();
+        showDialog("פיציק: \"המחסן מלא בכל מיני חביות וכדים ישנים. נעבור עליהם אחד-אחד, לפי הסדר — בדיוק כמו בסיפור.\"\n\nהפריט הבא בתור מאיר ✨. גש אליו (►◄) ולחץ A.", [
+            { text:"יוצאים למחסן! ◀", action: () => { switchArea('warehouse', "📍 המחסן של יחציאל"); } }
+        ]);
+    }
+
+    // ================= השיא =================
+    function startFinale() {
+        // בונוס: חומץ האדומי
+        showDialog("יחציאל: \"כל הכבוד! אבל רגע — סִפרתם 7 פריטים. המשנה מונה עוד אחד שלא היה במחסן! מצא אותו במשנה.\"", [
+            { text:"📜 פתח את המשנה", action: () => openMishnah(3, bonusDone) }
+        ]);
+    }
+    function bonusDone() {
+        bonusFound = true;
+        showDialog("💎 מצוין! גילית את 'חומץ האדומי' — תלמיד חכם ששם לב לכל מילה!\n\nעכשיו יחציאל מסביר את הכלל הגדול.", [
+            { text:"🎧 הקשב ליחציאל", action: () => { playSegment(SEG.klal); bonusDone(); } },
+            { text:"המשך ◀", action: () => switchArea('finale', "📍 מדורת הביעור") }
+        ]);
+    }
+    function bossQuiz1() {
+        stopAudio();
+        showDialog("חידון מסכם — שאלה 1:\nג'ינג'י עדיין ממלמל \"אבל זו רק תערובת...\". איזה משפט במשנה סוגר את הוויכוח אחת ולתמיד?", [
+            { text:"📜 פתח את המשנה", action: () => openMishnah(9, bossQuiz2) }
+        ]);
+    }
+    function bossQuiz2() {
+        document.getElementById('finale-text').innerHTML = "הכלל הגדול:<br>כל שהוא מין דגן — הרי זה עובר בפסח.";
+        showDialog("שאלה 2:\nלפי הכלל — האם משנה אם החמץ מיועד לאכילה?", [
+            { text:"כן, רק אוכל אסור", action: () => bossWrong(bossQuiz2, "טעות! הכלל לא תלוי באכילה.") },
+            { text:"לא — כל מין דגן", action: bossQuiz3 },
+            { text:"רק אם זה לחם", action: () => bossWrong(bossQuiz2, "טעות! גם בתערובת ושלא לאכילה.") },
+            { text:"רק בערב פסח", action: () => bossWrong(bossQuiz2, "טעות! זה לא תלוי בשעה.") }
+        ]);
+    }
+    function bossQuiz3() {
+        showDialog("שאלה 3 (מלכודת!):\nמצאנו דבק שעשוי מ'אורז'. האם צריך לשרוף אותו לפני פסח?", [
+            { text:"כן, לשרוף הכל", action: () => bossWrong(bossQuiz3, "חשוב שוב — האם אורז הוא מין דגן (מחמשת המינים)?") },
+            { text:"לא — אורז אינו מין דגן", action: bowlDilemma },
+            { text:"כן, כי יש בו דבק", action: () => bossWrong(bossQuiz3, "הדבק עצמו לא הבעיה — מה המקור שלו?") },
+            { text:"רק חצי ממנו", action: () => bossWrong(bossQuiz3, "הכלל ברור — תלוי אם זה מין דגן.") }
+        ]);
+    }
+    function bossWrong(retry, msg) {
+        showDialog(msg + "\n(אפשר להקשיב שוב ליחציאל)", [
+            { text:"🎧 הקשב שוב", action: () => { playSegment(SEG.klal); retry(); } },
+            { text:"נסה שוב 🔄", action: retry }
+        ]);
+    }
+
+    // ================= הסיום הרגשי =================
+    function bowlDilemma() {
+        stopAudio();
+        showDialog("ולסיום — דילמה אמיתית:\nג'ינג'י מגלה שהקערה היקרה של סבא מודבקת בבצק (חמץ!). הוא עומד מולה בדמעות.", [
+            { text:"🎧 הקשב לסיום", action: () => { playSegment(SEG.bowl); bowlDilemma(); } },
+            { text:"מה הדין? ◀", action: bowlChoice }
+        ]);
+    }
+    function bowlChoice() {
+        stopAudio();
+        showDialog("לפי מה שלמדנו — מה הדין של הקערה, ואיך אתה חושב שג'ינג'י מרגיש?", [
+            { text:"הכלל הוא כלל — גם חפץ יקר עם חמץ צריך ביעור", action: bowlEnd },
+            { text:"קשה מאוד, אבל הדין לא משתנה", action: bowlEnd }
+        ]);
+    }
+    function bowlEnd() {
+        showDialog("נכון, וזו לא שאלה קלה. גם חכמים דנו במצבים כאלה.\n💡 שווה לשאול את אבא/אמא או את הרב: מה עושים כשחפץ יקר נהיה חמץ?", [
+            { text:"סיימתי את המסע 🏆", action: winGame }
+        ]);
+    }
+    function winGame() {
+        stopAudio();
+        document.getElementById('dialog-ui').style.display = 'none';
+        const badge = bonusFound ? "🏅 תג: \"עין חדה\" + " : "";
+        document.getElementById('finale-text').innerHTML =
+            "🏆 כל הכבוד!<br>פינית את כל החמץ והצלת את ליל הסדר של יחציאל.<br>" +
+            badge + "🏅 תג: \"בקיא בכלל הגדול\"<br><br>הידע שלך פתר את כל הדילמות!";
+        document.getElementById('restart-msg').style.display = 'block';
+        gameState = 'gameover';
+    }
+
+    // ================= מעבר אזורים =================
+    function switchArea(area, title) {
+        document.querySelectorAll('.game-view').forEach(v => v.classList.remove('active'));
+        document.getElementById('area-' + area).classList.add('active');
+        document.getElementById('location-name').innerText = title;
+        currentArea = area;
+        document.getElementById('dialog-ui').style.display = 'none';
+        if (area === 'warehouse') { playerX = 40; playerY = 205; }
+        if (area === 'finale') {
+            spawnEmbers();
+            document.getElementById('finale-text').innerHTML = "יחציאל: \"בואו נשרוף את כל החמץ במדורה. אבל קודם — חידון קצר.\"";
+            setTimeout(bossQuiz1, 400);
+        }
+        gameState = 'playing';
+    }
+    function spawnEmbers() {
+        const area = document.getElementById('area-finale');
+        for (let i=0;i<10;i++){ const e=document.createElement('div'); e.className='ember';
+            e.style.left=(40+Math.random()*440)+'px'; e.style.bottom=(120+Math.random()*40)+'px';
+            e.style.animationDelay=(Math.random()*2)+'s'; area.appendChild(e);}
+    }
+
+    // ================= מדפים =================
+    function createShelves() {
+        const container = document.getElementById('shelves');
+        container.innerHTML = '';
+        shelves = [];
+        currentItemIndex = 0;
+        ITEMS.forEach((it, i) => {
+            const div = document.createElement('div');
+            div.className = 'shelf-item';
+            div.style.left = it.x + 'px';
+            div.style.top = it.y + 'px';
+            div.innerHTML = '<span class="num">' + (i+1) + '</span>' + it.emoji + '<span class="lbl">' + it.name.split(' ')[0] + '</span>';
+            container.appendChild(div);
+            shelves.push({ x: it.x, y: it.y, el: div, done: false });
+        });
+        updateShelfStates();
+    }
+
+    function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+    // ================= לולאת המשחק =================
+    function handleGround(el, minY, maxY) {
+        if (keys.left)  { playerX -= speed; el.style.transform = 'scaleX(-1)'; }
+        if (keys.right) { playerX += speed; el.style.transform = 'scaleX(1)'; }
+        if (keys.up)    playerY -= speed;
+        if (keys.down)  playerY += speed;
+        playerX = Math.max(10, Math.min(460, playerX));
+        playerY = Math.max(minY, Math.min(maxY, playerY));
+        el.style.left = playerX + 'px';
+        el.style.top = playerY + 'px';
+    }
+
+    function update() {
+        if (gameState === 'playing') {
+            if (currentArea === 'opening') {
+                handleGround(elOpen, 150, 215);
+                const d = Math.hypot(playerX - 410, playerY - 200);
+                if (d < 70) {
+                    bubbleOpen.style.left = '360px'; bubbleOpen.style.top = '170px'; bubbleOpen.style.display = 'block';
+                    if (keys.a && !prevKeys.a) startOpeningDialog();
+                } else bubbleOpen.style.display = 'none';
+            }
+            else if (currentArea === 'warehouse') {
+                handleGround(elWare, 110, 215);
+                const dY = Math.hypot(playerX - 470, playerY - 205);
+                if (foundCount === 7 && dY < 75) {
+                    // יחציאל (אחרי שכל הפריטים זוהו לפי הסדר)
+                    bubbleWare.innerText = "לחץ A";
+                    bubbleWare.style.left = '380px'; bubbleWare.style.top = '175px'; bubbleWare.style.display = 'block';
+                    if (keys.a && !prevKeys.a) startFinale();
+                } else {
+                    // רק הפריט הבא בתור פעיל. אם מתקרבים לפריט נעול — רמז.
+                    let showed = false;
+                    const active = shelves[currentItemIndex];
+                    if (active && !active.done && Math.hypot(playerX - active.x, playerY - active.y) < 55) {
+                        bubbleWare.innerText = "לחץ A";
+                        bubbleWare.style.left = (active.x - 5) + 'px';
+                        bubbleWare.style.top = (active.y - 28) + 'px';
+                        bubbleWare.style.display = 'block';
+                        showed = true;
+                        if (keys.a && !prevKeys.a) startStation(currentItemIndex);
+                    }
+                    if (!showed) {
+                        // בדיקת קרבה לפריט נעול
+                        let lockedNear = -1;
+                        shelves.forEach((s, i) => {
+                            if (s.done || i === currentItemIndex) return;
+                            if (Math.hypot(playerX - s.x, playerY - s.y) < 50) lockedNear = i;
+                        });
+                        if (lockedNear >= 0) {
+                            bubbleWare.innerText = "🔒 לפי הסדר";
+                            bubbleWare.style.left = (shelves[lockedNear].x - 8) + 'px';
+                            bubbleWare.style.top = (shelves[lockedNear].y - 28) + 'px';
+                            bubbleWare.style.display = 'block';
+                        } else bubbleWare.style.display = 'none';
+                    }
+                }
+            }
+        }
+        else if (gameState === 'dialog' && currentOptions.length > 0) {
+            if (keys.right && !prevKeys.right) selectedOptionIndex = (selectedOptionIndex + 1) % currentOptions.length;
+            if (keys.left && !prevKeys.left) selectedOptionIndex = (selectedOptionIndex - 1 + currentOptions.length) % currentOptions.length;
+            if (keys.down && !prevKeys.down) selectedOptionIndex = Math.min(selectedOptionIndex + 2, currentOptions.length - 1);
+            if (keys.up && !prevKeys.up) selectedOptionIndex = Math.max(selectedOptionIndex - 2, 0);
+            updateDialogSelection();
+            if (keys.a && !prevKeys.a) currentOptions[selectedOptionIndex].action();
+        }
+        else if (gameState === 'mishnah') {
+            if (keys.down && !prevKeys.down) { selMishnah = Math.min(selMishnah + 1, MISHNAH.length - 1); renderMishnah(); }
+            if (keys.up && !prevKeys.up) { selMishnah = Math.max(selMishnah - 1, 0); renderMishnah(); }
+            if (keys.a && !prevKeys.a) checkMishnah();
+        }
+        else if (gameState === 'gameover') {
+            if (keys.a && !prevKeys.a) location.reload();
+        }
+
+        prevKeys.a = keys.a; prevKeys.right = keys.right; prevKeys.left = keys.left; prevKeys.up = keys.up; prevKeys.down = keys.down;
+    }
+    function gameLoop(){ update(); requestAnimationFrame(gameLoop); }
+
+    // ================= קלט =================
+    document.querySelectorAll('.d-btn').forEach(btn => {
+        btn.addEventListener('mousedown', () => keys[btn.dataset.key] = true);
+        btn.addEventListener('mouseup', () => keys[btn.dataset.key] = false);
+        btn.addEventListener('mouseleave', () => keys[btn.dataset.key] = false);
+        btn.addEventListener('touchstart', e => { e.preventDefault(); keys[btn.dataset.key] = true; });
+        btn.addEventListener('touchend', e => { e.preventDefault(); keys[btn.dataset.key] = false; });
+    });
+    document.querySelectorAll('.action-btn').forEach(btn => {
+        btn.addEventListener('mousedown', () => { keys[btn.dataset.key] = true; btn.classList.add('pressed'); });
+        btn.addEventListener('mouseup', () => { keys[btn.dataset.key] = false; btn.classList.remove('pressed'); });
+        btn.addEventListener('mouseleave', () => { keys[btn.dataset.key] = false; btn.classList.remove('pressed'); });
+        btn.addEventListener('touchstart', e => { e.preventDefault(); keys[btn.dataset.key] = true; btn.classList.add('pressed'); });
+        btn.addEventListener('touchend', e => { e.preventDefault(); keys[btn.dataset.key] = false; btn.classList.remove('pressed'); });
+    });
+    window.addEventListener('keydown', e => {
+        if (e.key === 'ArrowUp') keys.up = true;
+        if (e.key === 'ArrowDown') keys.down = true;
+        if (e.key === 'ArrowLeft') keys.left = true;
+        if (e.key === 'ArrowRight') keys.right = true;
+        if (['z','Z','a','Enter',' '].includes(e.key)) keys.a = true;
+        if (['x','X','b'].includes(e.key)) keys.b = true;
+    });
+    window.addEventListener('keyup', e => {
+        if (e.key === 'ArrowUp') keys.up = false;
+        if (e.key === 'ArrowDown') keys.down = false;
+        if (e.key === 'ArrowLeft') keys.left = false;
+        if (e.key === 'ArrowRight') keys.right = false;
+        if (['z','Z','a','Enter',' '].includes(e.key)) keys.a = false;
+        if (['x','X','b'].includes(e.key)) keys.b = false;
+    });
+
+    gameLoop();
+    </script>
+</body>
+</html>

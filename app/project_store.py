@@ -62,6 +62,43 @@ def _find_mp3_by_id(mishna_id: str) -> Path | None:
     return None
 
 
+def _create_minute_slots(total_duration: float, images_per_minute: int, srt_path: str = None) -> list[dict]:
+    """יוצר משבצת אחת לכל דקה עם 4 sub-slots (סצנות) ריקים."""
+    from .srt_parser import seconds_to_timestamp
+    
+    slots = []
+    num_minutes = int(total_duration / 60) + (1 if total_duration % 60 > 0 else 0)
+    
+    for minute_idx in range(num_minutes):
+        minute_start = minute_idx * 60
+        minute_end = min((minute_idx + 1) * 60, total_duration)
+        
+        # יצירת 4 sub-slots ריקים לכל דקה (ימולאו ע״י Claude)
+        scenes = []
+        for scene_idx in range(images_per_minute):
+            scenes.append({
+                "scene_id": f"scene-{scene_idx + 1}",
+                "start": "",  # Claude ימלא את התזמון המדויק
+                "end": "",
+                "mishna_text": "",
+                "prompt": "",
+                "references": [],
+                "duration": 0.0,
+                "image_path": None,
+                "status": "proposed",
+            })
+        
+        slots.append({
+            "id": f"minute-{minute_idx + 1:03d}",
+            "minute_index": minute_idx,
+            "start": seconds_to_timestamp(minute_start),
+            "end": seconds_to_timestamp(minute_end),
+            "duration": minute_end - minute_start,
+            "scenes": scenes,
+            "status": "proposed",
+        })
+    
+    return slots
 
 
 def studio_dir(mishna_id: str) -> Path:
@@ -80,8 +117,11 @@ def load_or_init_project(mishna_id: str) -> dict:
     if p.exists():
         with open(p, "r", encoding="utf-8") as f:
             project = json.load(f)
-        # אם הפרויקט קיים אבל ריק ממשבצות — מאתחל אותן מה-SRT
-        if not project.get("slots") and project.get("srt_path"):
+        
+        # אם יש משבצות ישנות (לפי שורות ולא לפי דקות), נמחק אותן וניצור מחדש
+        has_old_slots = project.get("slots") and not project["slots"][0].get("scenes")
+        
+        if (not project.get("slots") or has_old_slots) and project.get("srt_path"):
             srt = ROOT / project["srt_path"]
             if srt.exists():
                 from .srt_parser import parse_srt, seconds_to_timestamp

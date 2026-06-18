@@ -1,0 +1,21 @@
+file 'C:/Users/MyPC/Desktop/code/kfar_hamishna/data/studio/pesachim_3_1_custom/Generated Image June 18, 2026 - 9_57PM (1).jpg'
+duration 38.625
+file 'C:/Users/MyPC/Desktop/code/kfar_hamishna/data/studio/pesachim_3_1_custom/Generated Image June 18, 2026 - 9_57PM (2).jpg'
+duration 38.625
+file 'C:/Users/MyPC/Desktop/code/kfar_hamishna/data/studio/pesachim_3_1_custom/Generated Image June 18, 2026 - 9_57PM (3).jpg'
+duration 38.625
+file 'C:/Users/MyPC/Desktop/code/kfar_hamishna/data/studio/pesachim_3_1_custom/Generated Image June 18, 2026 - 9_57PM (4).jpg'
+duration 38.625
+file 'C:/Users/MyPC/Desktop/code/kfar_hamishna/data/studio/pesachim_3_1_custom/Generated Image June 18, 2026 - 9_57PM.jpg'
+duration 38.625
+file 'C:/Users/MyPC/Desktop/code/kfar_hamishna/data/studio/pesachim_3_1_custom/Generated Image June 18, 2026 - 9_58PM (1).jpg'
+duration 38.625
+file 'C:/Users/MyPC/Desktop/code/kfar_hamishna/data/studio/pesachim_3_1_custom/Generated Image June 18, 2026 - 9_58PM (2).jpg'
+duration 38.625
+file 'C:/Users/MyPC/Desktop/code/kfar_hamishna/data/studio/pesachim_3_1_custom/Generated Image June 18, 2026 - 9_58PM (3).jpg'
+duration 38.625
+file 'C:/Users/MyPC/Desktop/code/kfar_hamishna/data/studio/pesachim_3_1_custom/Generated Image June 18, 2026 - 9_58PM (4).jpg'
+duration 38.625
+file 'C:/Users/MyPC/Desktop/code/kfar_hamishna/data/studio/pesachim_3_1_custom/Generated Image June 18, 2026 - 9_58PM.jpg'
+duration 38.625
+file 'C:/Users/MyPC/Desktop/code/kfar_hamishna/data/studio/pesachim_3_1_custom/Generated Image June 18, 2026 - 9_58PM.jpg'

@@ -180,8 +180,8 @@
             "scene-perek1-mishna3"
           ],
           "duration": 52.321,
-          "image_path": null,
-          "status": "proposed"
+          "image_path": "full-project-slot_scene-11.png",
+          "status": "image_ready"
         },
         {
           "scene_id": "scene-12",
@@ -196,8 +196,8 @@
             "scene-perek1-mishna3"
           ],
           "duration": 40.919,
-          "image_path": null,
-          "status": "proposed"
+          "image_path": "full-project-slot_scene-12.png",
+          "status": "image_ready"
         },
         {
           "scene_id": "scene-13",
@@ -212,8 +212,8 @@
             "scene-perek1-mishna3"
           ],
           "duration": 46.341,
-          "image_path": null,
-          "status": "proposed"
+          "image_path": "full-project-slot_scene-13.png",
+          "status": "image_ready"
         },
         {
           "scene_id": "scene-14",
@@ -229,8 +229,8 @@
             "scene-perek1-mishna3"
           ],
           "duration": 58.32,
-          "image_path": null,
-          "status": "proposed"
+          "image_path": "full-project-slot_scene-14.png",
+          "status": "image_ready"
         },
         {
           "scene_id": "scene-15",

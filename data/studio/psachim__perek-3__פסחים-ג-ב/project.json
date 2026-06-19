@@ -262,8 +262,8 @@
             "scene-perek1-mishna3"
           ],
           "duration": 36.079,
-          "image_path": null,
-          "status": "proposed"
+          "image_path": "full-project-slot_scene-16.png",
+          "status": "image_ready"
         },
         {
           "scene_id": "scene-17",
@@ -278,8 +278,8 @@
             "scene-perek1-mishna1"
           ],
           "duration": 39.24,
-          "image_path": null,
-          "status": "proposed"
+          "image_path": "full-project-slot_scene-17.png",
+          "status": "image_ready"
         }
       ],
       "status": "proposed"

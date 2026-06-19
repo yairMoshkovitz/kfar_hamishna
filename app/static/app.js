@@ -136,11 +136,14 @@ async function loadProject() {
     if (ipm) ipm.value = project.images_per_minute || 4;
     
     const audioContainer = $("#audioUploadContainer");
+    const audioLabel = $("#audioStatusLabel");
     if (!project.audio_path) {
-      if (audioContainer) audioContainer.style.display = "flex";
+      if (audioContainer) audioContainer.classList.add("missing-audio");
+      if (audioLabel) audioLabel.textContent = "חסר קובץ אודיו!";
       audio.src = "";
     } else {
-      if (audioContainer) audioContainer.style.display = "none";
+      if (audioContainer) audioContainer.classList.remove("missing-audio");
+      if (audioLabel) audioLabel.textContent = "שמע קיים ✓";
       audio.src = `/api/project/${encodeURIComponent(currentMishna)}/audio?t=${Date.now()}`;
     }
     
@@ -477,7 +480,12 @@ if (uabBtn) {
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       project.audio_path = data.audio_path;
-      $("#audioUploadContainer").style.display = "none";
+      
+      const audioContainer = $("#audioUploadContainer");
+      const audioLabel = $("#audioStatusLabel");
+      if (audioContainer) audioContainer.classList.remove("missing-audio");
+      if (audioLabel) audioLabel.textContent = "שמע קיים ✓";
+      
       audio.src = `/api/project/${encodeURIComponent(currentMishna)}/audio?t=${Date.now()}`;
       setStatus("אודיו הועלה בהצלחה ✓", "ok");
     } catch(e) {
@@ -709,13 +717,62 @@ async function runGenerateAll() {
 }
 
 async function runBuild() {
-  setStatus("מרכיב...");
-  await api(`/api/project/${encodeURIComponent(currentMishna)}/build`, { method: "POST" });
+  if (!project || !project.audio_path) {
+    alert("חובה להעלות קובץ אודיו לפני הרכבת הוידאו!");
+    setStatus("חסר קובץ אודיו", "err");
+    return;
+  }
+  
   const vPanel = $("#videoPanel");
-  if (vPanel) vPanel.classList.remove("hidden");
+  const buildLogs = $("#buildLogs");
   const rVid = $("#resultVideo");
-  if (rVid) rVid.src = `/api/project/${encodeURIComponent(currentMishna)}/video?t=${Date.now()}`;
-  setStatus("הוידאו הורכב ✓", "ok");
+  
+  if (vPanel) vPanel.classList.remove("hidden");
+  if (buildLogs) buildLogs.innerHTML = "מתחיל הרכבה...\n";
+  if (rVid) rVid.classList.add("hidden");
+
+  setStatus("מרכיב...");
+  
+  try {
+    const res = await fetch(`/api/project/${encodeURIComponent(currentMishna)}/build`, {
+      method: "POST"
+    });
+    
+    if (!res.ok || !res.body) throw new Error("הרכבת וידאו נכשלה");
+    
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      const text = decoder.decode(value, { stream: true });
+      if (buildLogs) {
+        buildLogs.innerHTML += text;
+        buildLogs.scrollTop = buildLogs.scrollHeight;
+      }
+    }
+    
+    if (rVid) {
+      const videoUrl = `/api/project/${encodeURIComponent(currentMishna)}/video?t=${Date.now()}`;
+      rVid.src = videoUrl;
+      $("#videoResultContainer").classList.remove("hidden");
+      
+      const downloadBtn = $("#downloadVideoBtn");
+      if (downloadBtn) {
+        downloadBtn.href = videoUrl;
+      }
+      
+      const pathLabel = $("#videoSavedPath");
+      if (pathLabel) {
+        pathLabel.textContent = `הקובץ נשמר בנתיב: data/studio/${currentMishna}/output.mp4`;
+      }
+    }
+    setStatus("הוידאו הורכב ✓", "ok");
+  } catch (e) {
+    setStatus("שגיאה בהרכבת וידאו: " + e.message, "err");
+    if (buildLogs) buildLogs.innerHTML += `\nERROR: ${e.message}`;
+  }
 }
 
 const nextBtn = $("#nextStepBtn");

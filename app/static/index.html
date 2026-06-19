@@ -19,9 +19,9 @@
       <button id="showPromptBtn" class="secondary">צפה בפרומפט (Claude)</button>
       <button id="proposeBtn" class="primary">הרץ הצעת Claude</button>
       <button id="generateAllBtn">צור כל התמונות</button>
-      <div id="audioUploadContainer" style="display: none; align-items: center; gap: 8px;">
-        <label for="projectAudio" style="font-size: 12px; font-weight: bold; color: var(--accent);">חסר קובץ אודיו!</label>
-        <input type="file" id="projectAudio" accept="audio/mpeg, audio/mp3, audio/wav" style="font-size: 12px; width: 160px;"/>
+      <div id="audioUploadContainer" class="audio-container">
+        <label id="audioStatusLabel" for="projectAudio">קובץ שמע</label>
+        <input type="file" id="projectAudio" accept="audio/mpeg, audio/mp3, audio/wav" />
         <button id="uploadAudioBtn" class="secondary">העלה</button>
       </div>
       <button id="buildBtn" class="accent">הרכב וידאו</button>
@@ -119,8 +119,15 @@
   </div>
 
   <div id="videoPanel" class="video-panel hidden">
-    <h2>וידאו מורכב</h2>
-    <video id="resultVideo" controls></video>
+    <h2>הרכבת וידאו</h2>
+    <div id="buildLogs" class="build-logs"></div>
+    <div id="videoResultContainer" class="hidden">
+      <p id="videoSavedPath" style="font-size: 13px; color: var(--ok); margin-bottom: 10px;"></p>
+      <video id="resultVideo" controls style="width: 100%; max-width: 800px; border-radius: 8px;"></video>
+      <div style="margin-top: 15px;">
+        <a id="downloadVideoBtn" class="button primary" download>הורד וידאו (MP4)</a>
+      </div>
+    </div>
   </div>
 
   <!-- בורר רפרנסים (מודאל) -->

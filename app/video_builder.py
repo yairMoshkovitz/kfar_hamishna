@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import os
 from pathlib import Path
 
 from .srt_parser import timestamp_to_seconds
@@ -18,11 +19,9 @@ def _ffmpeg() -> str:
     return exe
 
 
-def build_video(project: dict, audio_abs: Path, out_path: Path) -> Path:
+def build_video_stream(project: dict, audio_abs: Path, out_path: Path):
     """בונה וידאו מהסצנות שיש להן תמונה, מסונכרן לאודיו.
-
-    עובר על כל משבצת דקה, ובתוכה על כל הסצנות.
-    משך כל תמונה = duration של הסצנה (מתוך התזמון המדויק של Claude).
+    מחזיר Generator שמזרים את הלוגים של ffmpeg.
     """
     minute_slots = project.get("slots", [])
     
@@ -41,7 +40,8 @@ def build_video(project: dict, audio_abs: Path, out_path: Path) -> Path:
     all_scenes.sort(key=lambda s: timestamp_to_seconds(s["start"]) if s["start"] else 0)
     
     if not all_scenes:
-        raise RuntimeError("אין סצנות עם תמונה — צור ואשר תמונות לפני הרכבה")
+        yield "Error: אין סצנות עם תמונה — צור ואשר תמונות לפני הרכבה\n"
+        return
 
     studio = out_path.parent
     list_file = studio / "_concat.txt"
@@ -50,7 +50,6 @@ def build_video(project: dict, audio_abs: Path, out_path: Path) -> Path:
     for scene in all_scenes:
         img = (studio / Path(scene["image_path"]).name)
         if not img.exists():
-            # ייתכן ש-image_path הוא נתיב יחסי אחר
             img = Path(scene["image_path"])
         dur = max(0.5, scene["duration"])
         posix = str(img.resolve()).replace("\\", "/")
@@ -85,7 +84,32 @@ def build_video(project: dict, audio_abs: Path, out_path: Path) -> Path:
         "-shortest",
         str(out_path),
     ]
-    proc = subprocess.run(cmd, capture_output=True, text=True)
-    if proc.returncode != 0:
-        raise RuntimeError(f"ffmpeg נכשל:\n{proc.stderr[-2000:]}")
+
+    yield f"Starting FFMPEG with command: {' '.join(cmd)}\n"
+
+    # מריץ את התהליך ומאזין ל-stderr (שם ffmpeg מוציא לוגים)
+    process = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT, # ffmpeg logs to stderr by default
+        text=True,
+        bufsize=1,
+        universal_newlines=True
+    )
+
+    if process.stdout:
+        for line in process.stdout:
+            yield line
+
+    process.wait()
+    if process.returncode == 0:
+        yield "SUCCESS: וידאו הורכב בהצלחה\n"
+    else:
+        yield f"ERROR: ffmpeg נכשל עם קוד {process.returncode}\n"
+
+
+def build_video(project: dict, audio_abs: Path, out_path: Path) -> Path:
+    """גרסה סינכרונית לשימוש קודם אם נדרש (עוטפת את ה-stream)"""
+    for line in build_video_stream(project, audio_abs, out_path):
+        print(line, end="")
     return out_path

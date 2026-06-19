@@ -16,14 +16,22 @@ MODEL = os.environ.get("GEMINI_IMAGE_MODEL", "gemini-3-pro-image-preview")
 
 
 def _client() -> genai.Client:
+    """יוצר לקוח Gemini. משתמש ב-proxy רק אם מוגדר GEMINI_PROXY בסביבה."""
     # ב-google-genai ה-Client לא מקבל http_client ישירות ב-Constructor.
     # אנחנו מגדירים את ה-proxy דרך משתני סביבה שהספרייה מכבדת (דרך httpx פנימי).
-    proxy_url = "socks5h://127.0.0.1:1080"
-    os.environ["HTTP_PROXY"] = proxy_url
-    os.environ["HTTPS_PROXY"] = proxy_url
+    proxy_url = os.environ.get("GEMINI_PROXY")
+    
+    if proxy_url:
+        print(f"[Gemini] משתמש ב-proxy: {proxy_url}")
+        os.environ["HTTP_PROXY"] = proxy_url
+        os.environ["HTTPS_PROXY"] = proxy_url
+    else:
+        # ניקוי משתני סביבה של פרוקסי אם אינם מוגדרים (למקרה ששאריות נשארו)
+        os.environ.pop("HTTP_PROXY", None)
+        os.environ.pop("HTTPS_PROXY", None)
     
     # מכיוון שאי אפשר לבטל SSL VERIFY בקלות בתוך ה-SDK החדש,
-    # ננסה להשתמש ב-config אם קיים, או להסתמך על זה שה-Proxy מטפל בזה.
+    # נסתמך על זה שה-Proxy או השרת מטפלים בזה.
     return genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
 

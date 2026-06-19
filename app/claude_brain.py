@@ -74,16 +74,27 @@ SYSTEM_PROMPT = (
 
 
 def _client() -> anthropic.Anthropic:
+    """יוצר לקוח Anthropic. משתמש ב-proxy רק אם מוגדר CLAUDE_PROXY בסביבה."""
     import httpx
-    # יציאה דרך SOCKS5 proxy כמו במחולל תמונות
-    proxy_url = "socks5h://127.0.0.1:1080"
     
-    # Bypass SSL verification locally in case of certificate issues
-    http_client = httpx.Client(
-        verify=False,
-        proxy=proxy_url
-    )
-    return anthropic.Anthropic(http_client=http_client)  # קורא ANTHROPIC_API_KEY מהסביבה
+    proxy_url = os.environ.get("CLAUDE_PROXY")
+    
+    if proxy_url:
+        print(f"[Claude] משתמש ב-proxy: {proxy_url}")
+        # Bypass SSL verification locally in case of certificate issues when using proxy
+        http_client = httpx.Client(
+            verify=False,
+            proxy=proxy_url
+        )
+        return anthropic.Anthropic(http_client=http_client)
+    
+    return anthropic.Anthropic()  # קורא ANTHROPIC_API_KEY מהסביבה ומשתמש בחיבור ישיר
+#C:\Users\MyPC>ssh -D 1080 -C -q -N -p 2233 root@tamleluya.com
+#PS C:\Users\MyPC\Desktop\code\kfar_hamishna> open -a "Google Chrome" --args --proxy-server="socks5://127.0.0.1:1080"                                                                                                                                                    
+
+
+
+
 
 
 def preview_prompt(srt_path: str, images_per_minute: float, references: dict, plot_path: str | None = None, director_instructions: str = "") -> str:

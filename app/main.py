@@ -382,13 +382,18 @@ def build(mishna_id: str):
     project = project_store.load_or_init_project(mishna_id)
     if not project.get("audio_path"):
         raise HTTPException(status_code=400, detail="חסר קובץ אודיו להרכבת הוידאו")
+    
     audio = _abs(project["audio_path"])
     out = project_store.studio_dir(mishna_id) / "output.mp4"
-    try:
-        video_builder.build_video(project, audio, out)
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=str(e))
-    return {"video_path": str(out.relative_to(ROOT)).replace("\\", "/"), "ok": True}
+    
+    def generate_build_logs():
+        try:
+            for line in video_builder.build_video_stream(project, audio, out):
+                yield line
+        except Exception as e:
+            yield f"CRITICAL ERROR: {str(e)}\n"
+
+    return StreamingResponse(generate_build_logs(), media_type="text/plain")
 
 
 @app.get("/api/project/{mishna_id}/video")

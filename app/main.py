@@ -404,5 +404,11 @@ def get_video(mishna_id: str):
     return FileResponse(str(out), media_type="video/mp4")
 
 
+# ---------- הגשת קבצי דאטה (תמונות, וידאו וכו') ----------
+# חשוב בשרת (כמו Railway) שבו התיקייה data אינה חלק מה-StaticFiles של האפליקציה
+data_dir = Path(__file__).resolve().parent.parent / "data"
+if data_dir.exists():
+    app.mount("/data", StaticFiles(directory=str(data_dir)), name="data")
+
 # ---------- הגשת ה-UI הסטטי ----------
 app.mount("/", StaticFiles(directory=str(Path(__file__).resolve().parent / "static"), html=True), name="static")

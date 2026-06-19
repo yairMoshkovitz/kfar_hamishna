@@ -237,7 +237,10 @@ def add_reference(filename: str, content: bytes, name: str, description: str, ca
         "file": filename,
         "name": name,
         "description": description,
-        "category": category
+        "category": category,
+        "age": None,
+        "height": None,
+        "items": []
     }
     
     refs.setdefault("references", []).append(new_ref)

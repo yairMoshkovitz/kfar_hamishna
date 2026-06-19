@@ -9,7 +9,6 @@ let references = [];
 let refModalMinuteId = null;
 let refModalSceneId = null;
 
-// סדר השלבים של ה-Wizard
 const STEPS = ["transcription", "content", "images", "video"];
 let currentStep = "transcription";
 const STEP_LABELS = {
@@ -34,28 +33,23 @@ function setStep(step) {
   }
 }
 
-// קביעת השלב ההתחלתי לפי הנתונים הקיימים בפרויקט
 function inferStep() {
   const minuteSlots = (project && project.slots) || [];
   if (!minuteSlots.length) return "transcription";
-  
   let allHaveImages = true;
   let allHavePrompts = true;
-  
   for (const minute of minuteSlots) {
     for (const scene of minute.scenes || []) {
       if (!scene.image_path) allHaveImages = false;
       if (!scene.prompt || !scene.prompt.trim()) allHavePrompts = false;
     }
   }
-  
   if (allHaveImages) return "video";
   if (allHavePrompts) return "images";
   return "transcription";
 }
 
 const audio = new Audio();
-let audioStopTimer = null;
 
 function setStatus(msg, kind = "") {
   const el = $("#status");
@@ -85,8 +79,133 @@ function renderGlobalRefs() {
     const item = document.createElement("div");
     item.className = "ref-list-item";
     item.innerHTML = `<img src="/api/reference-image/${encodeURIComponent(r.id)}" alt=""/><div>${r.name}</div>`;
+    item.onclick = () => { renderRefsTable(); $("#manageRefsModal").classList.remove("hidden"); };
     container.appendChild(item);
   });
+}
+
+function renderRefsTable() {
+    const tbody = $("#refsTableBody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    const renderRowFields = (r, isProposed = false) => {
+        const idAttr = isProposed ? `data-temp-id="${r.id}"` : `data-id="${r.id}"`;
+        let fieldsHtml = "";
+        if (r.category === "characters") {
+            fieldsHtml = `
+                <td><input type="text" value="${r.age || ""}" class="ref-edit-age" style="width: 50px;" ${idAttr} placeholder="גיל"/></td>
+                <td><input type="text" value="${r.height || ""}" class="ref-edit-height" style="width: 80px;" ${idAttr} placeholder="גובה"/></td>
+            `;
+        } else if (r.category === "style") {
+            fieldsHtml = `
+                <td><input type="text" value="${r.mood || ""}" class="ref-edit-mood" style="width: 80px;" ${idAttr} placeholder="אווירה"/></td>
+                <td><input type="text" value="${r.time_of_day || ""}" class="ref-edit-time" style="width: 80px;" ${idAttr} placeholder="שעה"/></td>
+            `;
+        } else if (r.category === "items") {
+            fieldsHtml = `
+                <td><input type="text" value="${r.material || ""}" class="ref-edit-material" style="width: 80px;" ${idAttr} placeholder="חומר"/></td>
+                <td><input type="text" value="${r.condition || ""}" class="ref-edit-condition" style="width: 80px;" ${idAttr} placeholder="מצב"/></td>
+            `;
+        } else { fieldsHtml = `<td></td><td></td>`; }
+
+        return `
+            <td>${isProposed ? '<div class="no-image-placeholder">❓</div>' : `<img src="/api/reference-image/${encodeURIComponent(r.id)}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;"/>`}</td>
+            <td><input type="text" value="${r.name || ""}" class="ref-edit-name" ${idAttr}/></td>
+            <td><textarea class="ref-edit-desc" ${idAttr}>${r.description || ""}</textarea></td>
+            ${fieldsHtml}
+            <td>
+                <select class="ref-edit-cat" ${idAttr}>
+                    <option value="characters" ${r.category === "characters" ? "selected" : ""}>דמויות</option>
+                    <option value="style" ${r.category === "style" ? "selected" : ""}>סגנון</option>
+                    <option value="items" ${r.category === "items" ? "selected" : ""}>חפצים</option>
+                </select>
+            </td>
+            <td>
+                <button class="${isProposed ? 'create-ref-btn' : 'save-ref-row-btn'}" ${idAttr}>${isProposed ? '🎨' : '💾'}</button>
+            </td>
+        `;
+    };
+
+    references.forEach(r => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = renderRowFields(r, false);
+        tbody.appendChild(tr);
+    });
+
+    if (project && project.slots) {
+        project.slots.forEach(slot => {
+            (slot.new_references || []).forEach(nr => {
+                const tr = document.createElement("tr");
+                tr.className = "proposed-ref-row";
+                tr.innerHTML = renderRowFields(nr, true);
+                tbody.appendChild(tr);
+            });
+        });
+    }
+
+    $$(".save-ref-row-btn").forEach(btn => {
+        btn.onclick = async () => {
+            const tr = btn.closest("tr");
+            const id = btn.dataset.id;
+            const body = {
+                name: $(".ref-edit-name", tr).value,
+                description: $(".ref-edit-desc", tr).value,
+                age: $(".ref-edit-age", tr)?.value,
+                height: $(".ref-edit-height", tr)?.value,
+                mood: $(".ref-edit-mood", tr)?.value,
+                time_of_day: $(".ref-edit-time", tr)?.value,
+                material: $(".ref-edit-material", tr)?.value,
+                condition: $(".ref-edit-condition", tr)?.value,
+                category: $(".ref-edit-cat", tr).value
+            };
+            try {
+                await api(`/api/references/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(body) });
+                const ref = references.find(x => x.id === id);
+                if (ref) Object.assign(ref, body);
+                setStatus("רפרנס עודכן ✓", "ok");
+                renderGlobalRefs();
+            } catch (e) { setStatus("שגיאה: " + e.message, "err"); }
+        };
+    });
+
+    $$(".create-ref-btn").forEach(btn => {
+        btn.onclick = async () => {
+            const tr = btn.closest("tr");
+            const tempId = btn.dataset.tempId;
+            const nr = {
+                name: $(".ref-edit-name", tr).value,
+                description: $(".ref-edit-desc", tr).value,
+                age: $(".ref-edit-age", tr)?.value,
+                height: $(".ref-edit-height", tr)?.value,
+                mood: $(".ref-edit-mood", tr)?.value,
+                time_of_day: $(".ref-edit-time", tr)?.value,
+                material: $(".ref-edit-material", tr)?.value,
+                condition: $(".ref-edit-condition", tr)?.value,
+                category: $(".ref-edit-cat", tr).value
+            };
+            setStatus(`מייצר רפרנס ל-${nr.name}...`);
+            btn.disabled = true;
+            try {
+                const res = await api(`/api/project/${encodeURIComponent(currentMishna)}/create-reference-image`, { method: "POST", body: JSON.stringify(nr) });
+                references.push(res);
+                project.slots.forEach(slot => { if (slot.new_references) slot.new_references = slot.new_references.filter(x => x.id !== tempId); });
+                renderGlobalRefs();
+                renderRefsTable();
+                setStatus(`רפרנס ${nr.name} נוצר ✓`, "ok");
+            } catch (e) { setStatus("שגיאה: " + e.message, "err"); btn.disabled = false; }
+        };
+    });
+
+    $$(".ref-edit-cat").forEach(sel => {
+        sel.onchange = () => {
+            const id = sel.dataset.id || sel.dataset.tempId;
+            const list = sel.dataset.tempId ? project.slots.flatMap(s => s.new_references || []) : references;
+            const ref = list.find(x => x.id === id);
+            if (ref) ref.category = sel.value;
+            renderRefsTable();
+        };
+    });
 }
 
 async function init() {
@@ -94,11 +213,8 @@ async function init() {
     const refsData = await api("/api/references");
     references = (refsData && refsData.references) || [];
     renderGlobalRefs();
-    
     await loadMishnayotList();
-  } catch (e) {
-    setStatus("שגיאת אתחול: " + e.message, "err");
-  }
+  } catch (e) { setStatus("שגיאת אתחול: " + e.message, "err"); }
 }
 
 async function loadMishnayotList(selectId = null) {
@@ -106,169 +222,110 @@ async function loadMishnayotList(selectId = null) {
   const sel = $("#mishnaSelect");
   if (!sel) return;
   sel.innerHTML = "";
-
   list.forEach((m) => {
     const opt = document.createElement("option");
     opt.value = m.mishna_id;
     opt.textContent = m.title + (m.has_srt ? "" : " (אין SRT)") + (m.has_project ? " ✓" : "");
     sel.appendChild(opt);
   });
-  
-  if (selectId) {
-    sel.value = selectId;
-    currentMishna = selectId;
-    await loadProject();
-  } else if (list.length) {
-    currentMishna = list[0].mishna_id;
-    await loadProject();
-  }
+  if (selectId) { sel.value = selectId; currentMishna = selectId; await loadProject(); }
+  else if (list.length) { currentMishna = list[0].mishna_id; await loadProject(); }
 }
 
 async function loadProject() {
   const sel = $("#mishnaSelect");
   currentMishna = (sel && sel.value) || currentMishna;
   if (!currentMishna) return;
-  
   setStatus("טוען...");
   try {
     project = await api(`/api/project/${encodeURIComponent(currentMishna)}`);
-    const ipm = $("#ipm");
-    if (ipm) ipm.value = project.images_per_minute || 4;
-    
+    if ($("#ipm")) $("#ipm").value = project.images_per_minute || 4;
     const audioContainer = $("#audioUploadContainer");
-    const audioLabel = $("#audioStatusLabel");
     if (!project.audio_path) {
       if (audioContainer) audioContainer.classList.add("missing-audio");
-      if (audioLabel) audioLabel.textContent = "חסר קובץ אודיו!";
+      if ($("#audioStatusLabel")) $("#audioStatusLabel").textContent = "חסר קובץ אודיו!";
       audio.src = "";
     } else {
       if (audioContainer) audioContainer.classList.remove("missing-audio");
-      if (audioLabel) audioLabel.textContent = "שמע קיים ✓";
+      if ($("#audioStatusLabel")) $("#audioStatusLabel").textContent = "שמע קיים ✓";
       audio.src = `/api/project/${encodeURIComponent(currentMishna)}/audio?t=${Date.now()}`;
     }
-    
-    // Load director instructions if any
-    const dirText = $("#directorInstructionsText");
-    if (dirText) dirText.value = project.director_instructions || "";
-    
+    if ($("#directorInstructionsText")) $("#directorInstructionsText").value = project.director_instructions || "";
+    if ($("#styleDescriptionText")) $("#styleDescriptionText").value = project.style_description || "";
+
+    const srtContainer = $("#srtUploadContainer");
+    if (!project.srt_path) {
+      if (srtContainer) srtContainer.classList.add("missing-audio");
+      if ($("#srtStatusLabel")) $("#srtStatusLabel").textContent = "חסר קובץ SRT!";
+    } else {
+      if (srtContainer) srtContainer.classList.remove("missing-audio");
+      if ($("#srtStatusLabel")) $("#srtStatusLabel").textContent = "SRT קיים ✓";
+    }
+
     renderTimeline();
     setStep(inferStep());
-    
     const totalScenes = (project.slots || []).reduce((sum, m) => sum + (m.scenes || []).length, 0);
     setStatus(`${project.slots.length} דקות, ${totalScenes} סצנות`, "ok");
-  } catch (e) {
-    setStatus("שגיאה בטעינה: " + e.message, "err");
-  }
+  } catch (e) { setStatus("שגיאה בטעינה: " + e.message, "err"); }
 }
 
 function renderTimeline() {
   const tel = $("#timeline");
   if (!tel) return;
   tel.innerHTML = "";
-  
   if (!project || !project.slots || project.slots.length === 0) {
     tel.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--muted);">אין סצנות עדיין.</div>';
     return;
   }
-  
   const minuteTemplate = $("#minuteCardTemplate");
-  if (!minuteTemplate) return;
-  
   project.slots.forEach((minuteSlot) => {
     const minuteNode = minuteTemplate.content.cloneNode(true);
     const minuteRoot = $(".minute-card", minuteNode);
-    
-    const title = $(".minute-title", minuteRoot);
-    // If it's the "full project" slot, title it accordingly
-    if (title) {
-        if (minuteSlot.id === "full-project-slot") {
-            title.textContent = `כל הסצנות`;
-        } else {
-            title.textContent = `דקה ${minuteSlot.minute_index + 1}`;
-        }
+    if ($(".minute-title", minuteRoot)) {
+        $(".minute-title", minuteRoot).textContent = minuteSlot.id === "full-project-slot" ? `כל הסצנות` : `דקה ${minuteSlot.minute_index + 1}`;
     }
-    
-    const timeRange = $(".minute-time-range", minuteRoot);
-    if (timeRange) timeRange.textContent = `${minuteSlot.start} → ${minuteSlot.end}`;
-    
+    if ($(".minute-time-range", minuteRoot)) $(".minute-time-range", minuteRoot).textContent = `${minuteSlot.start} → ${minuteSlot.end}`;
     const scenesGrid = $(".scenes-grid", minuteRoot);
     if (scenesGrid) {
       (minuteSlot.scenes || []).forEach((scene, idx) => {
         scenesGrid.appendChild(renderScene(minuteSlot.id, scene, idx + 1));
       });
     }
-    
     tel.appendChild(minuteNode);
   });
 }
 
 function renderScene(minuteId, scene, sceneNumber) {
   const tpl = $("#sceneTemplate");
-  if (!tpl) return document.createElement("div");
   const node = tpl.content.cloneNode(true);
   const root = $(".scene-card", node);
   root.dataset.minuteId = minuteId;
   root.dataset.sceneId = scene.scene_id;
-
-  const numberEl = $(".scene-number", root);
-  if (numberEl) numberEl.textContent = `סצנה ${sceneNumber}`;
-  
-  const timeEl = $(".scene-time", root);
-  if (timeEl) timeEl.textContent = scene.start && scene.end ? `${scene.start} → ${scene.end}` : "";
-  
+  $(".scene-number", root).textContent = `סצנה ${sceneNumber}`;
+  $(".scene-time", root).textContent = scene.start && scene.end ? `${scene.start} → ${scene.end}` : "";
   const badge = $(".scene-status-badge", root);
-  if (badge) {
-    badge.textContent = statusLabel(scene.status);
-    badge.className = "scene-status-badge " + scene.status;
-  }
-
-  const mishnaText = $(".mishna-text", root);
-  if (mishnaText) {
-    mishnaText.value = scene.mishna_text || "";
-    mishnaText.onchange = () => saveScene(minuteId, scene.scene_id, root);
-  }
-  
-  const promptText = $(".prompt-text", root);
-  if (promptText) {
-    promptText.value = scene.prompt || "";
-    promptText.onchange = () => saveScene(minuteId, scene.scene_id, root);
-  }
-  
-  const chipsContainer = $(".ref-chips-container", root);
-  if (chipsContainer) renderChips(chipsContainer, scene.references || []);
-
+  badge.textContent = statusLabel(scene.status);
+  badge.className = "scene-status-badge " + scene.status;
+  $(".mishna-text", root).value = scene.mishna_text || "";
+  $(".mishna-text", root).onchange = () => saveScene(minuteId, scene.scene_id, root);
+  $(".prompt-text", root).value = scene.prompt || "";
+  $(".prompt-text", root).onchange = () => saveScene(minuteId, scene.scene_id, root);
+  renderChips($(".ref-chips-container", root), scene.references || []);
   const img = $(".scene-image", root);
-  if (img && scene.image_path) {
+  if (scene.image_path) {
     img.src = `/api/project/${encodeURIComponent(currentMishna)}/minute/${minuteId}/scene/${scene.scene_id}/image?t=${Date.now()}`;
     img.classList.add("has");
   }
-  
-  const aiBtn = $(".ai-prompt-btn", root);
-  if (aiBtn) aiBtn.onclick = () => askClaudeSingle(minuteId, scene.scene_id, root);
-
-  const saveBtn = $(".save-scene-btn", root);
-  if (saveBtn) saveBtn.onclick = () => saveScene(minuteId, scene.scene_id, root);
-  
-  const editRefsBtn = $(".edit-refs-btn", root);
-  if (editRefsBtn) editRefsBtn.onclick = () => openRefModal(minuteId, scene.scene_id);
-  
-  const genBtn = $(".generate-btn", root);
-  if (genBtn) genBtn.onclick = () => generateScene(minuteId, scene.scene_id);
-  
-  const approveBtn = $(".approve-btn", root);
-  if (approveBtn) approveBtn.onclick = () => approveScene(minuteId, scene.scene_id);
-
+  $(".ai-prompt-btn", root).onclick = () => askClaudeSingle(minuteId, scene.scene_id, root);
+  $(".save-scene-btn", root).onclick = () => saveScene(minuteId, scene.scene_id, root);
+  $(".edit-refs-btn", root).onclick = () => openRefModal(minuteId, scene.scene_id);
+  $(".generate-btn", root).onclick = () => generateScene(minuteId, scene.scene_id);
+  $(".approve-btn", root).onclick = () => approveScene(minuteId, scene.scene_id);
   return node;
 }
 
 function statusLabel(s) {
-  return {
-    proposed: "מוצע",
-    approved: "מאושר",
-    needs_regen: "ליצירה מחדש",
-    image_ready: "תמונה מוכנה",
-    image_approved: "מאושר ✓",
-  }[s] || s;
+  return { proposed: "מוצע", approved: "מאושר", needs_regen: "ליצירה מחדש", image_ready: "תמונה מוכנה", image_approved: "מאושר ✓" }[s] || s;
 }
 
 function renderChips(container, refs) {
@@ -287,132 +344,79 @@ function renderChips(container, refs) {
   });
 }
 
-function findMinuteSlot(minuteId) {
-  return (project.slots || []).find((m) => m.id === minuteId);
-}
-
+function findMinuteSlot(minuteId) { return (project.slots || []).find((m) => m.id === minuteId); }
 function findScene(minuteId, sceneId) {
   const minute = findMinuteSlot(minuteId);
-  if (!minute) return null;
-  return (minute.scenes || []).find((s) => s.scene_id === sceneId);
+  return minute ? (minute.scenes || []).find((s) => s.scene_id === sceneId) : null;
 }
-
-function findSceneCard(minuteId, sceneId) {
-  return $(`.scene-card[data-minute-id="${minuteId}"][data-scene-id="${sceneId}"]`);
-}
+function findSceneCard(minuteId, sceneId) { return $(`.scene-card[data-minute-id="${minuteId}"][data-scene-id="${sceneId}"]`); }
 
 async function askClaudeSingle(minuteId, sceneId, root) {
-  const instruction = prompt("הכנס הנחיה ל-Claude לתיקון ה-Prompt (או השאר ריק ליצירה מחדש רגילה):");
-  if (instruction === null) return; // cancelled
-  
+  const instruction = prompt("הכנס הנחיה ל-Claude:");
+  if (instruction === null) return;
   setStatus(`מבקש מ-Claude עבור סצנה ${sceneId}...`);
   try {
-    const updated = await api(
-      `/api/project/${encodeURIComponent(currentMishna)}/minute/${minuteId}/scene/${sceneId}/repropose`,
-      { method: "POST", body: JSON.stringify({ instruction }) }
-    );
-    
+    const updated = await api(`/api/project/${encodeURIComponent(currentMishna)}/minute/${minuteId}/scene/${sceneId}/repropose`, { method: "POST", body: JSON.stringify({ instruction }) });
     const scene = findScene(minuteId, sceneId);
     if (scene) Object.assign(scene, updated);
-    
-    const promptText = $(".prompt-text", root);
-    if (promptText) promptText.value = updated.prompt || "";
-    
-    const cCont = $(".ref-chips-container", root);
-    if (cCont) renderChips(cCont, updated.references || []);
-    
+    $(".prompt-text", root).value = updated.prompt || "";
+    renderChips($(".ref-chips-container", root), updated.references || []);
     const badge = $(".scene-status-badge", root);
-    if (badge) {
-      badge.textContent = statusLabel(updated.status);
-      badge.className = "scene-status-badge " + updated.status;
-    }
-    
+    badge.textContent = statusLabel(updated.status);
+    badge.className = "scene-status-badge " + updated.status;
     setStatus("עודכן בהצלחה מ-Claude ✓", "ok");
-  } catch (e) {
-    setStatus("שגיאת Claude: " + e.message, "err");
-  }
+  } catch (e) { setStatus("שגיאת Claude: " + e.message, "err"); }
 }
 
 async function saveScene(minuteId, sceneId, root) {
-  const scene = findScene(minuteId, sceneId);
-  if (!scene) return;
-  
-  const body = {
-    mishna_text: $(".mishna-text", root).value,
-    prompt: $(".prompt-text", root).value,
-  };
-  
+  const body = { mishna_text: $(".mishna-text", root).value, prompt: $(".prompt-text", root).value };
   try {
-    const updated = await api(
-      `/api/project/${encodeURIComponent(currentMishna)}/minute/${minuteId}/scene/${sceneId}`,
-      { method: "PUT", body: JSON.stringify(body) }
-    );
-    Object.assign(scene, updated);
+    const updated = await api(`/api/project/${encodeURIComponent(currentMishna)}/minute/${minuteId}/scene/${sceneId}`, { method: "PUT", body: JSON.stringify(body) });
+    const scene = findScene(minuteId, sceneId);
+    if (scene) Object.assign(scene, updated);
     setStatus("נשמר ✓", "ok");
-  } catch (e) {
-    setStatus("שגיאה בשמירה: " + e.message, "err");
-  }
+  } catch (e) { setStatus("שגיאה בשמירה: " + e.message, "err"); }
 }
 
 async function generateScene(minuteId, sceneId) {
   setStatus(`יוצר תמונה ל-${sceneId}...`);
   try {
-    const updated = await api(
-      `/api/project/${encodeURIComponent(currentMishna)}/minute/${minuteId}/scene/${sceneId}/generate`,
-      { method: "POST", body: JSON.stringify({}) }
-    );
+    const updated = await api(`/api/project/${encodeURIComponent(currentMishna)}/minute/${minuteId}/scene/${sceneId}/generate`, { method: "POST", body: JSON.stringify({}) });
     const scene = findScene(minuteId, sceneId);
     if (scene) Object.assign(scene, updated);
-    
     const card = findSceneCard(minuteId, sceneId);
     if (card) {
       const img = $(".scene-image", card);
-      if (img) {
-        img.src = `/api/project/${encodeURIComponent(currentMishna)}/minute/${minuteId}/scene/${sceneId}/image?t=${Date.now()}`;
-        img.classList.add("has");
-      }
+      img.src = `/api/project/${encodeURIComponent(currentMishna)}/minute/${minuteId}/scene/${sceneId}/image?t=${Date.now()}`;
+      img.classList.add("has");
       const badge = $(".scene-status-badge", card);
-      if (badge) {
-        badge.textContent = statusLabel(updated.status);
-        badge.className = "scene-status-badge " + updated.status;
-      }
+      badge.textContent = statusLabel(updated.status);
+      badge.className = "scene-status-badge " + updated.status;
     }
     setStatus("תמונה נוצרה ✓", "ok");
-  } catch (e) {
-    setStatus("שגיאה: " + e.message, "err");
-  }
+  } catch (e) { setStatus("שגיאה: " + e.message, "err"); }
 }
 
 async function approveScene(minuteId, sceneId) {
   try {
-    const updated = await api(
-      `/api/project/${encodeURIComponent(currentMishna)}/minute/${minuteId}/scene/${sceneId}/approve`,
-      { method: "POST", body: JSON.stringify({}) }
-    );
+    const updated = await api(`/api/project/${encodeURIComponent(currentMishna)}/minute/${minuteId}/scene/${sceneId}/approve`, { method: "POST", body: JSON.stringify({}) });
     const scene = findScene(minuteId, sceneId);
     if (scene) Object.assign(scene, updated);
-    
     const card = findSceneCard(minuteId, sceneId);
     if (card) {
       const badge = $(".scene-status-badge", card);
-      if (badge) {
-        badge.textContent = statusLabel(updated.status);
-        badge.className = "scene-status-badge " + updated.status;
-      }
+      badge.textContent = statusLabel(updated.status);
+      badge.className = "scene-status-badge " + updated.status;
     }
     setStatus("אושר ✓", "ok");
-  } catch (e) {
-    setStatus("שגיאה: " + e.message, "err");
-  }
+  } catch (e) { setStatus("שגיאה: " + e.message, "err"); }
 }
 
 function openRefModal(minuteId, sceneId) {
-  refModalMinuteId = minuteId;
-  refModalSceneId = sceneId;
+  refModalMinuteId = minuteId; refModalSceneId = sceneId;
   const scene = findScene(minuteId, sceneId);
   const selected = new Set(scene.references || []);
   const grid = $("#refGrid");
-  if (!grid) return;
   grid.innerHTML = "";
   references.forEach((r) => {
     const item = document.createElement("div");
@@ -422,253 +426,242 @@ function openRefModal(minuteId, sceneId) {
     item.onclick = () => item.classList.toggle("sel");
     grid.appendChild(item);
   });
-  if ($("#refModal")) $("#refModal").classList.remove("hidden");
+  $("#refModal").classList.remove("hidden");
 }
 
-const rsBtn = $("#refSave");
-if (rsBtn) {
-  rsBtn.onclick = async () => {
-    const chosen = $$("#refGrid .ref-item.sel").map((el) => el.dataset.id);
-    try {
-      const updated = await api(
-        `/api/project/${encodeURIComponent(currentMishna)}/minute/${refModalMinuteId}/scene/${refModalSceneId}`,
-        { method: "PUT", body: JSON.stringify({ references: chosen }) }
-      );
-      const scene = findScene(refModalMinuteId, refModalSceneId);
-      if (scene) Object.assign(scene, updated);
-      
-      const card = findSceneCard(refModalMinuteId, refModalSceneId);
-      if (card) {
-        const cCont = $(".ref-chips-container", card);
-        if (cCont) renderChips(cCont, updated.references || []);
-      }
-      setStatus("רפרנסים עודכנו ✓", "ok");
-    } catch (e) {
-      setStatus("שגיאה: " + e.message, "err");
-    }
-    if ($("#refModal")) $("#refModal").classList.add("hidden");
-  };
-}
+$("#refSave").onclick = async () => {
+  const chosen = $$("#refGrid .ref-item.sel").map((el) => el.dataset.id);
+  try {
+    const updated = await api(`/api/project/${encodeURIComponent(currentMishna)}/minute/${refModalMinuteId}/scene/${refModalSceneId}`, { method: "PUT", body: JSON.stringify({ references: chosen }) });
+    const scene = findScene(refModalMinuteId, refModalSceneId);
+    if (scene) Object.assign(scene, updated);
+    const card = findSceneCard(refModalMinuteId, refModalSceneId);
+    if (card) renderChips($(".ref-chips-container", card), updated.references || []);
+    setStatus("רפרנסים עודכנו ✓", "ok");
+  } catch (e) { setStatus("שגיאה: " + e.message, "err"); }
+  $("#refModal").classList.add("hidden");
+};
+$("#refCancel").onclick = () => $("#refModal").classList.add("hidden");
 
-const rcBtn = $("#refCancel");
-if (rcBtn) {
-  rcBtn.onclick = () => {
-    if ($("#refModal")) $("#refModal").classList.add("hidden");
-  };
-}
+$("#mishnaSelect").onchange = loadProject;
 
-const mSelect = $("#mishnaSelect");
-if (mSelect) mSelect.onchange = loadProject;
-
-// העלאת אודיו
-const uabBtn = $("#uploadAudioBtn");
-if (uabBtn) {
-  uabBtn.onclick = async () => {
+$("#uploadAudioBtn").onclick = async () => {
     const fileInput = $("#projectAudio");
-    if (!fileInput.files.length) {
-      alert("יש לבחור קובץ אודיו");
-      return;
-    }
+    if (!fileInput.files.length) return alert("יש לבחור קובץ אודיו");
     const fd = new FormData();
     fd.append("file", fileInput.files[0]);
     setStatus("מעלה אודיו...");
     try {
-      const res = await fetch(`/api/project/${encodeURIComponent(currentMishna)}/audio`, {
-        method: "POST",
-        body: fd
-      });
-      if (!res.ok) throw new Error(await res.text());
+      const res = await fetch(`/api/project/${encodeURIComponent(currentMishna)}/audio`, { method: "POST", body: fd });
       const data = await res.json();
       project.audio_path = data.audio_path;
-      
-      const audioContainer = $("#audioUploadContainer");
-      const audioLabel = $("#audioStatusLabel");
-      if (audioContainer) audioContainer.classList.remove("missing-audio");
-      if (audioLabel) audioLabel.textContent = "שמע קיים ✓";
-      
+      $("#audioUploadContainer").classList.remove("missing-audio");
+      $("#audioStatusLabel").textContent = "שמע קיים ✓";
       audio.src = `/api/project/${encodeURIComponent(currentMishna)}/audio?t=${Date.now()}`;
       setStatus("אודיו הועלה בהצלחה ✓", "ok");
-    } catch(e) {
-      setStatus("שגיאה בהעלאת אודיו: " + e.message, "err");
-    }
-  };
-}
-
-// הזרמת הצעת Claude
-// הוראות במאי ופרומפט
-$("#directorInstructionsBtn").onclick = () => {
-  $("#directorModal").classList.remove("hidden");
+    } catch(e) { setStatus("שגיאה בהעלאת אודיו: " + e.message, "err"); }
 };
+
+$("#uploadSrtBtn").onclick = async () => {
+    const fileInput = $("#projectSrt");
+    if (!fileInput.files.length) return alert("יש לבחור קובץ SRT");
+    const fd = new FormData();
+    fd.append("file", fileInput.files[0]);
+    setStatus("מעלה SRT...");
+    try {
+      const res = await fetch(`/api/project/${encodeURIComponent(currentMishna)}/srt`, { method: "POST", body: fd });
+      const data = await res.json();
+      project.srt_path = data.srt_path;
+      $("#srtUploadContainer").classList.remove("missing-audio");
+      $("#srtStatusLabel").textContent = "SRT קיים ✓";
+      setStatus("SRT הועלה בהצלחה ✓", "ok");
+      // טעינה מחדש של הפרויקט כדי לראות אם נוצרו סלוטים
+      await loadProject();
+    } catch(e) { setStatus("שגיאה בהעלאת SRT: " + e.message, "err"); }
+};
+
+$("#directorInstructionsBtn").onclick = () => $("#directorModal").classList.remove("hidden");
 $("#dirCancel").onclick = () => $("#directorModal").classList.add("hidden");
 $("#dirSave").onclick = async () => {
   const txt = $("#directorInstructionsText").value.trim();
-  setStatus("שומר הוראות במאי...");
   try {
-    await api(`/api/project/${encodeURIComponent(currentMishna)}`, {
-      method: "PUT",
-      body: JSON.stringify({ director_instructions: txt })
-    });
+    await api(`/api/project/${encodeURIComponent(currentMishna)}`, { method: "PUT", body: JSON.stringify({ director_instructions: txt }) });
     project.director_instructions = txt;
     $("#directorModal").classList.add("hidden");
     setStatus("הוראות נשמרו ✓", "ok");
-  } catch(e) {
-    setStatus("שגיאה: " + e.message, "err");
-  }
+  } catch(e) { setStatus("שגיאה: " + e.message, "err"); }
+};
+
+$("#styleSettingsBtn").onclick = () => {
+    const grid = $("#styleRefGrid");
+    grid.innerHTML = "";
+    const selected = new Set(project.style_references || []);
+    references.forEach(r => {
+        const item = document.createElement("div");
+        item.className = "ref-item" + (selected.has(r.id) ? " sel" : "");
+        item.dataset.id = r.id;
+        item.innerHTML = `<img src="/api/reference-image/${encodeURIComponent(r.id)}" alt=""/><div>${r.name}</div>`;
+        item.onclick = () => item.classList.toggle("sel");
+        grid.appendChild(item);
+    });
+    $("#styleModal").classList.remove("hidden");
+};
+$("#styleCancel").onclick = () => $("#styleModal").classList.add("hidden");
+$("#styleSave").onclick = async () => {
+    const txt = $("#styleDescriptionText").value.trim();
+    const refs = $$("#styleRefGrid .ref-item.sel").map(el => el.dataset.id);
+    try {
+        await api(`/api/project/${encodeURIComponent(currentMishna)}`, { method: "PUT", body: JSON.stringify({ style_description: txt, style_references: refs }) });
+        project.style_description = txt;
+        project.style_references = refs;
+        $("#styleModal").classList.add("hidden");
+        setStatus("הגדרות סגנון נשמרו ✓", "ok");
+    } catch(e) { setStatus("שגיאה: " + e.message, "err"); }
 };
 
 $("#showPromptBtn").onclick = async () => {
-  setStatus("טוען פרומפט לדוגמה...");
   try {
     const res = await api(`/api/project/${encodeURIComponent(currentMishna)}/prompt-preview`);
     $("#previewPromptText").value = res.prompt;
     $("#showPromptModal").classList.remove("hidden");
-    setStatus("פרומפט נטען ✓", "ok");
-  } catch(e) {
-    setStatus("שגיאה: " + e.message, "err");
-  }
+  } catch(e) { setStatus("שגיאה: " + e.message, "err"); }
 };
 
 $("#savePromptBtn").onclick = async () => {
   const customPrompt = $("#previewPromptText").value.trim();
   $("#showPromptModal").classList.add("hidden");
-  
-  const ipmInput = $("#ipm");
-  const ipm = parseFloat(ipmInput ? ipmInput.value : 4) || 4;
-
-  setStatus("Claude ממלא סצנות עם הפרומפט המעודכן...");
-  try {
-    const res = await fetch(`/api/project/${encodeURIComponent(currentMishna)}/propose-stream`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ images_per_minute: ipm, custom_prompt: customPrompt }),
-    });
-    if (!res.ok || !res.body) throw new Error(res.statusText || "stream נכשל");
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = "";
-    let filled = 0;
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buf += decoder.decode(value, { stream: true });
-      let nl;
-      while ((nl = buf.indexOf("\n")) >= 0) {
-        const line = buf.slice(0, nl).trim();
-        buf = buf.slice(nl + 1);
-        if (!line) continue;
-        let ev;
-        try { ev = JSON.parse(line); } catch (e) { continue; }
-        if (ev.type === "minute") {
-          const minute = ev.minute;
-          const existing = findMinuteSlot(minute.id);
-          if (existing) {
-            Object.assign(existing, minute);
-          } else {
-              project.slots = [minute];
-          }
-          filled++;
-          setStatus(`הסצנות נוצרו! מעדכן תצוגה...`);
-        }
-      }
-    }
-    renderTimeline();
-    setStatus("Claude סיים למלא את הסצנות ✓", "ok");
-  } catch (e) {
-    setStatus("שגיאה: " + e.message, "err");
-  }
+  await runProposeStream(customPrompt);
 };
-
 $("#closePromptBtn").onclick = () => $("#showPromptModal").classList.add("hidden");
 
-// פרויקט חדש
 $("#newProjectBtn").onclick = () => {
-  $("#npId").value = "";
-  $("#npPlot").value = "";
-  $("#npSrt").value = "";
+  $("#npId").value = ""; $("#npPlot").value = ""; $("#npSrt").value = "";
   $("#newProjectModal").classList.remove("hidden");
 };
 $("#npCancel").onclick = () => $("#newProjectModal").classList.add("hidden");
 $("#npSave").onclick = async () => {
-  const mishna_id = $("#npId").value.trim();
-  const plot = $("#npPlot").value.trim();
-  const srt_text = $("#npSrt").value.trim();
-  const ipm = parseInt($("#npIpm").value) || 4;
-  
-  if (!mishna_id || !srt_text) {
-    alert("חובה להזין מזהה פרויקט ו-SRT");
-    return;
-  }
-  
-  setStatus("יוצר פרויקט חדש...");
+  const body = { mishna_id: $("#npId").value.trim(), plot: $("#npPlot").value.trim(), srt_text: $("#npSrt").value.trim(), images_per_minute: parseInt($("#npIpm").value) || 4 };
+  if (!body.mishna_id || !body.srt_text) return alert("חובה להזין מזהה פרויקט ו-SRT");
   try {
-    await api("/api/project/create", {
-      method: "POST",
-      body: JSON.stringify({ mishna_id, plot, srt_text, images_per_minute: ipm })
-    });
+    await api("/api/project/create", { method: "POST", body: JSON.stringify(body) });
     $("#newProjectModal").classList.add("hidden");
-    setStatus("פרויקט נוצר בהצלחה ✓", "ok");
-    await loadMishnayotList(mishna_id);
-  } catch(e) {
-    setStatus("שגיאה ביצירת פרויקט: " + e.message, "err");
-  }
+    await loadMishnayotList(body.mishna_id);
+  } catch(e) { setStatus("שגיאה: " + e.message, "err"); }
 };
 
-// רפרנס חדש
+function renderUrExtraFields() {
+    const cat = $("#urCat").value;
+    const container = $("#urExtraFields");
+    container.innerHTML = "";
+    if (cat === "characters") {
+        container.innerHTML = `
+            <label>גיל: <input type="text" id="urAge" placeholder="למשל: 40"></label>
+            <label>גובה: <input type="text" id="urHeight" placeholder="גבוה ורזה"></label>
+        `;
+    } else if (cat === "style") {
+        container.innerHTML = `
+            <label>אווירה: <input type="text" id="urMood" placeholder="מואר, עתיק"></label>
+            <label>שעה: <input type="text" id="urTime" placeholder="צהריים"></label>
+        `;
+    } else if (cat === "items") {
+        container.innerHTML = `
+            <label>חומר: <input type="text" id="urMaterial" placeholder="זהב, חרס"></label>
+            <label>מצב: <input type="text" id="urCondition" placeholder="חדש, שבור"></label>
+        `;
+    }
+}
+$("#urCat").onchange = renderUrExtraFields;
+
 $("#uploadRefBtn").onclick = () => {
-  $("#urFile").value = "";
-  $("#urName").value = "";
-  $("#urDesc").value = "";
-  $("#uploadRefModal").classList.remove("hidden");
+    $("#urFile").value = ""; $("#urName").value = ""; $("#urDesc").value = "";
+    $("#urCat").value = "characters";
+    renderUrExtraFields();
+    $("#uploadRefModal").classList.remove("hidden");
 };
-$("#urCancel").onclick = () => $("#uploadRefModal").classList.add("hidden");
 $("#urSave").onclick = async () => {
   const fileInput = $("#urFile");
-  if (!fileInput.files.length) {
-    alert("יש לבחור קובץ תמונה");
-    return;
-  }
-  
+  if (!fileInput.files.length) return alert("יש לבחור קובץ תמונה");
+  const fd = new FormData();
+  fd.append("file", fileInput.files[0]);
+  fd.append("name", $("#urName").value.trim());
+  fd.append("description", $("#urDesc").value.trim());
+  fd.append("category", $("#urCat").value);
+  try {
+    const res = await fetch("/api/references", { method: "POST", body: fd });
+    const newRef = await res.json();
+    references.push(newRef);
+    renderGlobalRefs();
+    $("#uploadRefModal").classList.add("hidden");
+  } catch(e) { setStatus("שגיאה: " + e.message, "err"); }
+};
+$("#urSave").onclick = async () => {
+  const fileInput = $("#urFile");
+  if (!fileInput.files.length) return alert("יש לבחור קובץ תמונה");
   const fd = new FormData();
   fd.append("file", fileInput.files[0]);
   fd.append("name", $("#urName").value.trim());
   fd.append("description", $("#urDesc").value.trim());
   fd.append("category", $("#urCat").value);
   
-  setStatus("מעלה רפרנס...");
+  const body = {
+      age: $("#urAge")?.value,
+      height: $("#urHeight")?.value,
+      mood: $("#urMood")?.value,
+      time_of_day: $("#urTime")?.value,
+      material: $("#urMaterial")?.value,
+      condition: $("#urCondition")?.value,
+  };
+
   try {
-    const res = await fetch("/api/references", {
-      method: "POST",
-      body: fd
-    });
-    if (!res.ok) throw new Error(await res.text());
+    const res = await fetch("/api/references", { method: "POST", body: fd });
+    const newRef = await res.json();
     
+    // Update extra fields via PUT (since POST only takes FormData currently)
+    await api(`/api/references/${encodeURIComponent(newRef.id)}`, { method: "PUT", body: JSON.stringify(body) });
+    Object.assign(newRef, body);
+
+    references.push(newRef);
+    renderGlobalRefs();
+    $("#uploadRefModal").classList.add("hidden");
+  } catch(e) { setStatus("שגיאה: " + e.message, "err"); }
+};
+$("#manageRefsBtn").onclick = () => { renderRefsTable(); $("#manageRefsModal").classList.remove("hidden"); };
+$("#closeRefsModalBtn").onclick = () => $("#manageRefsModal").classList.add("hidden");
+$("#urCancel").onclick = () => $("#uploadRefModal").classList.add("hidden");
+$("#urSave").onclick = async () => {
+  const fileInput = $("#urFile");
+  if (!fileInput.files.length) return alert("יש לבחור קובץ תמונה");
+  const fd = new FormData();
+  fd.append("file", fileInput.files[0]);
+  fd.append("name", $("#urName").value.trim());
+  fd.append("description", $("#urDesc").value.trim());
+  fd.append("category", $("#urCat").value);
+  try {
+    const res = await fetch("/api/references", { method: "POST", body: fd });
     const newRef = await res.json();
     references.push(newRef);
     renderGlobalRefs();
     $("#uploadRefModal").classList.add("hidden");
-    setStatus("רפרנס הועלה ✓", "ok");
-  } catch(e) {
-    setStatus("שגיאה בהעלאת רפרנס: " + e.message, "err");
-  }
+  } catch(e) { setStatus("שגיאה: " + e.message, "err"); }
 };
 
-async function runProposeStream() {
-  const ipmInput = $("#ipm");
-  const ipm = parseFloat(ipmInput ? ipmInput.value : 4) || 4;
-
+async function runProposeStream(customPrompt = null) {
+  const ipm = parseFloat($("#ipm").value) || 4;
+  const mode = $("#workMode").value;
   setStatus("Claude ממלא סצנות...");
   const res = await fetch(`/api/project/${encodeURIComponent(currentMishna)}/propose-stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ images_per_minute: ipm }),
+    body: JSON.stringify({ 
+        images_per_minute: ipm, 
+        custom_prompt: customPrompt,
+        style_description: project.style_description,
+        style_references: project.style_references
+    }),
   });
-  if (!res.ok || !res.body) throw new Error(res.statusText || "stream נכשל");
-
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buf = "";
-  let filled = 0;
   while (true) {
     const { value, done } = await reader.read();
     if (done) break;
@@ -678,148 +671,72 @@ async function runProposeStream() {
       const line = buf.slice(0, nl).trim();
       buf = buf.slice(nl + 1);
       if (!line) continue;
-      let ev;
-      try { ev = JSON.parse(line); } catch (e) { continue; }
+      const ev = JSON.parse(line);
       if (ev.type === "minute") {
         const minute = ev.minute;
         const existing = findMinuteSlot(minute.id);
-        if (existing) {
-          Object.assign(existing, minute);
-        } else {
-            // New slot (like "full-project-slot")
-            project.slots = [minute];
-        }
-        filled++;
-        setStatus(`הסצנות נוצרו! מעדכן תצוגה...`);
+        if (existing) Object.assign(existing, minute);
+        else project.slots = [minute];
       }
     }
   }
-  // רנדר מחדש אחרי שכל הדקות התמלאו
   renderTimeline();
-  setStatus("Claude סיים למלא את הסצנות ✓", "ok");
+  let hasNewRefs = false;
+  project.slots.forEach(s => { if (s.new_references && s.new_references.length > 0) hasNewRefs = true; });
+  if (hasNewRefs && (mode === "semi" || mode === "manual")) {
+      setStatus("Claude הציע רפרנסים חדשים. נא לאשר אותם.", "ok");
+      renderRefsTable();
+      $("#manageRefsModal").classList.remove("hidden");
+  } else {
+      setStatus("Claude סיים ✓", "ok");
+      if (mode === "auto") runGenerateAll();
+  }
 }
 
 async function runGenerateAll() {
-  let count = 0;
+  const mode = $("#workMode").value;
   for (const minute of project.slots || []) {
     for (const scene of minute.scenes || []) {
       if (!scene.image_path) {
-        try {
           await generateScene(minute.id, scene.scene_id);
-          count++;
-        } catch (e) {
-          console.error(e);
-        }
+          if (mode === "manual") { setStatus(`תמונה ל-${scene.scene_id} נוצרה. ממתין לאישור...`, "ok"); return; }
       }
     }
   }
-  setStatus(`נוצרו ${count} תמונות ✓`, "ok");
 }
 
 async function runBuild() {
-  if (!project || !project.audio_path) {
-    alert("חובה להעלות קובץ אודיו לפני הרכבת הוידאו!");
-    setStatus("חסר קובץ אודיו", "err");
-    return;
+  if (!project.audio_path) return alert("חובה להעלות אודיו!");
+  $("#videoPanel").classList.remove("hidden");
+  $("#buildLogs").innerHTML = "מתחיל הרכבה...\n";
+  const res = await fetch(`/api/project/${encodeURIComponent(currentMishna)}/build`, { method: "POST" });
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    $("#buildLogs").innerHTML += decoder.decode(value, { stream: true });
+    $("#buildLogs").scrollTop = $("#buildLogs").scrollHeight;
   }
-  
-  const vPanel = $("#videoPanel");
-  const buildLogs = $("#buildLogs");
-  const rVid = $("#resultVideo");
-  
-  if (vPanel) vPanel.classList.remove("hidden");
-  if (buildLogs) buildLogs.innerHTML = "מתחיל הרכבה...\n";
-  if (rVid) rVid.classList.add("hidden");
-
-  setStatus("מרכיב...");
-  
-  try {
-    const res = await fetch(`/api/project/${encodeURIComponent(currentMishna)}/build`, {
-      method: "POST"
-    });
-    
-    if (!res.ok || !res.body) throw new Error("הרכבת וידאו נכשלה");
-    
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      const text = decoder.decode(value, { stream: true });
-      if (buildLogs) {
-        buildLogs.innerHTML += text;
-        buildLogs.scrollTop = buildLogs.scrollHeight;
-      }
-    }
-    
-    if (rVid) {
-      const videoUrl = `/api/project/${encodeURIComponent(currentMishna)}/video?t=${Date.now()}`;
-      rVid.src = videoUrl;
-      $("#videoResultContainer").classList.remove("hidden");
-      
-      const downloadBtn = $("#downloadVideoBtn");
-      if (downloadBtn) {
-        downloadBtn.href = videoUrl;
-      }
-      
-      const pathLabel = $("#videoSavedPath");
-      if (pathLabel) {
-        pathLabel.textContent = `הקובץ נשמר בנתיב: data/studio/${currentMishna}/output.mp4`;
-      }
-    }
-    setStatus("הוידאו הורכב ✓", "ok");
-  } catch (e) {
-    setStatus("שגיאה בהרכבת וידאו: " + e.message, "err");
-    if (buildLogs) buildLogs.innerHTML += `\nERROR: ${e.message}`;
-  }
+  const videoUrl = `/api/project/${encodeURIComponent(currentMishna)}/video?t=${Date.now()}`;
+  $("#resultVideo").src = videoUrl;
+  $("#videoResultContainer").classList.remove("hidden");
+  $("#downloadVideoBtn").href = videoUrl;
+  setStatus("הוידאו הורכב ✓", "ok");
 }
 
-const nextBtn = $("#nextStepBtn");
-if (nextBtn) {
-  nextBtn.onclick = async () => {
-    nextBtn.disabled = true;
+$("#nextStepBtn").onclick = async () => {
+    $("#nextStepBtn").disabled = true;
     try {
-      if (currentStep === "transcription") {
-        await runProposeStream();
-        setStep("content");
-      } else if (currentStep === "content") {
-        await runGenerateAll();
-        setStep("images");
-      } else if (currentStep === "images") {
-        await runBuild();
-        setStep("video");
-      }
-    } catch (e) {
-      setStatus("שגיאה: " + e.message, "err");
-    } finally {
-      if (currentStep !== "video") nextBtn.disabled = false;
-    }
-  };
-}
+      if (currentStep === "transcription") { await runProposeStream(); setStep("content"); }
+      else if (currentStep === "content") { await runGenerateAll(); setStep("images"); }
+      else if (currentStep === "images") { await runBuild(); setStep("video"); }
+    } catch (e) { setStatus("שגיאה: " + e.message, "err"); }
+    finally { if (currentStep !== "video") $("#nextStepBtn").disabled = false; }
+};
 
-const pBtn = $("#proposeBtn");
-if (pBtn) {
-  pBtn.onclick = async () => {
-    try { await runProposeStream(); setStep("content"); }
-    catch (e) { setStatus("שגיאה: " + e.message, "err"); }
-  };
-}
-
-const gaBtn = $("#generateAllBtn");
-if (gaBtn) {
-  gaBtn.onclick = async () => {
-    try { await runGenerateAll(); setStep("images"); }
-    catch (e) { setStatus("שגיאה: " + e.message, "err"); }
-  };
-}
-
-const bBtn = $("#buildBtn");
-if (bBtn) {
-  bBtn.onclick = async () => {
-    try { await runBuild(); setStep("video"); }
-    catch (e) { setStatus("שגיאה: " + e.message, "err"); }
-  };
-}
+$("#proposeBtn").onclick = () => runProposeStream();
+$("#generateAllBtn").onclick = () => runGenerateAll();
+$("#buildBtn").onclick = () => runBuild();
 
 window.addEventListener("DOMContentLoaded", init);

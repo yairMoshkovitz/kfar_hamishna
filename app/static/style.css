@@ -417,6 +417,42 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   max-width: 900px;
 }
 
+.modal-box.x-large {
+  max-width: 1200px;
+  width: 95%;
+}
+
+.table-container {
+  overflow-x: auto;
+  margin-top: 20px;
+  max-height: 60vh;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+th, td {
+  padding: 12px;
+  text-align: right;
+  border-bottom: 1px solid var(--line);
+}
+
+th {
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+}
+
+.ref-extra-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
 .modal-box label {
   display: flex;
   flex-direction: column;

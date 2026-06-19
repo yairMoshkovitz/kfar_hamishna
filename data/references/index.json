@@ -5,44 +5,56 @@
     {
       "id": "chars-old-generation-1",
       "file": "דמויות כפר המשנה הדור הישן (1).jpeg",
-      "name": "דמויות הדור הישן 1",
-      "description": "גיליון דמויות מהדור הישן של כפר המשנה — לשימוש כרפרנס לעקביות מראה הדמויות",
-      "category": "characters"
+      "name": "הרב קדוש",
+      "description": "רב הכפר יהודי חביב וחיכן עם זקן גדול ולבן לבוש בחליפה שחורה ומגבעת עם ציציות בחוץ. בדרך כלל עם ספר ביחד",
+      "category": "characters",
+      "age": "60",
+      "height": "160"
     },
     {
       "id": "chars-old-generation-2",
       "file": "דמויות כפר המשנה הדור הישן (2).jpeg",
-      "name": "דמויות הדור הישן 2",
-      "description": "גיליון דמויות מהדור הישן של כפר המשנה — רפרנס דמויות",
-      "category": "characters"
+      "name": "איציק ופיציק",
+      "description": "חברים טובים, איציק שמן ופיציק רזה.\nהם הדמויות העלילתיות יותר בכפר רבים ומשלימים לסירוגים",
+      "category": "characters",
+      "age": "30",
+      "height": "170"
     },
     {
       "id": "chars-old-generation-4",
       "file": "דמויות כפר המשנה הדור הישן (4).jpeg",
-      "name": "דמויות הדור הישן 4",
-      "description": "גיליון דמויות מהדור הישן של כפר המשנה — רפרנס דמויות",
-      "category": "characters"
+      "name": "אדון מדון",
+      "description": "המבוגר האחראי עם זקן שחור פנים חמורות סבר קצת מרובעות, עם שלייקס",
+      "category": "characters",
+      "age": "45",
+      "height": "180"
     },
     {
       "id": "chars-old-generation-5",
       "file": "דמויות כפר המשנה הדור הישן (5).jpeg",
-      "name": "דמויות הדור הישן 5",
-      "description": "גיליון דמויות מהדור הישן של כפר המשנה — רפרנס דמויות",
-      "category": "characters"
+      "name": "ג'ון בריון",
+      "description": "אדם עם גוף ולב ענק אבל עם שכל לא גדול\nמאוד גדול שמן וחזק.\nתמיד אוהב לעזור ולבוש בפשוט עם כובע קש",
+      "category": "characters",
+      "age": "35",
+      "height": "200"
     },
     {
       "id": "chars-old-generation-6",
       "file": "דמויות כפר המשנה הדור הישן (6).jpeg",
-      "name": "דמויות הדור הישן 6",
-      "description": "גיליון דמויות מהדור הישן של כפר המשנה — רפרנס דמויות",
-      "category": "characters"
+      "name": "סלסלוני",
+      "description": "ה\"חכם\" בכפר ידען ותמיד יש לו מה להגיד.\nרזה מאוד וגבוה עם פאות ארוכות מסתלסלות ומשקפיים",
+      "category": "characters",
+      "age": "28",
+      "height": "185"
     },
     {
       "id": "chars-old-generation-7",
       "file": "דמויות כפר המשנה הדור הישן (7).jpeg",
-      "name": "דמויות הדור הישן 7",
-      "description": "גיליון דמויות מהדור הישן של כפר המשנה — רפרנס דמויות",
-      "category": "characters"
+      "name": "נח",
+      "description": "ה\"עצלן\" של הכפר יש לו לב טוב, אבל מאוד לא אוהב לקום מהכסא.\nשמנמן.\nבדרך כלל נראה אותו על הכסא נדנדה שלו",
+      "category": "characters",
+      "age": "30",
+      "height": "160"
     },
     {
       "id": "scene-perek1-mishna1",
@@ -69,8 +81,88 @@
       "id": "ref-ee4cc74c",
       "file": "Gemini_Generated_Image_qm4sd1qm4sd1qm4s.png",
       "name": "כפר המשנה כולו",
-      "description": "כל הכפר מלמעלה כמו מפה",
+      "description": "כל הכפר מלמעלה כמו מפה, במרכזו בית הכנסת והבתים מסביב העיגול",
       "category": "style"
+    },
+    {
+      "id": "ref-c74a2962",
+      "file": "ג'ינג'י.jpg",
+      "name": "ג'ינג'י",
+      "description": "נער ג'ינג'י שמח עם שיער מתולתל.\nמנומש עם עיינים גדולות",
+      "category": "characters",
+      "age": "15",
+      "height": "150",
+      "items": []
+    },
+    {
+      "id": "ref-921fc685",
+      "file": "ref_db9b0ee7.png",
+      "name": "בן אבטיח גרוע1",
+      "description": "A giant, enormously tall and muscular man with a big friendly face, simple ancient tunic, and a straw hat. He carries massive objects on one shoulder with ease and has a warm, slightly confused expression. Dressed in rough woven cloth typical of Second Temple period laborers.\n\nstyle PIXAR 3D",
+      "category": "characters",
+      "age": "40",
+      "height": "1.80",
+      "items": []
+    },
+    {
+      "id": "ref-cab796ca",
+      "file": "ref_080b034f.png",
+      "name": "בן אבטיח גרוע",
+      "description": "A giant, enormously tall and muscular man with a big friendly face, simple ancient tunic, and a straw hat. He carries massive objects on one shoulder with ease and has a warm, slightly confused expression. Dressed in rough woven cloth typical of Second Temple period laborers.",
+      "category": "characters",
+      "age": "",
+      "height": "",
+      "items": []
+    },
+    {
+      "id": "ref-5eecdf6d",
+      "file": "ref_ca566faa.png",
+      "name": "יחציאל",
+      "description": "A warm middle-aged Jewish man with a short dark beard and kind eyes, wearing a simple linen tunic and sandals typical of Second Temple Jerusalem. He has a calm, responsible demeanor and a welcoming smile. Stands at medium height with a sturdy build.",
+      "category": "characters",
+      "age": "",
+      "height": "",
+      "items": []
+    },
+    {
+      "id": "ref-afdd4bac",
+      "file": "ref_55ead695.png",
+      "name": "בן בוני",
+      "description": "A well-dressed young Jewish man, son of the wealthy Nakdimon ben Gurion. He wears fine woven robes with decorative borders, clean sandals, and a neat hairstyle. His expression is thoughtful and slightly worried. Medium height, lean build.",
+      "category": "characters",
+      "age": "25",
+      "height": "medium, lean",
+      "items": []
+    },
+    {
+      "id": "ref-1640552e",
+      "file": "ref_b31dd0b8.png",
+      "name": "מגילת כפר המשנה",
+      "description": "An ancient parchment scroll, partially unrolled, with Hebrew text written in neat ink lettering. The scroll is rolled around two small wooden handles and tied with a simple cord. It looks slightly worn at the edges but is intact. The text visible reads 'כפר המשנה'.",
+      "category": "items",
+      "age": null,
+      "height": null,
+      "items": []
+    },
+    {
+      "id": "ref-b9023d87",
+      "file": "ref_979f2d71.png",
+      "name": "שוק ירושלים ערב פסח",
+      "description": "A busy, colorful ancient Jerusalem marketplace street scene set during Second Temple period, just before Passover. Stone-paved narrow streets with market stalls selling bitter herbs (maror), matzah, and live sheep. People in ancient Jewish tunics and robes rush about with joyful faces. Warm golden afternoon sunlight streams between stone buildings.",
+      "category": "style",
+      "age": null,
+      "height": null,
+      "items": []
+    },
+    {
+      "id": "ref-93d3e7b7",
+      "file": "ref_e62571b0.png",
+      "name": "קערת סבא של ג'ינג'י",
+      "description": "A beautiful, ornate ceramic bowl with vibrant multicolored painted patterns — blues, reds, and yellows. It is round and wide, clearly handcrafted with great care. The bowl has a special family history and is treated with reverence. Medium-sized, fits in two hands.",
+      "category": "items",
+      "age": null,
+      "height": null,
+      "items": []
     }
   ]
 }

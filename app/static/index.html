@@ -16,13 +16,26 @@
         <input type="number" id="ipm" min="1" max="30" step="1" value="4" />
       </label>
       <button id="directorInstructionsBtn" class="secondary">הוראות במאי</button>
+      <button id="styleSettingsBtn" class="secondary">הגדרות סגנון</button>
       <button id="showPromptBtn" class="secondary">צפה בפרומפט (Claude)</button>
-      <button id="proposeBtn" class="primary">הרץ הצעת Claude</button>
-      <button id="generateAllBtn">צור כל התמונות</button>
+      <div class="flow-controls">
+        <button id="proposeBtn" class="primary">הצעה (Claude)</button>
+        <button id="generateAllBtn">צור תמונות</button>
+        <select id="workMode" title="מצב עבודה">
+          <option value="auto">אוטומטי מלא</option>
+          <option value="semi" selected>חצי-אוטומטי (אישור שלב)</option>
+          <option value="manual">ידני (אישור תמונה)</option>
+        </select>
+      </div>
       <div id="audioUploadContainer" class="audio-container">
         <label id="audioStatusLabel" for="projectAudio">קובץ שמע</label>
         <input type="file" id="projectAudio" accept="audio/mpeg, audio/mp3, audio/wav" />
         <button id="uploadAudioBtn" class="secondary">העלה</button>
+      </div>
+      <div id="srtUploadContainer" class="audio-container">
+        <label id="srtStatusLabel" for="projectSrt">קובץ SRT</label>
+        <input type="file" id="projectSrt" accept=".srt" />
+        <button id="uploadSrtBtn" class="secondary">העלה</button>
       </div>
       <button id="buildBtn" class="accent">הרכב וידאו</button>
     </div>
@@ -34,6 +47,7 @@
     <aside class="assets-sidebar">
       <h3>דמויות ורפרנסים</h3>
       <button id="uploadRefBtn" class="secondary">העלה רפרנס חדש</button>
+      <button id="manageRefsBtn" class="secondary">ניהול רפרנסים (טבלה)</button>
       <div id="globalRefsList" class="refs-list"></div>
     </aside>
 
@@ -83,6 +97,29 @@
     </div>
   </div>
 
+  <!-- מודאל הגדרות סגנון -->
+  <div id="styleModal" class="modal hidden">
+    <div class="modal-box">
+      <h3>הגדרות סגנון ויזואלי</h3>
+      <p style="font-size: 13px; color: var(--muted); margin-bottom: 10px;">
+        הגדר את הסגנון הכללי של הפרויקט. Claude ישתמש בזה ליצירת ה-Prompts.
+      </p>
+      <label>תיאור סגנון (Style Description):</label>
+      <textarea id="styleDescriptionText" rows="10" style="width: 100%; min-height: 200px; font-size: 14px; padding: 10px;" placeholder="למשל: ציור שמן בסגנון יהודי עתיק, צבעים חמים, תאורה דרמטית..."></textarea>
+      
+      <div style="margin-top: 15px;">
+        <label>תמונות אווירה (Style References):</label>
+        <p style="font-size: 11px; color: var(--muted);">בחר 2-3 תמונות שנותנות את האווירה הכללית.</p>
+        <div id="styleRefGrid" class="ref-grid" style="max-height: 200px; overflow-y: auto;"></div>
+      </div>
+
+      <div class="modal-actions" style="margin-top: 15px;">
+        <button id="styleSave" class="primary">שמור</button>
+        <button id="styleCancel">ביטול</button>
+      </div>
+    </div>
+  </div>
+
   <!-- מודאל הצגת פרומפט -->
   <div id="showPromptModal" class="modal hidden">
     <div class="modal-box large">
@@ -103,17 +140,47 @@
     <div class="modal-box">
       <h3>העלאת רפרנס חדש</h3>
       <label>קובץ תמונה: <input type="file" id="urFile" accept="image/*"></label>
-      <label>שם (לדוגמה: רב חסדא): <input type="text" id="urName"></label>
+      <label>שם: <input type="text" id="urName"></label>
       <label>תיאור חזותי ל-Claude: <textarea id="urDesc" rows="3"></textarea></label>
       <label>קטגוריה: 
         <select id="urCat">
-          <option value="characters">דמויות</option>
-          <option value="style">סגנון / מקום</option>
+          <option value="characters" selected>דמויות (Characters)</option>
+          <option value="style">סגנון / מקום (Style/Location)</option>
+          <option value="items">חפצים (Items)</option>
         </select>
       </label>
+      <div id="urExtraFields" class="ref-extra-fields">
+        <!-- JS fills this -->
+      </div>
       <div class="modal-actions">
         <button id="urSave" class="primary">העלה</button>
         <button id="urCancel">ביטול</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- מודאל ניהול רפרנסים (טבלה) -->
+  <div id="manageRefsModal" class="modal hidden">
+    <div class="modal-box x-large">
+      <h3>ניהול רפרנסים</h3>
+      <div class="table-container">
+        <table id="refsTable">
+          <thead>
+            <tr>
+              <th>תמונה</th>
+              <th>שם</th>
+              <th>תיאור</th>
+              <th>שדה א'</th>
+              <th>שדה ב'</th>
+              <th>קטגוריה</th>
+              <th>פעולות</th>
+            </tr>
+          </thead>
+          <tbody id="refsTableBody"></tbody>
+        </table>
+      </div>
+      <div class="modal-actions">
+        <button id="closeRefsModalBtn">סגור</button>
       </div>
     </div>
   </div>
@@ -163,39 +230,28 @@
       </div>
       
       <div class="scene-content">
-        <!-- טקסטים -->
         <div class="scene-section">
           <label class="section-label">טקסט המשנה</label>
           <textarea class="mishna-text" rows="2" placeholder="טקסט המשנה..."></textarea>
         </div>
-
-        <!-- Prompt -->
         <div class="scene-section">
           <label class="section-label">Prompt</label>
           <textarea class="prompt-text" rows="3" placeholder="Prompt לתמונה..."></textarea>
-          
           <div class="scene-controls">
             <button class="save-scene-btn" title="שמור">💾</button>
             <button class="ai-prompt-btn" title="בקש מ-Claude">🤖</button>
           </div>
         </div>
-
-        <!-- רפרנסים -->
         <div class="scene-section refs-section">
           <label class="section-label">רפרנסים</label>
           <div class="ref-chips-container"></div>
           <button class="edit-refs-btn" title="ערוך רפרנסים">+</button>
         </div>
-
-        <!-- תמונה -->
         <div class="scene-section image-section">
           <div class="image-preview">
             <img class="scene-image" alt="" />
-            <div class="no-image-placeholder">
-              <span>🖼️</span>
-            </div>
+            <div class="no-image-placeholder"><span>🖼️</span></div>
           </div>
-          
           <div class="image-controls">
             <button class="generate-btn" title="צור תמונה">🎨</button>
             <button class="approve-btn" title="אשר">✓</button>

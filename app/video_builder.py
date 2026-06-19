@@ -93,6 +93,7 @@ def build_video_stream(project: dict, audio_abs: Path, out_path: Path):
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT, # ffmpeg logs to stderr by default
         text=True,
+        encoding="utf-8",
         bufsize=1,
         universal_newlines=True
     )

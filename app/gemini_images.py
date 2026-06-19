@@ -16,6 +16,14 @@ MODEL = os.environ.get("GEMINI_IMAGE_MODEL", "gemini-3-pro-image-preview")
 
 
 def _client() -> genai.Client:
+    # ב-google-genai ה-Client לא מקבל http_client ישירות ב-Constructor.
+    # אנחנו מגדירים את ה-proxy דרך משתני סביבה שהספרייה מכבדת (דרך httpx פנימי).
+    proxy_url = "socks5h://127.0.0.1:1080"
+    os.environ["HTTP_PROXY"] = proxy_url
+    os.environ["HTTPS_PROXY"] = proxy_url
+    
+    # מכיוון שאי אפשר לבטל SSL VERIFY בקלות בתוך ה-SDK החדש,
+    # ננסה להשתמש ב-config אם קיים, או להסתמך על זה שה-Proxy מטפל בזה.
     return genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
 
@@ -51,10 +59,9 @@ def generate_image(prompt: str, reference_paths: list[Path], out_path: Path) -> 
 
     print(f"[Gemini] שולח בקשה ל-API...")
     try:
-        response = _client().models.generate_content(model=MODEL, contents=contents)
+        client = _client()
+        response = client.models.generate_content(model=MODEL, contents=contents)
         print(f"[Gemini] התקבלה תשובה מהשרת")
-        print(f"[Gemini] response type: {type(response)}")
-        print(f"[Gemini] response attributes: {dir(response)}")
     except Exception as e:
         print(f"[Gemini ERROR] שגיאה בקריאה ל-API: {type(e).__name__}: {e}")
         raise

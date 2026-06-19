@@ -5,7 +5,7 @@ import subprocess
 from pathlib import Path
 
 # דוגמא
-# python app/build_pesachim_video.py --json "C:\Users\MyPC\Downloads\pesachim_scenes.json" --images "data\images\pesachim_v1" --audio "data\podcasts\pesachim_gimmel.mp3" --output "data\studio\pesachim_final.mp4"
+# python app/build_pesachim_video.py --json "C:\Users\MyPC\Downloads\pesachim_scenes.json" --images "data\images\pesachim_v1" --audio "data\podcasts\psachim\perek-3\פסחים-ג-א.mp3" --output "data\studio\pesachim_final.mp4"
 
 WIDTH = 1920
 HEIGHT = 1080

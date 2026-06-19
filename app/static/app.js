@@ -77,28 +77,50 @@ async function api(path, opts = {}) {
   return res.status === 204 ? null : res.json();
 }
 
+function renderGlobalRefs() {
+  const container = $("#globalRefsList");
+  if (!container) return;
+  container.innerHTML = "";
+  references.forEach(r => {
+    const item = document.createElement("div");
+    item.className = "ref-list-item";
+    item.innerHTML = `<img src="/api/reference-image/${encodeURIComponent(r.id)}" alt=""/><div>${r.name}</div>`;
+    container.appendChild(item);
+  });
+}
+
 async function init() {
   try {
     const refsData = await api("/api/references");
     references = (refsData && refsData.references) || [];
+    renderGlobalRefs();
     
-    const list = await api("/api/mishnayot");
-    const sel = $("#mishnaSelect");
-    if (!sel) return;
-    sel.innerHTML = "";
-
-    list.forEach((m) => {
-      const opt = document.createElement("option");
-      opt.value = m.mishna_id;
-      opt.textContent = m.title + (m.has_srt ? "" : " (אין SRT)") + (m.has_project ? " ✓" : "");
-      sel.appendChild(opt);
-    });
-    if (list.length) {
-      currentMishna = list[0].mishna_id;
-      await loadProject();
-    }
+    await loadMishnayotList();
   } catch (e) {
     setStatus("שגיאת אתחול: " + e.message, "err");
+  }
+}
+
+async function loadMishnayotList(selectId = null) {
+  const list = await api("/api/mishnayot");
+  const sel = $("#mishnaSelect");
+  if (!sel) return;
+  sel.innerHTML = "";
+
+  list.forEach((m) => {
+    const opt = document.createElement("option");
+    opt.value = m.mishna_id;
+    opt.textContent = m.title + (m.has_srt ? "" : " (אין SRT)") + (m.has_project ? " ✓" : "");
+    sel.appendChild(opt);
+  });
+  
+  if (selectId) {
+    sel.value = selectId;
+    currentMishna = selectId;
+    await loadProject();
+  } else if (list.length) {
+    currentMishna = list[0].mishna_id;
+    await loadProject();
   }
 }
 
@@ -113,7 +135,19 @@ async function loadProject() {
     const ipm = $("#ipm");
     if (ipm) ipm.value = project.images_per_minute || 4;
     
-    audio.src = `/api/project/${encodeURIComponent(currentMishna)}/audio?t=${Date.now()}`;
+    const audioContainer = $("#audioUploadContainer");
+    if (!project.audio_path) {
+      if (audioContainer) audioContainer.style.display = "flex";
+      audio.src = "";
+    } else {
+      if (audioContainer) audioContainer.style.display = "none";
+      audio.src = `/api/project/${encodeURIComponent(currentMishna)}/audio?t=${Date.now()}`;
+    }
+    
+    // Load director instructions if any
+    const dirText = $("#directorInstructionsText");
+    if (dirText) dirText.value = project.director_instructions || "";
+    
     renderTimeline();
     setStep(inferStep());
     
@@ -130,7 +164,7 @@ function renderTimeline() {
   tel.innerHTML = "";
   
   if (!project || !project.slots || project.slots.length === 0) {
-    tel.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--muted);">אין משבצות דקה עדיין.</div>';
+    tel.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--muted);">אין סצנות עדיין.</div>';
     return;
   }
   
@@ -142,7 +176,14 @@ function renderTimeline() {
     const minuteRoot = $(".minute-card", minuteNode);
     
     const title = $(".minute-title", minuteRoot);
-    if (title) title.textContent = `דקה ${minuteSlot.minute_index + 1}`;
+    // If it's the "full project" slot, title it accordingly
+    if (title) {
+        if (minuteSlot.id === "full-project-slot") {
+            title.textContent = `כל הסצנות`;
+        } else {
+            title.textContent = `דקה ${minuteSlot.minute_index + 1}`;
+        }
+    }
     
     const timeRange = $(".minute-time-range", minuteRoot);
     if (timeRange) timeRange.textContent = `${minuteSlot.start} → ${minuteSlot.end}`;
@@ -199,6 +240,9 @@ function renderScene(minuteId, scene, sceneNumber) {
     img.classList.add("has");
   }
   
+  const aiBtn = $(".ai-prompt-btn", root);
+  if (aiBtn) aiBtn.onclick = () => askClaudeSingle(minuteId, scene.scene_id, root);
+
   const saveBtn = $(".save-scene-btn", root);
   if (saveBtn) saveBtn.onclick = () => saveScene(minuteId, scene.scene_id, root);
   
@@ -252,6 +296,38 @@ function findScene(minuteId, sceneId) {
 
 function findSceneCard(minuteId, sceneId) {
   return $(`.scene-card[data-minute-id="${minuteId}"][data-scene-id="${sceneId}"]`);
+}
+
+async function askClaudeSingle(minuteId, sceneId, root) {
+  const instruction = prompt("הכנס הנחיה ל-Claude לתיקון ה-Prompt (או השאר ריק ליצירה מחדש רגילה):");
+  if (instruction === null) return; // cancelled
+  
+  setStatus(`מבקש מ-Claude עבור סצנה ${sceneId}...`);
+  try {
+    const updated = await api(
+      `/api/project/${encodeURIComponent(currentMishna)}/minute/${minuteId}/scene/${sceneId}/repropose`,
+      { method: "POST", body: JSON.stringify({ instruction }) }
+    );
+    
+    const scene = findScene(minuteId, sceneId);
+    if (scene) Object.assign(scene, updated);
+    
+    const promptText = $(".prompt-text", root);
+    if (promptText) promptText.value = updated.prompt || "";
+    
+    const cCont = $(".ref-chips-container", root);
+    if (cCont) renderChips(cCont, updated.references || []);
+    
+    const badge = $(".scene-status-badge", root);
+    if (badge) {
+      badge.textContent = statusLabel(updated.status);
+      badge.className = "scene-status-badge " + updated.status;
+    }
+    
+    setStatus("עודכן בהצלחה מ-Claude ✓", "ok");
+  } catch (e) {
+    setStatus("שגיאת Claude: " + e.message, "err");
+  }
 }
 
 async function saveScene(minuteId, sceneId, root) {
@@ -381,7 +457,194 @@ if (rcBtn) {
 const mSelect = $("#mishnaSelect");
 if (mSelect) mSelect.onchange = loadProject;
 
+// העלאת אודיו
+const uabBtn = $("#uploadAudioBtn");
+if (uabBtn) {
+  uabBtn.onclick = async () => {
+    const fileInput = $("#projectAudio");
+    if (!fileInput.files.length) {
+      alert("יש לבחור קובץ אודיו");
+      return;
+    }
+    const fd = new FormData();
+    fd.append("file", fileInput.files[0]);
+    setStatus("מעלה אודיו...");
+    try {
+      const res = await fetch(`/api/project/${encodeURIComponent(currentMishna)}/audio`, {
+        method: "POST",
+        body: fd
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      project.audio_path = data.audio_path;
+      $("#audioUploadContainer").style.display = "none";
+      audio.src = `/api/project/${encodeURIComponent(currentMishna)}/audio?t=${Date.now()}`;
+      setStatus("אודיו הועלה בהצלחה ✓", "ok");
+    } catch(e) {
+      setStatus("שגיאה בהעלאת אודיו: " + e.message, "err");
+    }
+  };
+}
+
 // הזרמת הצעת Claude
+// הוראות במאי ופרומפט
+$("#directorInstructionsBtn").onclick = () => {
+  $("#directorModal").classList.remove("hidden");
+};
+$("#dirCancel").onclick = () => $("#directorModal").classList.add("hidden");
+$("#dirSave").onclick = async () => {
+  const txt = $("#directorInstructionsText").value.trim();
+  setStatus("שומר הוראות במאי...");
+  try {
+    await api(`/api/project/${encodeURIComponent(currentMishna)}`, {
+      method: "PUT",
+      body: JSON.stringify({ director_instructions: txt })
+    });
+    project.director_instructions = txt;
+    $("#directorModal").classList.add("hidden");
+    setStatus("הוראות נשמרו ✓", "ok");
+  } catch(e) {
+    setStatus("שגיאה: " + e.message, "err");
+  }
+};
+
+$("#showPromptBtn").onclick = async () => {
+  setStatus("טוען פרומפט לדוגמה...");
+  try {
+    const res = await api(`/api/project/${encodeURIComponent(currentMishna)}/prompt-preview`);
+    $("#previewPromptText").value = res.prompt;
+    $("#showPromptModal").classList.remove("hidden");
+    setStatus("פרומפט נטען ✓", "ok");
+  } catch(e) {
+    setStatus("שגיאה: " + e.message, "err");
+  }
+};
+
+$("#savePromptBtn").onclick = async () => {
+  const customPrompt = $("#previewPromptText").value.trim();
+  $("#showPromptModal").classList.add("hidden");
+  
+  const ipmInput = $("#ipm");
+  const ipm = parseFloat(ipmInput ? ipmInput.value : 4) || 4;
+
+  setStatus("Claude ממלא סצנות עם הפרומפט המעודכן...");
+  try {
+    const res = await fetch(`/api/project/${encodeURIComponent(currentMishna)}/propose-stream`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ images_per_minute: ipm, custom_prompt: customPrompt }),
+    });
+    if (!res.ok || !res.body) throw new Error(res.statusText || "stream נכשל");
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    let filled = 0;
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let nl;
+      while ((nl = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, nl).trim();
+        buf = buf.slice(nl + 1);
+        if (!line) continue;
+        let ev;
+        try { ev = JSON.parse(line); } catch (e) { continue; }
+        if (ev.type === "minute") {
+          const minute = ev.minute;
+          const existing = findMinuteSlot(minute.id);
+          if (existing) {
+            Object.assign(existing, minute);
+          } else {
+              project.slots = [minute];
+          }
+          filled++;
+          setStatus(`הסצנות נוצרו! מעדכן תצוגה...`);
+        }
+      }
+    }
+    renderTimeline();
+    setStatus("Claude סיים למלא את הסצנות ✓", "ok");
+  } catch (e) {
+    setStatus("שגיאה: " + e.message, "err");
+  }
+};
+
+$("#closePromptBtn").onclick = () => $("#showPromptModal").classList.add("hidden");
+
+// פרויקט חדש
+$("#newProjectBtn").onclick = () => {
+  $("#npId").value = "";
+  $("#npPlot").value = "";
+  $("#npSrt").value = "";
+  $("#newProjectModal").classList.remove("hidden");
+};
+$("#npCancel").onclick = () => $("#newProjectModal").classList.add("hidden");
+$("#npSave").onclick = async () => {
+  const mishna_id = $("#npId").value.trim();
+  const plot = $("#npPlot").value.trim();
+  const srt_text = $("#npSrt").value.trim();
+  const ipm = parseInt($("#npIpm").value) || 4;
+  
+  if (!mishna_id || !srt_text) {
+    alert("חובה להזין מזהה פרויקט ו-SRT");
+    return;
+  }
+  
+  setStatus("יוצר פרויקט חדש...");
+  try {
+    await api("/api/project/create", {
+      method: "POST",
+      body: JSON.stringify({ mishna_id, plot, srt_text, images_per_minute: ipm })
+    });
+    $("#newProjectModal").classList.add("hidden");
+    setStatus("פרויקט נוצר בהצלחה ✓", "ok");
+    await loadMishnayotList(mishna_id);
+  } catch(e) {
+    setStatus("שגיאה ביצירת פרויקט: " + e.message, "err");
+  }
+};
+
+// רפרנס חדש
+$("#uploadRefBtn").onclick = () => {
+  $("#urFile").value = "";
+  $("#urName").value = "";
+  $("#urDesc").value = "";
+  $("#uploadRefModal").classList.remove("hidden");
+};
+$("#urCancel").onclick = () => $("#uploadRefModal").classList.add("hidden");
+$("#urSave").onclick = async () => {
+  const fileInput = $("#urFile");
+  if (!fileInput.files.length) {
+    alert("יש לבחור קובץ תמונה");
+    return;
+  }
+  
+  const fd = new FormData();
+  fd.append("file", fileInput.files[0]);
+  fd.append("name", $("#urName").value.trim());
+  fd.append("description", $("#urDesc").value.trim());
+  fd.append("category", $("#urCat").value);
+  
+  setStatus("מעלה רפרנס...");
+  try {
+    const res = await fetch("/api/references", {
+      method: "POST",
+      body: fd
+    });
+    if (!res.ok) throw new Error(await res.text());
+    
+    const newRef = await res.json();
+    references.push(newRef);
+    renderGlobalRefs();
+    $("#uploadRefModal").classList.add("hidden");
+    setStatus("רפרנס הועלה ✓", "ok");
+  } catch(e) {
+    setStatus("שגיאה בהעלאת רפרנס: " + e.message, "err");
+  }
+};
+
 async function runProposeStream() {
   const ipmInput = $("#ipm");
   const ipm = parseFloat(ipmInput ? ipmInput.value : 4) || 4;
@@ -414,9 +677,12 @@ async function runProposeStream() {
         const existing = findMinuteSlot(minute.id);
         if (existing) {
           Object.assign(existing, minute);
+        } else {
+            // New slot (like "full-project-slot")
+            project.slots = [minute];
         }
         filled++;
-        setStatus(`התמלאו ${filled}/${project.slots.length} דקות...`);
+        setStatus(`הסצנות נוצרו! מעדכן תצוגה...`);
       }
     }
   }

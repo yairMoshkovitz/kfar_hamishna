@@ -26,8 +26,17 @@ app = FastAPI(title="כפר המשנה — Studio")
 
 
 # ---------- מודלים לבקשות ----------
+class CreateProjectBody(BaseModel):
+    mishna_id: str
+    plot: str
+    srt_text: str
+    images_per_minute: int = 4
+
 class ProposeBody(BaseModel):
     images_per_minute: float | None = None
+    plot: str | None = None
+    director_instructions: str | None = None
+    custom_prompt: str | None = None
 
 
 class SlotUpdate(BaseModel):
@@ -48,6 +57,8 @@ def _abs(rel_path: str) -> Path:
     return (ROOT / rel_path).resolve()
 
 
+from fastapi import UploadFile, Form
+
 # ---------- API: גילוי וטעינה ----------
 @app.get("/api/mishnayot")
 def list_mishnayot():
@@ -58,6 +69,53 @@ def list_mishnayot():
 def get_references():
     return project_store.load_references()
 
+@app.post("/api/references")
+async def add_reference(
+    file: UploadFile,
+    name: str = Form(...),
+    description: str = Form(...),
+    category: str = Form(...)
+):
+    try:
+        content = await file.read()
+        return project_store.add_reference(file.filename, content, name, description, category)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/project/create")
+def create_project(body: CreateProjectBody):
+    try:
+        return project_store.create_custom_project(
+            body.mishna_id, body.plot, body.srt_text, body.images_per_minute
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/project/{mishna_id}/prompt-preview")
+def get_prompt_preview(mishna_id: str):
+    project = project_store.load_or_init_project(mishna_id)
+    if not project.get("srt_path"):
+        raise HTTPException(status_code=400, detail="אין קובץ SRT למשנה זו")
+        
+    refs = project_store.load_references()
+    plot_path = project.get("plot_path")
+    
+    try:
+        # Check if plot exists and load it properly if it does
+        plot_abs = str(_abs(plot_path)) if plot_path else None
+        
+        prompt_text = claude_brain.preview_prompt(
+            srt_path=str(_abs(project["srt_path"])),
+            images_per_minute=project.get("images_per_minute", 4),
+            references=refs,
+            plot_path=plot_abs,
+            director_instructions=project.get("director_instructions", "")
+        )
+        return {"prompt": prompt_text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/project/{mishna_id}")
 def get_project(mishna_id: str):
@@ -105,11 +163,7 @@ def propose(mishna_id: str, body: ProposeBody):
 
 @app.post("/api/project/{mishna_id}/propose-stream")
 def propose_stream(mishna_id: str, body: ProposeBody):
-    """מציע משבצות דקה אחת-אחת ומזרים כל אחת ברגע שהיא מוכנה (NDJSON).
-
-    כל שורה היא אובייקט JSON: {"type":"minute","minute":{...}} למשבצת דקה שהושלמה,
-    {"type":"error","minute_id":...,"detail":...} לכשל, ו-{"type":"done"} בסיום.
-    """
+    """מציע משבצות לכל הפרויקט."""
     project = project_store.load_or_init_project(mishna_id)
     if not project.get("srt_path"):
         raise HTTPException(status_code=400, detail="אין קובץ SRT למשנה זו")
@@ -119,21 +173,27 @@ def propose_stream(mishna_id: str, body: ProposeBody):
 
     refs = project_store.load_references()
     
-    # מריצים את Claude על כל המשבצות ביחד
+    # מריצים את Claude על כל ה-SRT ויוצרים מבנה סצנות רציף.
     try:
+        # We pass plot_path if it exists
+        plot_path = project.get("plot_path")
+        director_instructions = project.get("director_instructions", "")
         updated_slots = claude_brain.propose_slots(
-            str(_abs(project["srt_path"])),
-            project["images_per_minute"],
-            refs,
-            existing_slots=project.get("slots")
+            srt_path=str(_abs(project["srt_path"])),
+            images_per_minute=project.get("images_per_minute", 4),
+            references=refs,
+            existing_slots=project.get("slots"),
+            plot_path=plot_path,
+            director_instructions=director_instructions,
+            custom_prompt=body.custom_prompt
         )
         project["slots"] = updated_slots
         project_store.save_project(project)
         
-        # מזרימים כל משבצת דקה שהושלמה
+        # מכיוון שחזרנו מזרם למבנה בודד (או למשבצת בודדת גדולה), נחזיר אירוע אחד למשבצת הכוללת ואז done
         def generate_events():
-            for minute_slot in updated_slots:
-                yield json.dumps({"type": "minute", "minute": minute_slot}, ensure_ascii=False) + "\n"
+            for slot in updated_slots:
+                yield json.dumps({"type": "minute", "minute": slot}, ensure_ascii=False) + "\n"
             yield json.dumps({"type": "done"}, ensure_ascii=False) + "\n"
         
         return StreamingResponse(generate_events(), media_type="application/x-ndjson")
@@ -142,23 +202,37 @@ def propose_stream(mishna_id: str, body: ProposeBody):
         raise HTTPException(status_code=502, detail=f"שגיאת Claude: {type(e).__name__}: {e}")
 
 
-@app.post("/api/project/{mishna_id}/slot/{slot_id}/repropose")
-def repropose(mishna_id: str, slot_id: str, body: RepromptBody):
+@app.post("/api/project/{mishna_id}/minute/{minute_id}/scene/{scene_id}/repropose")
+def repropose_scene(mishna_id: str, minute_id: str, scene_id: str, body: RepromptBody):
     project = project_store.load_or_init_project(mishna_id)
-    slot = project_store.get_slot(project, slot_id)
-    if slot is None:
-        raise HTTPException(status_code=404, detail="משבצת לא נמצאה")
+    minute_slot = project_store.get_slot(project, minute_id)
+    if minute_slot is None:
+        raise HTTPException(status_code=404, detail="משבצת דקה לא נמצאה")
+    
+    scene = next((s for s in minute_slot.get("scenes", []) if s["scene_id"] == scene_id), None)
+    if scene is None:
+        raise HTTPException(status_code=404, detail="סצנה לא נמצאה")
+        
     refs = project_store.load_references()
     try:
-        result = claude_brain.repropose_prompt(slot, refs, body.instruction)
+        # We pass the scene as the 'slot' to Claude
+        # We need to give it context of the minute text maybe?
+        scene_context = {
+            "start": scene.get("start"),
+            "end": scene.get("end"),
+            "text": minute_slot.get("text", "") + "\n(Mishna: " + scene.get("mishna_text", "") + ")",
+            "prompt": scene.get("prompt", "")
+        }
+        result = claude_brain.repropose_prompt(scene_context, refs, body.instruction)
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"שגיאת Claude: {e}")
-    slot["prompt"] = result["prompt"]
+        
+    scene["prompt"] = result["prompt"]
     if result["references"]:
-        slot["references"] = result["references"]
-    slot["status"] = "proposed"
+        scene["references"] = result["references"]
+    scene["status"] = "proposed"
     project_store.save_project(project)
-    return slot
+    return scene
 
 
 # ---------- API: עריכת במאי ----------
@@ -181,6 +255,8 @@ def update_project(mishna_id: str, body: ProposeBody):
     project = project_store.load_or_init_project(mishna_id)
     if body.images_per_minute is not None:
         project["images_per_minute"] = body.images_per_minute
+    if body.director_instructions is not None:
+        project["director_instructions"] = body.director_instructions
     project_store.save_project(project)
     return project
 
@@ -254,10 +330,25 @@ def update_scene(mishna_id: str, minute_id: str, scene_id: str, body: SlotUpdate
 @app.get("/api/project/{mishna_id}/audio")
 def get_audio(mishna_id: str):
     project = project_store.load_or_init_project(mishna_id)
+    if not project.get("audio_path"):
+        raise HTTPException(status_code=404, detail="קובץ אודיו לא נמצא")
     audio = _abs(project["audio_path"])
     if not audio.exists():
         raise HTTPException(status_code=404, detail="קובץ אודיו לא נמצא")
     return FileResponse(str(audio), media_type="audio/mpeg")
+
+@app.post("/api/project/{mishna_id}/audio")
+async def upload_audio(mishna_id: str, file: UploadFile):
+    project = project_store.load_or_init_project(mishna_id)
+    d = project_store.studio_dir(mishna_id)
+    audio_path = d / file.filename
+    content = await file.read()
+    with open(audio_path, "wb") as f:
+        f.write(content)
+    
+    project["audio_path"] = str(audio_path.relative_to(ROOT)).replace("\\", "/")
+    project_store.save_project(project)
+    return {"status": "ok", "audio_path": project["audio_path"]}
 
 
 @app.get("/api/project/{mishna_id}/minute/{minute_id}/scene/{scene_id}/image")
@@ -289,6 +380,8 @@ def get_reference_image(ref_id: str):
 @app.post("/api/project/{mishna_id}/build")
 def build(mishna_id: str):
     project = project_store.load_or_init_project(mishna_id)
+    if not project.get("audio_path"):
+        raise HTTPException(status_code=400, detail="חסר קובץ אודיו להרכבת הוידאו")
     audio = _abs(project["audio_path"])
     out = project_store.studio_dir(mishna_id) / "output.mp4"
     try:

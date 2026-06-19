@@ -10,30 +10,113 @@
   <header class="topbar">
     <h1>🎬 כפר המשנה — Studio V2</h1>
     <div class="controls">
+      <button id="newProjectBtn" class="primary">פרויקט חדש</button>
       <select id="mishnaSelect" title="בחר משנה"></select>
       <label>תמונות לדקה
         <input type="number" id="ipm" min="1" max="30" step="1" value="4" />
       </label>
+      <button id="directorInstructionsBtn" class="secondary">הוראות במאי</button>
+      <button id="showPromptBtn" class="secondary">צפה בפרומפט (Claude)</button>
       <button id="proposeBtn" class="primary">הרץ הצעת Claude</button>
       <button id="generateAllBtn">צור כל התמונות</button>
+      <div id="audioUploadContainer" style="display: none; align-items: center; gap: 8px;">
+        <label for="projectAudio" style="font-size: 12px; font-weight: bold; color: var(--accent);">חסר קובץ אודיו!</label>
+        <input type="file" id="projectAudio" accept="audio/mpeg, audio/mp3, audio/wav" style="font-size: 12px; width: 160px;"/>
+        <button id="uploadAudioBtn" class="secondary">העלה</button>
+      </div>
       <button id="buildBtn" class="accent">הרכב וידאו</button>
     </div>
   </header>
 
   <div id="status" class="status"></div>
 
-  <nav id="wizard" class="wizard">
-    <button class="wizard-step" data-step="transcription">1. תמלול</button>
-    <span class="wizard-arrow">←</span>
-    <button class="wizard-step" data-step="content">2. משנה + Prompt</button>
-    <span class="wizard-arrow">←</span>
-    <button class="wizard-step" data-step="images">3. תמונות</button>
-    <span class="wizard-arrow">←</span>
-    <button class="wizard-step" data-step="video">4. וידאו</button>
-    <button id="nextStepBtn" class="primary">המשך לשלב הבא →</button>
-  </nav>
+  <div class="layout">
+    <aside class="assets-sidebar">
+      <h3>דמויות ורפרנסים</h3>
+      <button id="uploadRefBtn" class="secondary">העלה רפרנס חדש</button>
+      <div id="globalRefsList" class="refs-list"></div>
+    </aside>
 
-  <main id="timeline" class="timeline"></main>
+    <div class="main-content">
+      <nav id="wizard" class="wizard">
+        <button class="wizard-step" data-step="transcription">1. תמלול</button>
+        <span class="wizard-arrow">←</span>
+        <button class="wizard-step" data-step="content">2. משנה + Prompt</button>
+        <span class="wizard-arrow">←</span>
+        <button class="wizard-step" data-step="images">3. תמונות</button>
+        <span class="wizard-arrow">←</span>
+        <button class="wizard-step" data-step="video">4. וידאו</button>
+        <button id="nextStepBtn" class="primary">המשך לשלב הבא →</button>
+      </nav>
+
+      <main id="timeline" class="timeline"></main>
+    </div>
+  </div>
+
+  <!-- מודאל פרויקט חדש -->
+  <div id="newProjectModal" class="modal hidden">
+    <div class="modal-box large">
+      <h3>יצירת פרויקט חדש</h3>
+      <label>שם הפרויקט (אנגלית ללא רווחים): <input type="text" id="npId"></label>
+      <label>עלילה (Plot): <textarea id="npPlot" rows="4"></textarea></label>
+      <label>טקסט SRT: <textarea id="npSrt" rows="6"></textarea></label>
+      <label>תמונות לדקה: <input type="number" id="npIpm" value="4"></label>
+      <div class="modal-actions">
+        <button id="npSave" class="primary">צור</button>
+        <button id="npCancel">ביטול</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- מודאל הוראות במאי -->
+  <div id="directorModal" class="modal hidden">
+    <div class="modal-box">
+      <h3>הוראות במאי (לכל הפרויקט)</h3>
+      <p style="font-size: 13px; color: var(--muted); margin-bottom: 10px;">
+        הוראות אלו ישלחו ל-Claude יחד עם העלילה וה-SRT וינחו אותו כיצד לחלק ולייצר את הסצנות.
+      </p>
+      <textarea id="directorInstructionsText" rows="6" style="width: 100%;" placeholder="למשל: תדאג שהסצנות בתוך בית המדרש יהיו קצרות, והסצנות בחוץ יהיו ארוכות..."></textarea>
+      <div class="modal-actions" style="margin-top: 15px;">
+        <button id="dirSave" class="primary">שמור</button>
+        <button id="dirCancel">ביטול</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- מודאל הצגת פרומפט -->
+  <div id="showPromptModal" class="modal hidden">
+    <div class="modal-box large">
+      <h3>הפרומפט שיישלח ל-Claude</h3>
+      <p style="font-size: 13px; color: var(--muted); margin-bottom: 10px;">
+        כאן תוכל לראות ולערוך את הטקסט שיישלח ל-Claude כדי לקבל את רשימת הסצנות.
+      </p>
+      <textarea id="previewPromptText" rows="15" style="width: 100%; font-family: monospace; font-size: 12px; direction: ltr;"></textarea>
+      <div class="modal-actions" style="margin-top: 15px;">
+        <button id="savePromptBtn" class="primary">שמור והרץ מחדש עם פרומפט זה</button>
+        <button id="closePromptBtn">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- מודאל רפרנס חדש -->
+  <div id="uploadRefModal" class="modal hidden">
+    <div class="modal-box">
+      <h3>העלאת רפרנס חדש</h3>
+      <label>קובץ תמונה: <input type="file" id="urFile" accept="image/*"></label>
+      <label>שם (לדוגמה: רב חסדא): <input type="text" id="urName"></label>
+      <label>תיאור חזותי ל-Claude: <textarea id="urDesc" rows="3"></textarea></label>
+      <label>קטגוריה: 
+        <select id="urCat">
+          <option value="characters">דמויות</option>
+          <option value="style">סגנון / מקום</option>
+        </select>
+      </label>
+      <div class="modal-actions">
+        <button id="urSave" class="primary">העלה</button>
+        <button id="urCancel">ביטול</button>
+      </div>
+    </div>
+  </div>
 
   <div id="videoPanel" class="video-panel hidden">
     <h2>וידאו מורכב</h2>

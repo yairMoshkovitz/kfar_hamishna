@@ -62,20 +62,25 @@ def _find_mp3_by_id(mishna_id: str) -> Path | None:
     return None
 
 
-def _create_minute_slots(total_duration: float, images_per_minute: int, srt_path: str = None) -> list[dict]:
+def _create_minute_slots(total_duration: float, images_per_minute, srt_path: str = None) -> list[dict]:
     """יוצר משבצת אחת לכל דקה עם 4 sub-slots (סצנות) ריקים."""
     from .srt_parser import seconds_to_timestamp
     
     slots = []
     num_minutes = int(total_duration / 60) + (1 if total_duration % 60 > 0 else 0)
     
+    try:
+        ipm = int(float(images_per_minute))
+    except (ValueError, TypeError):
+        ipm = 4
+        
     for minute_idx in range(num_minutes):
         minute_start = minute_idx * 60
         minute_end = min((minute_idx + 1) * 60, total_duration)
         
         # יצירת 4 sub-slots ריקים לכל דקה (ימולאו ע״י Claude)
         scenes = []
-        for scene_idx in range(images_per_minute):
+        for scene_idx in range(ipm):
             scenes.append({
                 "scene_id": f"scene-{scene_idx + 1}",
                 "start": "",  # Claude ימלא את התזמון המדויק
@@ -124,7 +129,6 @@ def load_or_init_project(mishna_id: str) -> dict:
         if (not project.get("slots") or has_old_slots) and project.get("srt_path"):
             srt = ROOT / project["srt_path"]
             if srt.exists():
-                from .srt_parser import parse_srt, seconds_to_timestamp
                 cues = parse_srt(str(srt))
                 duration = total_duration(cues)
                 project["slots"] = _create_minute_slots(duration, project.get("images_per_minute", DEFAULT_IMAGES_PER_MINUTE))
@@ -163,6 +167,36 @@ def save_project(project: dict) -> None:
         json.dump(project, f, ensure_ascii=False, indent=2)
 
 
+def create_custom_project(mishna_id: str, plot: str, srt_text: str, images_per_minute: int) -> dict:
+    # שמירת עלילה ו-SRT בקבצים בתיקיית הסטודיו של הפרויקט
+    d = studio_dir(mishna_id)
+    plot_path = d / "plot.txt"
+    srt_path = d / "transcription.srt"
+    
+    with open(plot_path, "w", encoding="utf-8") as f:
+        f.write(plot)
+    with open(srt_path, "w", encoding="utf-8") as f:
+        f.write(srt_text)
+        
+    from .srt_parser import parse_srt, total_duration
+    cues = parse_srt(str(srt_path))
+    duration = total_duration(cues)
+    
+    slots = _create_minute_slots(duration, images_per_minute)
+    
+    project = {
+        "mishna_id": mishna_id,
+        "title": mishna_id,
+        "audio_path": "", # אין עדיין
+        "srt_path": str(srt_path.relative_to(ROOT)).replace("\\", "/"),
+        "plot_path": str(plot_path.relative_to(ROOT)).replace("\\", "/"),
+        "audio_duration": duration,
+        "images_per_minute": images_per_minute,
+        "slots": slots,
+    }
+    save_project(project)
+    return project
+
 def get_slot(project: dict, slot_id: str) -> dict | None:
     for s in project.get("slots", []):
         if s.get("id") == slot_id:
@@ -187,3 +221,27 @@ def reference_file_path(ref_value: str) -> Path | None:
     # אולי הועבר שם קובץ ישיר
     candidate = base / ref_value
     return candidate if candidate.exists() else None
+
+def add_reference(filename: str, content: bytes, name: str, description: str, category: str) -> dict:
+    refs = load_references()
+    base = ROOT / refs.get("base_dir", "data/images")
+    base.mkdir(parents=True, exist_ok=True)
+    
+    file_path = base / filename
+    with open(file_path, "wb") as f:
+        f.write(content)
+        
+    import uuid
+    new_ref = {
+        "id": f"ref-{uuid.uuid4().hex[:8]}",
+        "file": filename,
+        "name": name,
+        "description": description,
+        "category": category
+    }
+    
+    refs.setdefault("references", []).append(new_ref)
+    with open(REFERENCES_INDEX, "w", encoding="utf-8") as f:
+        json.dump(refs, f, ensure_ascii=False, indent=2)
+        
+    return new_ref

@@ -1,0 +1,288 @@
+{
+  "mishna_id": "psachim__perek-3__פסחים-ג-ב",
+  "title": "פסחים-ג-ב",
+  "audio_path": "data/podcasts/psachim/perek-3/פסחים-ג-ב.mp3",
+  "srt_path": "data/podcasts/psachim/perek-3/פסחים-ג-ב.srt",
+  "audio_duration": 647.019,
+  "images_per_minute": 4.0,
+  "slots": [
+    {
+      "id": "full-project-slot",
+      "minute_index": 0,
+      "start": "00:00:00.000",
+      "end": "00:10:47.019",
+      "duration": 647.019,
+      "scenes": [
+        {
+          "scene_id": "scene-1",
+          "start": "00:00:00.220",
+          "end": "00:00:06.740",
+          "mishna_text": "מסכת פסחים, פרק ג', משנה ב'",
+          "prompt": "Animated title card scene for 'Kfar HaMishna' podcast. Colorful illustrated village paths and characters walking through a quaint ancient Jewish village. Warm, storybook illustration style with rich earthy tones and vibrant accents. Text overlay: 'כפר המשנה'. Style reference: warm hand-drawn animation aesthetic consistent with previous scenes.",
+          "references": [
+            "scene-perek1-mishna1",
+            "ref-ee4cc74c"
+          ],
+          "duration": 6.52,
+          "image_path": "full-project-slot_scene-1.png",
+          "status": "image_ready"
+        },
+        {
+          "scene_id": "scene-2",
+          "start": "00:00:06.740",
+          "end": "00:00:12.660",
+          "mishna_text": "מסכת פסחים, פרק ג', משנה ב'",
+          "prompt": "An illustrated title card showing 'Tractate Pesachim, Chapter 3, Mishna 2' in stylized Hebrew lettering, set against a warm parchment-colored background with subtle village imagery. Ancient Jewish village atmosphere, soft golden lighting suggesting Passover eve. Storybook illustration style.",
+          "references": [
+            "scene-perek1-mishna1",
+            "ref-ee4cc74c"
+          ],
+          "duration": 5.92,
+          "image_path": "full-project-slot_scene-2.png",
+          "status": "image_ready"
+        },
+        {
+          "scene_id": "scene-3",
+          "start": "00:00:12.660",
+          "end": "00:00:27.739",
+          "mishna_text": "בצק שבסדקי עריבה — אם יש כזית במקום אחד, חייב לבאר",
+          "prompt": "Recap scene: A cluttered storage room being cleaned out for Passover. Two young animated characters (Ginger and Pitzik, from the old generation character sheets) tidying up boxes and objects. Warm interior lighting, storybook style. Show nostalgic objects and memories scattered around. The atmosphere is pre-Passover, busy and slightly chaotic but warm.",
+          "references": [
+            "chars-old-generation-1",
+            "chars-old-generation-2",
+            "scene-perek1-mishna2"
+          ],
+          "duration": 15.079,
+          "image_path": "full-project-slot_scene-3.png",
+          "status": "image_ready"
+        },
+        {
+          "scene_id": "scene-4",
+          "start": "00:00:27.739",
+          "end": "00:00:48.359",
+          "mishna_text": "בצק שבסדקי עריבה — אם יש כזית במקום אחד, חייב לבאר",
+          "prompt": "Three animated characters (Ginger, Pitzik, and Yachtziel, from old generation character sheets) sitting at the entrance of a storage room, all gazing at a remarkable mosaic bowl. The bowl is made of colorful ceramic shards — red, green, purple, blue, white, black, and uncolored pieces — all held together by a thin layer of hardened dough acting as mortar. The bowl is beautiful and patchwork-like. Warm afternoon light, ancient village setting, storybook illustration style.",
+          "references": [
+            "chars-old-generation-1",
+            "chars-old-generation-2",
+            "chars-old-generation-4",
+            "scene-perek1-mishna2"
+          ],
+          "duration": 20.62,
+          "image_path": "full-project-slot_scene-4.png",
+          "status": "image_ready"
+        },
+        {
+          "scene_id": "scene-5",
+          "start": "00:00:48.359",
+          "end": "00:01:10.719",
+          "mishna_text": "בצק שבסדקי עריבה — אם יש כזית במקום אחד, חייב לבאר. ואם לאו — בטל",
+          "prompt": "Close-up illustrated view of the extraordinary mosaic bowl. Ceramic shards of red, green, purple, blue, white, black and plain colors are fitted together and bonded by a thin layer of dried dough. The dough is visible in the cracks between the shards, forming a thin web of pale beige adhesive. The bowl sits in warm sunlight, glowing with color. Storybook style, detailed and vivid.",
+          "references": [
+            "scene-perek1-mishna1",
+            "scene-perek1-mishna2"
+          ],
+          "duration": 22.36,
+          "image_path": "full-project-slot_scene-5.png",
+          "status": "image_ready"
+        },
+        {
+          "scene_id": "scene-6",
+          "start": "00:01:10.719",
+          "end": "00:01:52.560",
+          "mishna_text": "בצק שבסדקי עריבה — אם יש כזית במקום אחד, חייב לבאר. ואם לאו — בטל במיעוטו",
+          "prompt": "Yachtziel (elderly wise man from old generation character sheets) speaks seriously and thoughtfully to Ginger (younger redhead character from old generation character sheets), explaining halacha. He gestures with his hands, pointing to the bowl. Behind them is the open storage room. Ginger listens wide-eyed and worried. Pitzik (small, energetic character from old generation character sheets) stands nearby. Warm village setting, storybook illustration style.",
+          "references": [
+            "chars-old-generation-1",
+            "chars-old-generation-2",
+            "chars-old-generation-4",
+            "scene-perek1-mishna2"
+          ],
+          "duration": 41.841,
+          "image_path": "full-project-slot_scene-6.png",
+          "status": "image_ready"
+        },
+        {
+          "scene_id": "scene-7",
+          "start": "00:01:52.560",
+          "end": "00:02:35.960",
+          "mishna_text": "בצק שבסדקי עריבה — אם יש כזית במקום אחד, חייב לבאר. ואם לאו — בטל במיעוטו",
+          "prompt": "Pitzik (small energetic animated character from old generation character sheets) carefully takes the mosaic bowl and examines it with a small ruler pulled from his pocket. He measures the thickness of the dough-filled cracks with great precision. Then he kneels and uses a stick to make calculations in the sand/dirt. Ginger (redhead character from old generation character sheets) watches nervously in the background, nearly fainting with worry. Warm sunlight, outdoor village entrance, storybook illustration style.",
+          "references": [
+            "chars-old-generation-1",
+            "chars-old-generation-2",
+            "scene-perek1-mishna2"
+          ],
+          "duration": 43.38,
+          "image_path": "full-project-slot_scene-7.png",
+          "status": "image_ready"
+        },
+        {
+          "scene_id": "scene-8",
+          "start": "00:02:35.960",
+          "end": "00:03:12.759",
+          "mishna_text": "בצק שבסדקי עריבה — אם יש כזית במקום אחד, חייב לבאר. ואם לאו — בטל במיעוטו",
+          "prompt": "Ginger (redhead animated character from old generation character sheets) looks relieved and happy, hugging the mosaic bowl close to his chest. Pitzik (small energetic character from old generation character sheets) smiles triumphantly. Yachtziel (wise elder from old generation character sheets) nods knowingly. Then the three characters look at the bowl more closely — the dough looks rock-hard and ceramic-like. Ginger points at the dried dough questioningly. Outdoor village setting, warm light, storybook illustration style.",
+          "references": [
+            "chars-old-generation-1",
+            "chars-old-generation-2",
+            "chars-old-generation-4",
+            "scene-perek1-mishna2"
+          ],
+          "duration": 36.799,
+          "image_path": "full-project-slot_scene-8.png",
+          "status": "image_ready"
+        },
+        {
+          "scene_id": "scene-9",
+          "start": "00:03:12.759",
+          "end": "00:03:59.180",
+          "mishna_text": "בצק החרס — אם יש כיוצא בו שהחמיץ, חייב לבאר",
+          "prompt": "A tall, stately, distinguished elderly Kohen priest appears at the entrance of the storage room — he has a long white beard, priestly robes, and an air of great dignity and authority. He slightly resembles Rabbi Tzadik Kadosh but is taller with a much longer beard. Yachtziel (from old generation character sheets) recognizes him joyfully and they embrace warmly. Pitzik and Ginger (from old generation character sheets) watch in surprise and curiosity. Ancient village setting, warm golden light, storybook illustration style.",
+          "references": [
+            "chars-old-generation-1",
+            "chars-old-generation-2",
+            "chars-old-generation-4",
+            "chars-old-generation-5",
+            "scene-perek1-mishna3"
+          ],
+          "duration": 46.421,
+          "image_path": "full-project-slot_scene-9.png",
+          "status": "image_ready"
+        },
+        {
+          "scene_id": "scene-10",
+          "start": "00:03:59.180",
+          "end": "00:04:51.839",
+          "mishna_text": "בצק החרס — אם יש כיוצא בו שהחמיץ, חייב לבאר",
+          "prompt": "The tall distinguished Kohen priest (long white beard, priestly robes) stands and speaks warmly with the group — Yachtziel, Ginger, and Pitzik (from old generation character sheets). He gestures with concern and care, asking about their Passover preparations — the Korban Pesach, their group, their lamb. The characters respond with smiles. The storage room entrance is visible behind them, nearly empty and ready for Passover. Warm Passover eve atmosphere, storybook illustration style.",
+          "references": [
+            "chars-old-generation-1",
+            "chars-old-generation-2",
+            "chars-old-generation-4",
+            "chars-old-generation-5",
+            "scene-perek1-mishna3"
+          ],
+          "duration": 52.659,
+          "image_path": "full-project-slot_scene-10.png",
+          "status": "image_ready"
+        },
+        {
+          "scene_id": "scene-11",
+          "start": "00:04:51.839",
+          "end": "00:05:44.160",
+          "mishna_text": "בצק החרס — אם יש כיוצא בו שהחמיץ, חייב לבאר",
+          "prompt": "The tall distinguished Kohen priest (long white beard, priestly robes) carefully examines the colorful mosaic bowl that Ginger (redhead character from old generation character sheets) holds out to him. The Kohen's brow furrows, his eyes widen with recognition. He tells the group he has seen a bowl exactly like this one — it belonged to Ben Buni, the son of Nakdimon ben Gurion. Ginger looks astonished and emotional. Then Ginger begins dreaming — illustrated thought bubble shows him as a master craftsman making beautiful mosaic bowls for wealthy Jerusalem families. Storybook illustration style, warm light.",
+          "references": [
+            "chars-old-generation-1",
+            "chars-old-generation-2",
+            "chars-old-generation-5",
+            "scene-perek1-mishna3"
+          ],
+          "duration": 52.321,
+          "image_path": null,
+          "status": "proposed"
+        },
+        {
+          "scene_id": "scene-12",
+          "start": "00:05:44.160",
+          "end": "00:06:25.079",
+          "mishna_text": "בצק החרס — אם יש כיוצא בו שהחמיץ, חייב לבאר",
+          "prompt": "Pitzik (small energetic character from old generation character sheets) politely interrupts the conversation with a direct question to the Kohen priest. He gestures toward the mosaic bowl's dried dough. The Kohen listens attentively. The group stands together in a semicircle around the bowl at the entrance of the storage room. The atmosphere is engaged and curious, like a study session. Storybook illustration style, warm Passover eve light.",
+          "references": [
+            "chars-old-generation-1",
+            "chars-old-generation-2",
+            "chars-old-generation-5",
+            "scene-perek1-mishna3"
+          ],
+          "duration": 40.919,
+          "image_path": null,
+          "status": "proposed"
+        },
+        {
+          "scene_id": "scene-13",
+          "start": "00:06:25.079",
+          "end": "00:07:11.420",
+          "mishna_text": "בצק החרס — אם יש כיוצא בו שהחמיץ, חייב לבאר",
+          "prompt": "The tall distinguished Kohen priest (long white beard, priestly robes) explains halacha with authority. He gestures toward the mosaic bowl's dough. He explains: if the dough had time to leaven before it dried and hardened, it is considered chametz. Ginger (redhead, from old generation character sheets) nods slowly, understanding — he used old dough that had been sitting outside for a long time. Then Ginger asks why Ben Buni showed the bowl to the Kohen in the first place. The Kohen smiles and says it's a long story. Warm outdoor village setting, storybook style.",
+          "references": [
+            "chars-old-generation-1",
+            "chars-old-generation-2",
+            "chars-old-generation-5",
+            "scene-perek1-mishna3"
+          ],
+          "duration": 46.341,
+          "image_path": null,
+          "status": "proposed"
+        },
+        {
+          "scene_id": "scene-14",
+          "start": "00:07:11.420",
+          "end": "00:08:09.740",
+          "mishna_text": "בצק שבסדקי עריבה — אם מקפיד עליו, חוצץ; ואם לאו — אינו חוצץ",
+          "prompt": "Pitzik (small energetic character from old generation character sheets) runs quickly to check the storage room, sees it is nearly empty and ready, then runs back excitedly. The Kohen priest (tall, long white beard, priestly robes) begins his story: Ben Buni came to him with the mosaic bowl, worried because a dead lizard had fallen and touched the bowl — but only on the dough part, not the ceramic shards. The Kohen explains the halacha question: is the dough considered part of the bowl or just stuck to it? Close-up of the bowl with a tiny illustrated lizard silhouette near the dough section. Storybook illustration style.",
+          "references": [
+            "chars-old-generation-1",
+            "chars-old-generation-2",
+            "chars-old-generation-5",
+            "scene-perek1-mishna2",
+            "scene-perek1-mishna3"
+          ],
+          "duration": 58.32,
+          "image_path": null,
+          "status": "proposed"
+        },
+        {
+          "scene_id": "scene-15",
+          "start": "00:08:09.740",
+          "end": "00:09:31.700",
+          "mishna_text": "בצק שבסדקי עריבה — אם מקפיד עליו, חוצץ; ואם לאו — אינו חוצץ",
+          "prompt": "The Kohen priest (tall, long white beard, priestly robes) explains the halacha to the attentive group. He gestures expressively: if the bowl's owner does NOT want the dough attached — it's like dirt, it's a barrier (chotzetz), and impurity touching the dough does NOT reach the bowl. But if the owner WANTS the dough attached — like Ginger's bowl where the dough holds all the pieces together — then impurity touching the dough reaches the bowl itself. Ginger (redhead, from old generation character sheets) listens intently, holding his bowl protectively. Diagram-like illustration of the bowl with arrows showing the concept. Storybook illustration style, warm light.",
+          "references": [
+            "chars-old-generation-1",
+            "chars-old-generation-2",
+            "chars-old-generation-5",
+            "scene-perek1-mishna2",
+            "scene-perek1-mishna3"
+          ],
+          "duration": 81.96,
+          "image_path": null,
+          "status": "proposed"
+        },
+        {
+          "scene_id": "scene-16",
+          "start": "00:09:31.700",
+          "end": "00:10:07.779",
+          "mishna_text": "בצק שבסדקי עריבה — אם מקפיד עליו, חוצץ; ואם לאו — אינו חוצץ",
+          "prompt": "Ginger (redhead animated character from old generation character sheets) carefully places the mosaic bowl into his bag while listening. As he does, he pulls out an old rolled scroll from the bag and sets it on one of the crates nearby. Pitzik (small energetic character from old generation character sheets) glances at the scroll curiously. The Kohen continues his story — Ben Buni came on a holiday after Passover seder, and they were making matzot when this question arose. Warm storage room exterior, ancient village, storybook illustration style.",
+          "references": [
+            "chars-old-generation-1",
+            "chars-old-generation-2",
+            "chars-old-generation-5",
+            "scene-perek1-mishna3"
+          ],
+          "duration": 36.079,
+          "image_path": null,
+          "status": "proposed"
+        },
+        {
+          "scene_id": "scene-17",
+          "start": "00:10:07.779",
+          "end": "00:10:47.019",
+          "mishna_text": "כפר המשנה",
+          "prompt": "Pitzik (small energetic character from old generation character sheets) notices the old scroll that Ginger placed on the crate. He approaches it and sees ancient writing on it: 'כפר המשנה — לא לגעת' (Kfar HaMishna — Do Not Touch). His body freezes, a strange feeling washes over him. His eyes go wide. He stares at it in shock — this is the place he came from, two thousand years in the future. He looks around confused and alarmed, then runs off urgently to find Adon-Madon. Final frame: aerial view of the ancient village of Kfar HaMishna as if from a map, with the closing title card. Storybook illustration style, dramatic lighting.",
+          "references": [
+            "chars-old-generation-1",
+            "chars-old-generation-2",
+            "ref-ee4cc74c",
+            "scene-perek1-mishna1"
+          ],
+          "duration": 39.24,
+          "image_path": null,
+          "status": "proposed"
+        }
+      ],
+      "status": "proposed"
+    }
+  ]
+}

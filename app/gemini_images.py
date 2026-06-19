@@ -40,14 +40,17 @@ def _guess_mime(path: Path) -> str:
     return mime or "image/png"
 
 
-def generate_image(prompt: str, reference_paths: list[Path], out_path: Path) -> Path:
-    """יוצר תמונה אחת מ-prompt + תמונות רפרנס, שומר ל-out_path. מחזיר את הנתיב."""
-    print(f"[Gemini] מתחיל יצירת תמונה עם מודל: {MODEL}")
+def generate_image(prompt: str, reference_paths: list[Path], out_path: Path, scene_type: str = "character") -> Path:
+    """יוצר תמונה אחת מ-prompt + תמונות רפרנס, שומר ל-out_path. מחזיר את הנתיב.
+    
+    scene_type: "character", "place", or "object".
+    """
+    print(f"[Gemini] מתחיל יצירת תמונה עם מודל: {MODEL} (סוג: {scene_type})")
     print(f"[Gemini] prompt: {prompt[:100]}..." if len(prompt) > 100 else f"[Gemini] prompt: {prompt}")
     print(f"[Gemini] מספר רפרנסים: {len(reference_paths)}")
     
     contents: list = []
-    # הרפרנסים קודם — הם מקבעים את מראה הדמויות; אחריהם ההוראה הטקסטואלית.
+    # הרפרנסים קודם — הם מקבעים את הסגנון/מראה; אחריהם ההוראה הטקסטואלית.
     for rp in reference_paths:
         if rp and rp.exists():
             print(f"[Gemini] טוען רפרנס: {rp.name}")
@@ -57,12 +60,28 @@ def generate_image(prompt: str, reference_paths: list[Path], out_path: Path) -> 
                     mime_type=_guess_mime(rp),
                 )
             )
-    instruction = prompt
-    if reference_paths:
+    
+    if scene_type == "object":
         instruction = (
-            "Use the provided reference image(s) to keep the characters' appearance "
-            "consistent. Generate a single illustration for the following scene: " + prompt
+            "Use the provided reference image(s) ONLY to keep the artistic style consistent. "
+            "Focus strictly on the main object. Keep the background simple, clean and uncluttered "
+            "as this element will be integrated into other scenes. Do NOT include any characters. "
+            "Generate a single illustration for the following object: " + prompt
         )
+    elif scene_type == "place":
+        instruction = (
+            "Use the provided reference image(s) ONLY to keep the artistic style consistent. "
+            "Focus on the environment and atmosphere. Do NOT include any characters unless "
+            "explicitly mentioned in the prompt. Generate a single illustration for the following place: " + prompt
+        )
+    else: # character
+        instruction = prompt
+        if reference_paths:
+            instruction = (
+                "Use the provided reference image(s) to keep the characters' appearance "
+                "consistent and maintain the overall style. Generate a single illustration for the following scene: " + prompt
+            )
+            
     contents.append(instruction)
 
     print(f"[Gemini] שולח בקשה ל-API...")

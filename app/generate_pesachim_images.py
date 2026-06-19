@@ -16,6 +16,10 @@ SCENES_JSON_PATH = Path(r"C:\Users\MyPC\Downloads\pesachim_scenes.json")
 CHARACTERS_DIR = Path(r"C:\Users\MyPC\Desktop\code\kfar_hamishna\data\images\charcter_v2")
 OUTPUT_DIR = Path(r"C:\Users\MyPC\Desktop\code\kfar_hamishna\data\images\pesachim_v1")
 
+# Default style reference image (Optional)
+# This will be used as a reference if no previous scene exists, to maintain a consistent style.
+DEFAULT_STYLE_REF = Path(r"C:\Users\MyPC\Desktop\code\kfar_hamishna\data\images\style.jpg")
+
 MODEL = "gemini-3.1-flash-image"
 
 def save_binary_file(file_name, data):
@@ -36,8 +40,8 @@ def create_image_part(image_path: Path):
         mime_type=guess_mime(image_path)
     )
 
-def generate_scene_image(client, prompt: str, reference_paths: list[Path], output_path: Path):
-    print(f"\n[Gemini] Starting image generation for: {output_path.name}")
+def generate_scene_image(client, prompt: str, reference_paths: list[Path], output_path: Path, scene_type: str = "character"):
+    print(f"\n[Gemini] Starting image generation for: {output_path.name} (type: {scene_type})")
     print(f"[Gemini] References: {[p.name for p in reference_paths if p and p.exists()]}")
     
     parts = []
@@ -50,13 +54,26 @@ def generate_scene_image(client, prompt: str, reference_paths: list[Path], outpu
                 parts.append(part)
                 
     # Add the text prompt
-    instruction = prompt
-    if reference_paths:
-         instruction = (
-            "Use the provided reference images to keep the characters' appearance and the scene's style "
-            "consistent. The first reference is usually the previous scene, and the subsequent ones are the characters. "
-            "Generate a single illustration for the following scene: " + prompt
-         )
+    if scene_type == "object":
+        instruction = (
+            "Use the provided reference images ONLY to keep the artistic style consistent. "
+            "Focus strictly on the main object. Keep the background simple, clean and uncluttered "
+            "as this element will be integrated into other scenes. Do NOT include any characters. "
+            "Generate a single illustration for the following object: " + prompt
+        )
+    elif scene_type == "place":
+        instruction = (
+            "Use the provided reference images ONLY to keep the artistic style consistent. "
+            "Focus on the environment and atmosphere. Do NOT include any characters unless "
+            "explicitly mentioned in the prompt. Generate a single illustration for the following place: " + prompt
+        )
+    else: # character
+        instruction = prompt
+        if reference_paths:
+            instruction = (
+                "Use the provided reference images to keep the characters' appearance and the scene's style "
+                "consistent. Generate a single illustration for the following scene: " + prompt
+            )
     
     parts.append(types.Part.from_text(text=instruction))
     
@@ -125,8 +142,18 @@ def main():
     
     for i, scene in enumerate(scenes):
         scene_num = scene.get("scene_number", i + 1)
-        prompt = scene.get("image_prompt", "")
+        prompt = scene.get("image_prompt", "").lower()
         characters_present = scene.get("characters_present", [])
+        
+        # Determine scene type
+        scene_type = "character"
+        if not characters_present:
+            # Check if it's an object or a place
+            place_keywords = ["מחסן", "בית", "חדר", "שוק", "רחוב", "warehouse", "room", "market", "street", "house", "מטבח", "kitchen", "חצר", "yard"]
+            if any(kw in prompt for kw in place_keywords):
+                scene_type = "place"
+            else:
+                scene_type = "object"
         
         output_filename = f"scene_{scene_num:02d}.jpg"
         output_path = OUTPUT_DIR / output_filename
@@ -138,20 +165,24 @@ def main():
              
         reference_paths = []
         
-        # 1. Add previous scene image if exists
+        # 1. Add style reference (Previous scene OR Default style)
         if previous_image_path and previous_image_path.exists():
             reference_paths.append(previous_image_path)
+        elif DEFAULT_STYLE_REF and DEFAULT_STYLE_REF.exists():
+            print(f"Using default style reference: {DEFAULT_STYLE_REF.name}")
+            reference_paths.append(DEFAULT_STYLE_REF)
             
-        # 2. Add character images
-        for char_name in characters_present:
-            char_path = CHARACTERS_DIR / f"{char_name}.jpg"
-            if char_path.exists():
-                reference_paths.append(char_path)
-            else:
-                print(f"Warning: Character image not found for {char_name}")
+        # 2. Add character images ONLY if characters are present
+        if scene_type == "character":
+            for char_name in characters_present:
+                char_path = CHARACTERS_DIR / f"{char_name}.jpg"
+                if char_path.exists():
+                    reference_paths.append(char_path)
+                else:
+                    print(f"Warning: Character image not found for {char_name}")
                 
         # Generate the image
-        result_path = generate_scene_image(client, prompt, reference_paths, output_path)
+        result_path = generate_scene_image(client, prompt, reference_paths, output_path, scene_type=scene_type)
         
         if result_path:
             previous_image_path = result_path

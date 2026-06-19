@@ -185,6 +185,9 @@
     </div>
   </div>
 
+  <!-- שדה נסתר להעלאת תמונה לרפרנס קיים -->
+  <input type="file" id="hiddenRefImageInput" accept="image/*" style="display: none;">
+
   <div id="videoPanel" class="video-panel hidden">
     <h2>הרכבת וידאו</h2>
     <div id="buildLogs" class="build-logs"></div>
@@ -218,6 +221,36 @@
       </div>
       <div class="scenes-grid"></div>
     </section>
+  </template>
+
+  <!-- תבנית רפרנס מוצע -->
+  <template id="proposedRefTemplate">
+    <article class="scene-card proposed-ref-card">
+      <div class="scene-header">
+        <span class="scene-number">רפרנס חדש</span>
+        <span class="scene-status-badge"></span>
+      </div>
+      <div class="scene-content">
+        <div class="scene-section">
+          <label class="section-label">שם (עברית)</label>
+          <input type="text" class="ref-name" placeholder="שם הרפרנס..." />
+        </div>
+        <div class="scene-section">
+          <label class="section-label">תיאור ויזואלי (English)</label>
+          <textarea class="ref-description" rows="3" placeholder="תיאור ויזואלי ל-Gemini..."></textarea>
+        </div>
+        <div class="scene-section image-section">
+          <div class="image-preview">
+            <img class="ref-image" alt="" />
+            <div class="no-image-placeholder"><span>🖼️</span></div>
+          </div>
+          <div class="image-controls">
+            <button class="generate-ref-btn" title="צור תמונת רפרנס">🎨</button>
+            <button class="approve-ref-btn" title="אשר והוסף לאינדקס">✓</button>
+          </div>
+        </div>
+      </div>
+    </article>
   </template>
 
   <!-- תבנית סצנה -->

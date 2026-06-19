@@ -109,9 +109,25 @@ function renderRefsTable() {
             `;
         } else { fieldsHtml = `<td></td><td></td>`; }
 
+        const dormantHtml = isProposed ? '' : `
+            <label style="font-size: 10px; display: block; margin-top: 5px;">
+                <input type="checkbox" class="ref-edit-dormant" ${idAttr} ${r.dormant ? 'checked' : ''}/> רדום
+            </label>
+        `;
+
         return `
-            <td>${isProposed ? '<div class="no-image-placeholder">❓</div>' : `<img src="/api/reference-image/${encodeURIComponent(r.id)}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;"/>`}</td>
-            <td><input type="text" value="${r.name || ""}" class="ref-edit-name" ${idAttr}/></td>
+            <td>
+                ${isProposed ? '<div class="no-image-placeholder">❓</div>' : `
+                    <div class="ref-table-img-container">
+                        <img src="/api/reference-image/${encodeURIComponent(r.id)}?t=${Date.now()}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px; cursor: pointer;" class="ref-table-img" ${idAttr} title="החלף תמונה"/>
+                        <button class="v2-ref-btn" ${idAttr} title="ייצר V2" style="font-size: 10px; padding: 2px 4px; margin-top: 2px;">V2</button>
+                    </div>
+                `}
+            </td>
+            <td>
+                <input type="text" value="${r.name || ""}" class="ref-edit-name" ${idAttr}/>
+                ${dormantHtml}
+            </td>
             <td><textarea class="ref-edit-desc" ${idAttr}>${r.description || ""}</textarea></td>
             ${fieldsHtml}
             <td>
@@ -157,7 +173,8 @@ function renderRefsTable() {
                 time_of_day: $(".ref-edit-time", tr)?.value,
                 material: $(".ref-edit-material", tr)?.value,
                 condition: $(".ref-edit-condition", tr)?.value,
-                category: $(".ref-edit-cat", tr).value
+                category: $(".ref-edit-cat", tr).value,
+                dormant: $(".ref-edit-dormant", tr)?.checked
             };
             try {
                 await api(`/api/references/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(body) });
@@ -166,6 +183,45 @@ function renderRefsTable() {
                 setStatus("רפרנס עודכן ✓", "ok");
                 renderGlobalRefs();
             } catch (e) { setStatus("שגיאה: " + e.message, "err"); }
+        };
+    });
+
+    $$(".ref-table-img").forEach(img => {
+        img.onclick = () => {
+            const id = img.dataset.id;
+            const input = $("#hiddenRefImageInput");
+            input.onchange = async () => {
+                if (!input.files.length) return;
+                const fd = new FormData();
+                fd.append("file", input.files[0]);
+                setStatus(`מעלה תמונה חדשה לרפרנס ${id}...`);
+                try {
+                    const res = await fetch(`/api/references/${encodeURIComponent(id)}/image`, { method: "POST", body: fd });
+                    const updatedRef = await res.json();
+                    const idx = references.findIndex(r => r.id === id);
+                    if (idx >= 0) references[idx] = updatedRef;
+                    renderRefsTable();
+                    renderGlobalRefs();
+                    setStatus("תמונה עודכנה ✓", "ok");
+                } catch (e) { setStatus("שגיאה: " + e.message, "err"); }
+            };
+            input.click();
+        };
+    });
+
+    $$(".v2-ref-btn").forEach(btn => {
+        btn.onclick = async () => {
+            const id = btn.dataset.id;
+            setStatus(`מייצר גרסת V2 לרפרנס ${id}...`);
+            btn.disabled = true;
+            try {
+                const res = await api(`/api/references/${encodeURIComponent(id)}/v2?mishna_id=${encodeURIComponent(currentMishna)}`, { method: "POST" });
+                const idx = references.findIndex(r => r.id === id);
+                if (idx >= 0) references[idx] = res;
+                renderRefsTable();
+                renderGlobalRefs();
+                setStatus("גרסת V2 נוצרה בהצלחה ✓", "ok");
+            } catch (e) { setStatus("שגיאה: " + e.message, "err"); btn.disabled = false; }
         };
     });
 
@@ -273,10 +329,35 @@ function renderTimeline() {
   const tel = $("#timeline");
   if (!tel) return;
   tel.innerHTML = "";
+
   if (!project || !project.slots || project.slots.length === 0) {
     tel.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--muted);">אין סצנות עדיין.</div>';
     return;
   }
+
+  // רינדור רפרנסים מוצעים בראש ה-Timeline
+  let allProposedRefs = [];
+  project.slots.forEach(s => {
+    if (s.new_references) allProposedRefs.push(...s.new_references);
+  });
+
+  if (allProposedRefs.length > 0) {
+    const refSection = document.createElement("section");
+    refSection.className = "minute-card proposed-refs-section";
+    refSection.innerHTML = `
+      <div class="minute-header">
+        <h2 class="minute-title">דמויות ורפרנסים מוצעים לפרק זה</h2>
+        <span class="minute-time-range">חובה לאשר לפני יצירת סצנות</span>
+      </div>
+      <div class="scenes-grid proposed-refs-grid"></div>
+    `;
+    const grid = $(".scenes-grid", refSection);
+    allProposedRefs.forEach(ref => {
+      grid.appendChild(renderProposedRef(ref));
+    });
+    tel.appendChild(refSection);
+  }
+
   const minuteTemplate = $("#minuteCardTemplate");
   project.slots.forEach((minuteSlot) => {
     const minuteNode = minuteTemplate.content.cloneNode(true);
@@ -295,6 +376,61 @@ function renderTimeline() {
   });
 }
 
+function renderProposedRef(ref) {
+  const tpl = $("#proposedRefTemplate");
+  const node = tpl.content.cloneNode(true);
+  const root = $(".scene-card", node);
+  
+  const nameInput = $(".ref-name", root);
+  nameInput.value = ref.name || "";
+  
+  const descTextarea = $(".ref-description", root);
+  descTextarea.value = ref.description || "";
+  
+  const badge = $(".scene-status-badge", root);
+  badge.textContent = "מוצע";
+  badge.className = "scene-status-badge proposed";
+
+  const img = $(".ref-image", root);
+  // אם כבר יש רפרנס כזה באינדקס (למשל אחרי יצירה), נציג את התמונה שלו
+  const existing = references.find(r => r.name === ref.name);
+  if (existing) {
+        img.src = `/api/reference-image/${encodeURIComponent(existing.id)}`;
+        img.classList.add("has");
+        badge.textContent = "קיים באינדקס";
+        badge.className = "scene-status-badge approved";
+  }
+
+  $(".generate-ref-btn", root).onclick = async () => {
+      setStatus(`מייצר רפרנס ל-${nameInput.value}...`);
+      try {
+          const res = await api(`/api/project/${encodeURIComponent(currentMishna)}/create-reference-image`, {
+              method: "POST",
+              body: JSON.stringify({
+                  name: nameInput.value,
+                  description: descTextarea.value,
+                  category: ref.category || "characters"
+              })
+          });
+          references.push(res);
+          renderGlobalRefs();
+          renderTimeline(); // רינדור מחדש כדי לעדכן את הכרטיס
+          setStatus(`רפרנס ${res.name} נוצר ✓`, "ok");
+      } catch (e) { setStatus("שגיאה: " + e.message, "err"); }
+  };
+
+  $(".approve-ref-btn", root).onclick = () => {
+      // אם כבר קיים, פשוט נסיר מהרשימה המוצעת
+      project.slots.forEach(s => {
+          if (s.new_references) s.new_references = s.new_references.filter(r => r.id !== ref.id);
+      });
+      renderTimeline();
+      setStatus("רפרנס אושר", "ok");
+  };
+
+  return node;
+}
+
 function renderScene(minuteId, scene, sceneNumber) {
   const tpl = $("#sceneTemplate");
   const node = tpl.content.cloneNode(true);
@@ -310,7 +446,16 @@ function renderScene(minuteId, scene, sceneNumber) {
   $(".mishna-text", root).onchange = () => saveScene(minuteId, scene.scene_id, root);
   $(".prompt-text", root).value = scene.prompt || "";
   $(".prompt-text", root).onchange = () => saveScene(minuteId, scene.scene_id, root);
-  renderChips($(".ref-chips-container", root), scene.references || []);
+  
+  const hasMissing = renderChips($(".ref-chips-container", root), scene.references || []);
+  if (hasMissing) {
+      const missingBadge = document.createElement("span");
+      missingBadge.className = "scene-status-badge missing-refs";
+      missingBadge.textContent = "חסרים רפרנסים";
+      missingBadge.style.marginRight = "5px";
+      $(".scene-header", root).appendChild(missingBadge);
+  }
+
   const img = $(".scene-image", root);
   if (scene.image_path) {
     img.src = `/api/project/${encodeURIComponent(currentMishna)}/minute/${minuteId}/scene/${scene.scene_id}/image?t=${Date.now()}`;
@@ -335,13 +480,22 @@ function renderChips(container, refs) {
     container.innerHTML = '<span style="font-size: 11px; color: var(--muted);">אין רפרנסים</span>';
     return;
   }
+  let hasMissing = false;
   refs.forEach((r) => {
     const meta = references.find((x) => x.id === r || x.file === r);
     const span = document.createElement("span");
-    span.className = "chip";
-    span.textContent = meta ? meta.name : r;
+    if (meta) {
+      span.className = "chip";
+      span.textContent = meta.name;
+    } else {
+      span.className = "chip missing";
+      span.textContent = `⚠️ ${r}`;
+      span.title = "רפרנס חסר במאגר";
+      hasMissing = true;
+    }
     container.appendChild(span);
   });
+  return hasMissing;
 }
 
 function findMinuteSlot(minuteId) { return (project.slots || []).find((m) => m.id === minuteId); }
@@ -586,22 +740,6 @@ $("#urSave").onclick = async () => {
   fd.append("name", $("#urName").value.trim());
   fd.append("description", $("#urDesc").value.trim());
   fd.append("category", $("#urCat").value);
-  try {
-    const res = await fetch("/api/references", { method: "POST", body: fd });
-    const newRef = await res.json();
-    references.push(newRef);
-    renderGlobalRefs();
-    $("#uploadRefModal").classList.add("hidden");
-  } catch(e) { setStatus("שגיאה: " + e.message, "err"); }
-};
-$("#urSave").onclick = async () => {
-  const fileInput = $("#urFile");
-  if (!fileInput.files.length) return alert("יש לבחור קובץ תמונה");
-  const fd = new FormData();
-  fd.append("file", fileInput.files[0]);
-  fd.append("name", $("#urName").value.trim());
-  fd.append("description", $("#urDesc").value.trim());
-  fd.append("category", $("#urCat").value);
   
   const body = {
       age: $("#urAge")?.value,
@@ -628,22 +766,6 @@ $("#urSave").onclick = async () => {
 $("#manageRefsBtn").onclick = () => { renderRefsTable(); $("#manageRefsModal").classList.remove("hidden"); };
 $("#closeRefsModalBtn").onclick = () => $("#manageRefsModal").classList.add("hidden");
 $("#urCancel").onclick = () => $("#uploadRefModal").classList.add("hidden");
-$("#urSave").onclick = async () => {
-  const fileInput = $("#urFile");
-  if (!fileInput.files.length) return alert("יש לבחור קובץ תמונה");
-  const fd = new FormData();
-  fd.append("file", fileInput.files[0]);
-  fd.append("name", $("#urName").value.trim());
-  fd.append("description", $("#urDesc").value.trim());
-  fd.append("category", $("#urCat").value);
-  try {
-    const res = await fetch("/api/references", { method: "POST", body: fd });
-    const newRef = await res.json();
-    references.push(newRef);
-    renderGlobalRefs();
-    $("#uploadRefModal").classList.add("hidden");
-  } catch(e) { setStatus("שגיאה: " + e.message, "err"); }
-};
 
 async function runProposeStream(customPrompt = null) {
   const ipm = parseFloat($("#ipm").value) || 4;

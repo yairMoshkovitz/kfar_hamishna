@@ -4,21 +4,33 @@
   "references": [
     {
       "id": "chars-old-generation-1",
-      "file": "דמויות כפר המשנה הדור הישן (1).jpeg",
+      "file": "ref_v2_f426d2d8.png",
       "name": "הרב קדוש",
       "description": "רב הכפר יהודי חביב וחיכן עם זקן גדול ולבן לבוש בחליפה שחורה ומגבעת עם ציציות בחוץ. בדרך כלל עם ספר ביחד",
       "category": "characters",
       "age": "60",
-      "height": "160"
+      "height": "160",
+      "versions": [
+        {
+          "file": "דמויות כפר המשנה הדור הישן (1).jpeg",
+          "timestamp": "2026-06-19T19:02:06.770756"
+        }
+      ]
     },
     {
       "id": "chars-old-generation-2",
-      "file": "דמויות כפר המשנה הדור הישן (2).jpeg",
+      "file": "ref_v2_7f2fb9e7.png",
       "name": "איציק ופיציק",
       "description": "חברים טובים, איציק שמן ופיציק רזה.\nהם הדמויות העלילתיות יותר בכפר רבים ומשלימים לסירוגים",
       "category": "characters",
       "age": "30",
-      "height": "170"
+      "height": "170",
+      "versions": [
+        {
+          "file": "דמויות כפר המשנה הדור הישן (2).jpeg",
+          "timestamp": "2026-06-19T19:02:36.753326"
+        }
+      ]
     },
     {
       "id": "chars-old-generation-4",
@@ -163,6 +175,68 @@
       "age": null,
       "height": null,
       "items": []
+    },
+    {
+      "id": "ref-ce2a8940",
+      "file": "ref_5dfafdcf.png",
+      "name": "מחסן יחציאל",
+      "description": "A large stone storage room in ancient Jerusalem with thick clay walls and a low arched entrance. Clay jars, wooden crates, and sacks line the walls. There is enough open space in the center for a large clay oven. Lit by oil lamps and light from a small window. Atmosphere is dim, earthy, and warm.",
+      "category": "style",
+      "age": null,
+      "height": null,
+      "items": []
+    },
+    {
+      "id": "ref-9af6b91b",
+      "file": "ref_18ed54c5.png",
+      "name": "תנור פסח חרס",
+      "description": "A massive ancient clay oven, nearly as tall as a short adult man, cylindrical in shape with thick terracotta walls. It is old and slightly darkened from use, with a wide opening at the top. Its circumference is so large that two children with outstretched arms could barely encircle it. It has a rough, textured clay surface.",
+      "category": "items",
+      "age": null,
+      "height": null,
+      "items": []
+    },
+    {
+      "id": "ref-0f428f52",
+      "file": "ref_42dceb3b.png",
+      "name": "תנור פסח חרס",
+      "description": "A massive ancient clay oven, nearly as tall as a short adult man, cylindrical in shape with thick terracotta walls. It is old and slightly darkened from use, with a wide opening at the top. Its circumference is so large that two children with outstretched arms could barely encircle it. It has a rough, textured clay surface.",
+      "category": "items",
+      "age": null,
+      "height": null,
+      "items": []
+    },
+    {
+      "id": "ref-4a64cd5f",
+      "file": "ref_aab9c700.png",
+      "name": "תנור פסח חרס",
+      "description": "A massive ancient clay oven, nearly as tall as a short adult man, cylindrical in shape with thick terracotta walls. It is old and slightly darkened from use, with a wide opening at the top. Its circumference is so large that two children with outstretched arms could barely encircle it. It has a rough, textured clay surface.",
+      "category": "items",
+      "age": null,
+      "height": null,
+      "items": []
+    },
+    {
+      "id": "ref-5002c37c",
+      "file": "style.jpg",
+      "name": "style",
+      "description": "תמונה של הרב קדוש וגון בריון עמודים בכפר.\r\nהתמונה מיועדת לתת אוירה כללית של הכפר ליצירת תמונות נוספות בסגנון",
+      "category": "style",
+      "age": null,
+      "height": null,
+      "items": []
+    },
+    {
+      "id": "ref-9f7c04ca",
+      "file": "ref_943bb05d.png",
+      "name": "אשת ג'ינג'י",
+      "description": "A warm and energetic young Jewish woman with a cheerful face, wearing a simple ancient linen dress with a head covering typical of Second Temple period women. She has kind eyes and an expressive, slightly worried expression. Medium height, modest appearance. PIXAR 3D style.",
+      "category": "characters",
+      "age": null,
+      "height": null,
+      "items": [],
+      "dormant": false,
+      "versions": []
     }
   ]
 }

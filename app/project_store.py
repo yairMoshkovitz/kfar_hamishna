@@ -21,6 +21,9 @@ STUDIO_DIR = ROOT / "data" / "studio"
 REFERENCES_INDEX = ROOT / "data" / "references" / "index.json"
 
 DEFAULT_IMAGES_PER_MINUTE = 4
+DEFAULT_STYLE_DESCRIPTION = "תמונות באווירה יהודית ומתאימה לילדים בסגנון 3D PIXAR כמו דמויות WORLD DISNEY"
+# שם הקובץ או המזהה של תמונת הסגנון המוגדרת מראש
+DEFAULT_STYLE_REF_NAME = "פרק א משנה א.png"
 
 
 def _slugify(text: str) -> str:
@@ -123,6 +126,23 @@ def load_or_init_project(mishna_id: str) -> dict:
         with open(p, "r", encoding="utf-8") as f:
             project = json.load(f)
         
+        # הגדרת ברירת מחדל לסגנון אם חסר
+        changed = False
+        if not project.get("style_description"):
+            project["style_description"] = DEFAULT_STYLE_DESCRIPTION
+            changed = True
+        if not project.get("style_references"):
+            # נחפש את ה-ID של תמונת ברירת המחדל
+            refs = load_references()
+            default_ref_id = None
+            for r in refs.get("references", []):
+                if r.get("file") == DEFAULT_STYLE_REF_NAME or r.get("name") == DEFAULT_STYLE_REF_NAME:
+                    default_ref_id = r["id"]
+                    break
+            if default_ref_id:
+                project["style_references"] = [default_ref_id]
+                changed = True
+
         # אם יש משבצות ישנות (לפי שורות ולא לפי דקות), נמחק אותן וניצור מחדש
         has_old_slots = project.get("slots") and not project["slots"][0].get("scenes")
         
@@ -132,7 +152,11 @@ def load_or_init_project(mishna_id: str) -> dict:
                 cues = parse_srt(str(srt))
                 duration = total_duration(cues)
                 project["slots"] = _create_minute_slots(duration, project.get("images_per_minute", DEFAULT_IMAGES_PER_MINUTE))
-                save_project(project)
+                changed = True
+        
+        if changed:
+            save_project(project)
+            
         return project
 
     mp3 = _find_mp3_by_id(mishna_id)
@@ -148,6 +172,14 @@ def load_or_init_project(mishna_id: str) -> dict:
         # יצירת משבצות דקה עם sub-slots
         slots = _create_minute_slots(duration, DEFAULT_IMAGES_PER_MINUTE)
 
+    # חיפוש מזהה רפרנס ברירת מחדל
+    refs = load_references()
+    default_ref_id = None
+    for r in refs.get("references", []):
+        if r.get("file") == DEFAULT_STYLE_REF_NAME or r.get("name") == DEFAULT_STYLE_REF_NAME:
+            default_ref_id = r["id"]
+            break
+
     project = {
         "mishna_id": mishna_id,
         "title": mp3.stem,
@@ -155,6 +187,8 @@ def load_or_init_project(mishna_id: str) -> dict:
         "srt_path": str(srt.relative_to(ROOT)).replace("\\", "/") if srt.exists() else None,
         "audio_duration": duration,
         "images_per_minute": DEFAULT_IMAGES_PER_MINUTE,
+        "style_description": DEFAULT_STYLE_DESCRIPTION,
+        "style_references": [default_ref_id] if default_ref_id else [],
         "slots": slots,
     }
     save_project(project)
@@ -184,6 +218,14 @@ def create_custom_project(mishna_id: str, plot: str, srt_text: str, images_per_m
     
     slots = _create_minute_slots(duration, images_per_minute)
     
+    # חיפוש מזהה רפרנס ברירת מחדל
+    refs = load_references()
+    default_ref_id = None
+    for r in refs.get("references", []):
+        if r.get("file") == DEFAULT_STYLE_REF_NAME or r.get("name") == DEFAULT_STYLE_REF_NAME:
+            default_ref_id = r["id"]
+            break
+
     project = {
         "mishna_id": mishna_id,
         "title": mishna_id,
@@ -192,6 +234,8 @@ def create_custom_project(mishna_id: str, plot: str, srt_text: str, images_per_m
         "plot_path": str(plot_path.relative_to(ROOT)).replace("\\", "/"),
         "audio_duration": duration,
         "images_per_minute": images_per_minute,
+        "style_description": DEFAULT_STYLE_DESCRIPTION,
+        "style_references": [default_ref_id] if default_ref_id else [],
         "slots": slots,
     }
     save_project(project)
@@ -211,12 +255,16 @@ def load_references() -> dict:
         return json.load(f)
 
 
-def reference_file_path(ref_value: str) -> Path | None:
-    """ממיר ערך reference (id או שם קובץ) לנתיב מוחלט בדיסק."""
+def reference_file_path(ref_value: str, version_index: int = -1) -> Path | None:
+    """ממיר ערך reference (id או שם קובץ) לנתיב מוחלט בדיסק.
+    אם version_index >= 0, יחזיר את הגרסה הספציפית מהרשימה.
+    """
     refs = load_references()
     base = ROOT / refs.get("base_dir", "data/images")
     for r in refs.get("references", []):
         if ref_value in (r.get("id"), r.get("file"), r.get("name")):
+            if version_index >= 0 and r.get("versions") and version_index < len(r["versions"]):
+                return base / r["versions"][version_index]["file"]
             return base / r["file"]
     # אולי הועבר שם קובץ ישיר
     candidate = base / ref_value
@@ -240,7 +288,9 @@ def add_reference(filename: str, content: bytes, name: str, description: str, ca
         "category": category,
         "age": None,
         "height": None,
-        "items": []
+        "items": [],
+        "dormant": False,
+        "versions": []
     }
     
     refs.setdefault("references", []).append(new_ref)

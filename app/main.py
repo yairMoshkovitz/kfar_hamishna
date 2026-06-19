@@ -57,6 +57,7 @@ class ReferenceUpdate(BaseModel):
     age: str | None = None
     height: str | None = None
     items: list[str] | None = None
+    dormant: bool | None = None
 
 
 class RepromptBody(BaseModel):
@@ -109,6 +110,104 @@ async def add_reference(
         return project_store.add_reference(file.filename, content, name, description, category)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/references/{ref_id}/image")
+async def upload_reference_image(ref_id: str, file: UploadFile):
+    refs = project_store.load_references()
+    found_ref = None
+    for r in refs.get("references", []):
+        if r["id"] == ref_id:
+            found_ref = r
+            break
+    
+    if not found_ref:
+        raise HTTPException(status_code=404, detail="Reference not found")
+        
+    try:
+        content = await file.read()
+        base = project_store.ROOT / refs.get("base_dir", "data/images")
+        
+        # Save new image and move old to versions if not already there
+        import uuid
+        import datetime
+        
+        new_filename = f"ref_{uuid.uuid4().hex[:8]}_{file.filename}"
+        with open(base / new_filename, "wb") as f:
+            f.write(content)
+            
+        # Add current to versions
+        if "versions" not in found_ref:
+            found_ref["versions"] = []
+            
+        found_ref["versions"].append({
+            "file": found_ref["file"],
+            "timestamp": datetime.datetime.now().isoformat()
+        })
+        
+        found_ref["file"] = new_filename
+        
+        with open(project_store.REFERENCES_INDEX, "w", encoding="utf-8") as f:
+            json.dump(refs, f, ensure_ascii=False, indent=2)
+            
+        return found_ref
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/references/{ref_id}/v2")
+async def generate_reference_v2(ref_id: str, mishna_id: str):
+    refs = project_store.load_references()
+    found_ref = None
+    for r in refs.get("references", []):
+        if r["id"] == ref_id:
+            found_ref = r
+            break
+    
+    if not found_ref:
+        raise HTTPException(status_code=404, detail="Reference not found")
+        
+    project = project_store.load_or_init_project(mishna_id)
+    style_desc = project.get("style_description", "")
+    style_refs = project.get("style_references", [])
+    
+    # Use current image as a reference for V2
+    current_ref_path = project_store.reference_file_path(ref_id)
+    ref_paths = [current_ref_path] if current_ref_path else []
+    
+    # Add style references
+    for s_id in style_refs:
+        p = project_store.reference_file_path(s_id)
+        if p:
+            ref_paths.append(p)
+            
+    full_prompt = found_ref["description"]
+    if style_desc:
+        full_prompt = f"Style: {style_desc}\n\nSubject: {found_ref['description']}. This is a second version (V2) of the character, keep the same features but in a slightly different pose or lighting."
+
+    import uuid
+    import datetime
+    filename = f"ref_v2_{uuid.uuid4().hex[:8]}.png"
+    out = project_store.ROOT / "data" / "images" / filename
+    
+    try:
+        gemini_images.generate_image(full_prompt, ref_paths, out)
+        
+        # Add current to versions
+        if "versions" not in found_ref:
+            found_ref["versions"] = []
+            
+        found_ref["versions"].append({
+            "file": found_ref["file"],
+            "timestamp": datetime.datetime.now().isoformat()
+        })
+        
+        found_ref["file"] = filename
+        
+        with open(project_store.REFERENCES_INDEX, "w", encoding="utf-8") as f:
+            json.dump(refs, f, ensure_ascii=False, indent=2)
+            
+        return found_ref
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Gemini error: {e}")
 
 
 @app.post("/api/project/create")
@@ -270,6 +369,13 @@ def generate_scene(mishna_id: str, minute_id: str, scene_id: str):
     ref_paths = []
     for r in scene.get("references", []):
         p = project_store.reference_file_path(r)
+        if not p:
+            # ננסה לחפש לפי שם אם ה-ID לא נמצא
+            refs = project_store.load_references()
+            for existing_ref in refs.get("references", []):
+                if existing_ref.get("name") == r:
+                    p = project_store.reference_file_path(existing_ref["id"])
+                    break
         if p:
             ref_paths.append(p)
 

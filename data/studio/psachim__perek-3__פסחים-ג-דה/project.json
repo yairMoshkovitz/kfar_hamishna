@@ -1,0 +1,325 @@
+{
+  "mishna_id": "psachim__perek-3__פסחים-ג-דה",
+  "title": "פסחים-ג-דה",
+  "audio_path": "data/podcasts/psachim/perek-3/פסחים-ג-דה.mp3",
+  "srt_path": "data/studio/psachim__perek-3__פסחים-ג-דה/פסחים-ג-דה.srt",
+  "audio_duration": 439.879,
+  "images_per_minute": 4.0,
+  "slots": [
+    {
+      "id": "full-project-slot",
+      "minute_index": 0,
+      "start": "00:00:00.000",
+      "end": "00:07:19.879",
+      "duration": 439.879,
+      "scenes": [
+        {
+          "scene_id": "scene-1",
+          "start": "00:00:00.000",
+          "end": "00:00:10.279",
+          "mishna_text": "",
+          "prompt": "Opening title sequence for 'Kfar HaMishna' podcast. Aerial view of an ancient Jewish village with winding stone paths, small houses, and a central synagogue at the heart. Warm golden morning light. Cheerful and inviting atmosphere. Characters from the village are seen walking along paths. PIXAR 3D Disney style, colorful and child-friendly, Jewish ancient setting.",
+          "references": [
+            "ref-ee4cc74c",
+            "ref-5002c37c"
+          ],
+          "duration": 10.279,
+          "image_path": null,
+          "status": "proposed"
+        },
+        {
+          "scene_id": "scene-2",
+          "start": "00:00:10.279",
+          "end": "00:00:23.879",
+          "mishna_text": "מסכת פסחים, פרק ג', משנה ד'-ה'",
+          "prompt": "A narrator scene: A wide establishing shot of the ancient village. An illustrated scroll unfurls showing the title 'Masechet Pesachim, Perek 3, Mishna 4-5'. In the background, Fitzik (a thin cheerful man) and Adon Madon (a stern square-faced man with black beard and suspenders) notice a rolled parchment scroll in Ginji's bag (a happy freckled red-haired boy with big eyes and curly hair). The scroll reads 'Kfar HaMishna'. Scene is warm and inviting, PIXAR 3D Disney style, ancient Jewish village setting.",
+          "references": [
+            "chars-old-generation-2",
+            "chars-old-generation-4",
+            "ref-c74a2962",
+            "ref-1640552e"
+          ],
+          "duration": 13.6,
+          "image_path": null,
+          "status": "proposed"
+        },
+        {
+          "scene_id": "scene-3",
+          "start": "00:00:23.879",
+          "end": "00:00:41.399",
+          "mishna_text": "",
+          "prompt": "Recap scene: Fitzik (thin cheerful man) and Adon Madon (stern square-faced man with black beard and suspenders) are shown fainting dramatically on the ground after hearing Ginji (happy freckled curly red-haired boy) say the scroll is just an old dream. Around them is a busy ancient stone baking room with a large clay oven, women rushing with dough bowls, warm flickering oil lamps. When they wake up, nobody notices them — the room is full of commotion. PIXAR 3D Disney style, humorous and lively.",
+          "references": [
+            "chars-old-generation-2",
+            "chars-old-generation-4",
+            "ref-c74a2962",
+            "loc-mishna-oven-room",
+            "ref-0f428f52"
+          ],
+          "duration": 17.52,
+          "image_path": null,
+          "status": "proposed"
+        },
+        {
+          "scene_id": "scene-4",
+          "start": "00:00:41.399",
+          "end": "00:01:02.460",
+          "mishna_text": "",
+          "prompt": "Inside the busy ancient stone baking room. A large clay oven glows with heat at the center. Several Jewish women in ancient linen dresses with head coverings rush around it with dough bowls, bumping into each other. Ginji (happy freckled curly red-haired boy) and Yachziel (warm middle-aged man with short dark beard, linen tunic) watch the chaos. Everyone talks at once, pointing at the oven. One woman fans herself dramatically. Speech bubbles show overlapping dialogue. Comedic chaotic energy. PIXAR 3D Disney style, warm and colorful.",
+          "references": [
+            "ref-c74a2962",
+            "ref-5eecdf6d",
+            "chars-ginjis-wife",
+            "loc-mishna-oven-room",
+            "ref-0f428f52"
+          ],
+          "duration": 21.061,
+          "image_path": null,
+          "status": "proposed"
+        },
+        {
+          "scene_id": "scene-5",
+          "start": "00:01:02.460",
+          "end": "00:01:22.000",
+          "mishna_text": "",
+          "prompt": "In the busy stone baking room, Ginji's wife (young energetic Jewish woman in ancient linen dress with head covering) stands near the clay oven looking worried, holding a wide clay dough bowl. The dough inside is visibly beginning to puff. Ginji (happy freckled curly red-haired boy) and Yachziel (warm middle-aged man with short dark beard) rush over to look. The room is hot and cramped. Dramatic comedic moment — then a voice calls out 'Oops!'. PIXAR 3D Disney style, warm golden light.",
+          "references": [
+            "ref-c74a2962",
+            "ref-5eecdf6d",
+            "chars-ginjis-wife",
+            "loc-mishna-oven-room",
+            "item-dough-bowl"
+          ],
+          "duration": 19.54,
+          "image_path": null,
+          "status": "proposed"
+        },
+        {
+          "scene_id": "scene-6",
+          "start": "00:01:22.000",
+          "end": "00:01:52.840",
+          "mishna_text": "שאור - הסיעור, סידוק",
+          "prompt": "Yachziel (warm middle-aged man with short dark beard, linen tunic and sandals) explains to Ginji's wife (young woman in ancient linen dress with head covering) about two levels of leavened dough. He holds up two fingers as he explains. Split visual: on one side, a dough bowl where the surface is pale and slightly risen (labeled 'Si'ur' — first stage), on the other side a dough bowl with large intersecting cracks (labeled 'Siduk' — fully leavened, karet warning). The stone room glows warmly in the background. Serious but educational tone. PIXAR 3D Disney style.",
+          "references": [
+            "ref-5eecdf6d",
+            "chars-ginjis-wife",
+            "item-dough-bowl",
+            "loc-mishna-oven-room"
+          ],
+          "duration": 30.84,
+          "image_path": null,
+          "status": "proposed"
+        },
+        {
+          "scene_id": "scene-7",
+          "start": "00:01:52.840",
+          "end": "00:02:10.599",
+          "mishna_text": "שאור - הסיעור, סידוק",
+          "prompt": "Close-up sequence of a dough bowl showing the stages of leavening: first the surface becomes pale and slightly lighter (like a person's face going pale), then tiny cracks appear like grasshopper antennae, then large intersecting cracks spread across the surface. Yachziel (warm middle-aged man with short dark beard) narrates with a thoughtful nostalgic expression, recalling watching dough as a child. Warm oil lamp light, ancient stone room background. PIXAR 3D Disney style, educational and visually clear.",
+          "references": [
+            "ref-5eecdf6d",
+            "item-dough-bowl",
+            "loc-mishna-oven-room"
+          ],
+          "duration": 17.759,
+          "image_path": null,
+          "status": "proposed"
+        },
+        {
+          "scene_id": "scene-8",
+          "start": "00:02:10.599",
+          "end": "00:02:57.960",
+          "mishna_text": "סידוק וסיעור לפי רבי יהודה וחכמים",
+          "prompt": "Yachziel (warm middle-aged man with short dark beard) and Ginji's wife (young woman in ancient linen dress) stand near a clay dough bowl. Yachziel explains two opinions: Rabbi Yehuda's view (small cracks = Si'ur, large intersecting cracks = Siduk/karet) versus the Sages' view (pale color = already forbidden, any crack = full chametz/karet). Two visual panels float beside him like thought bubbles — one showing a pale dough, one showing a cracked dough — each with a small illustrated rabbi figure gesturing. Warm stone room, educational PIXAR 3D Disney style.",
+          "references": [
+            "ref-5eecdf6d",
+            "chars-ginjis-wife",
+            "item-dough-bowl",
+            "loc-mishna-oven-room"
+          ],
+          "duration": 47.361,
+          "image_path": null,
+          "status": "proposed"
+        },
+        {
+          "scene_id": "scene-9",
+          "start": "00:02:57.960",
+          "end": "00:03:30.800",
+          "mishna_text": "סידוק וסיעור לפי רבי יהודה וחכמים",
+          "prompt": "Ginji's wife (young woman in ancient linen dress with head covering) looks at her dough bowl in horror — the dough is visibly full of large cracks, clearly leavened chametz. She turns pale with exaggerated PIXAR-style fear. Yachziel (warm middle-aged man with short dark beard) and Ginji (happy freckled curly red-haired boy) look on sympathetically. She admits it was her fault for making others wait. Another woman nearby glances anxiously at her own bowl. Bright warm light, ancient stone baking room. PIXAR 3D Disney style, dramatic but comedic.",
+          "references": [
+            "ref-c74a2962",
+            "ref-5eecdf6d",
+            "chars-ginjis-wife",
+            "item-dough-bowl",
+            "loc-mishna-oven-room"
+          ],
+          "duration": 32.84,
+          "image_path": null,
+          "status": "proposed"
+        },
+        {
+          "scene_id": "scene-10",
+          "start": "00:03:30.800",
+          "end": "00:04:13.780",
+          "mishna_text": "",
+          "prompt": "The busy ancient stone baking room. Everyone turns to look at Mrs. Elimelech (capable middle-aged Jewish woman in neat linen dress with head covering) who is efficiently working near the clay oven. She has already kneaded, shaped, and rolled her dough and is placing it in the oven first. The other women watch with a mix of admiration and frustration as their own doughs wait in bowls and slowly rise. Warm glowing oven light, comedic expressions of envy and stress. PIXAR 3D Disney style.",
+          "references": [
+            "chars-elimelech-wife",
+            "chars-ginjis-wife",
+            "loc-mishna-oven-room",
+            "ref-0f428f52",
+            "item-dough-bowl"
+          ],
+          "duration": 42.98,
+          "image_path": null,
+          "status": "proposed"
+        },
+        {
+          "scene_id": "scene-11",
+          "start": "00:04:13.780",
+          "end": "00:05:11.480",
+          "mishna_text": "שלש נשים לשות כאחת",
+          "prompt": "Mrs. Elimelech (capable middle-aged Jewish woman) apologizes with a guilty but kind expression. Then Yachziel (warm middle-aged man with short dark beard) describes an efficient baking system: a visual diagram-style animation shows three ancient Jewish women in sequence — Woman 1 kneads dough, then when ready Woman 2 begins kneading while Woman 1 shapes, then when Woman 1 puts her matzah in the oven, Woman 2 shapes while Woman 3 begins kneading. An assembly line in a stone baking room. Like a conveyor belt. No dough ever waits idle. Bright warm stone room, PIXAR 3D Disney style, educational and clear.",
+          "references": [
+            "chars-elimelech-wife",
+            "chars-ginjis-wife",
+            "loc-mishna-oven-room",
+            "ref-0f428f52",
+            "item-dough-bowl"
+          ],
+          "duration": 57.7,
+          "image_path": null,
+          "status": "proposed"
+        },
+        {
+          "scene_id": "scene-12",
+          "start": "00:05:11.480",
+          "end": "00:05:38.759",
+          "mishna_text": "שלש נשים לשות כאחת - לפי חכמים ורבן גמליאל",
+          "prompt": "Inside the ancient stone baking room, Yachziel (warm middle-aged man with short dark beard) and Ginji's wife (young woman in head covering) discuss two approaches: the Sages' method (sequential, assembly-line baking) versus Rabban Gamliel's method (three women kneading all at once simultaneously, each at her own bowl). Two side-by-side illustrated panels show both approaches. The women in the room listen attentively with varying expressions. Warm golden light, PIXAR 3D Disney style, educational tone.",
+          "references": [
+            "ref-5eecdf6d",
+            "chars-ginjis-wife",
+            "chars-elimelech-wife",
+            "loc-mishna-oven-room",
+            "item-dough-bowl"
+          ],
+          "duration": 27.279,
+          "image_path": "full-project-slot_scene-12.png",
+          "status": "image_ready"
+        },
+        {
+          "scene_id": "scene-13",
+          "start": "00:05:38.759",
+          "end": "00:06:15.560",
+          "mishna_text": "רבי עקיבא אומר - תלטוש בצונן",
+          "prompt": "Adon Madon (stern square-faced man with black beard and suspenders, serious expression) suddenly speaks up dramatically, raising one finger with authority. He quotes Rabbi Akiva: whenever dough starts to rise, splash it with cold water to prevent leavening. A visual shows a hand pouring cold water over a dough bowl, stopping the rising process. The room watches Adon Madon with surprise and respect. Fitzik (thin cheerful man) claps. Comedic and educational moment. PIXAR 3D Disney style, warm stone room background.",
+          "references": [
+            "chars-old-generation-4",
+            "chars-old-generation-2",
+            "ref-5eecdf6d",
+            "item-dough-bowl",
+            "loc-mishna-oven-room"
+          ],
+          "duration": 36.801,
+          "image_path": "full-project-slot_scene-13.png",
+          "status": "image_ready"
+        },
+        {
+          "scene_id": "scene-14",
+          "start": "00:06:15.560",
+          "end": "00:06:47.779",
+          "mishna_text": "כפר המשנה",
+          "prompt": "Adon Madon (stern square-faced man with black beard and suspenders) proudly announces he learned all this from the Mishnah — Masechet Pesachim, Perek 3, Mishna 4. He holds up the ancient parchment scroll 'Kfar HaMishna'. Yachziel (warm middle-aged man with short dark beard) looks amazed. Then Adon Madon reveals to Yachziel: everyone in his village learns Mishnah — it is called 'Kfar HaMishna'. Ginji (happy freckled curly red-haired boy) freezes in shock, eyes wide. The scroll glows gently. Dramatic musical sting. PIXAR 3D Disney style.",
+          "references": [
+            "chars-old-generation-4",
+            "ref-c74a2962",
+            "ref-5eecdf6d",
+            "ref-1640552e",
+            "loc-mishna-oven-room"
+          ],
+          "duration": 32.219,
+          "image_path": "full-project-slot_scene-14.png",
+          "status": "image_ready"
+        },
+        {
+          "scene_id": "scene-15",
+          "start": "00:06:47.779",
+          "end": "00:07:19.879",
+          "mishna_text": "",
+          "prompt": "Ginji (happy freckled curly red-haired boy) stands frozen in the stone room, eyes wide, face pale, overwhelmed and confused. His head spins — shown with a swirling cartoon effect around his head. He collapses dramatically onto the stone floor. His wife (young woman in head covering) rushes to him calling his name. Yachziel (warm middle-aged man with short dark beard) and Adon Madon (stern square-faced man with black beard) look down in surprise. Closing title sequence begins — aerial view of the village with cheerful music. PIXAR 3D Disney style, emotional and comedic ending.",
+          "references": [
+            "ref-c74a2962",
+            "chars-ginjis-wife",
+            "ref-5eecdf6d",
+            "chars-old-generation-4",
+            "ref-ee4cc74c"
+          ],
+          "duration": 32.1,
+          "image_path": "full-project-slot_scene-15.png",
+          "status": "image_ready"
+        }
+      ],
+      "new_references": [
+        {
+          "id": "chars-ginjis-wife",
+          "name": "אשת ג'ינג'י",
+          "description": "A warm and energetic young Jewish woman with a cheerful face, wearing a simple ancient linen dress with a head covering typical of Second Temple period women. She has kind eyes and an expressive, slightly worried expression. Medium height, modest appearance. PIXAR 3D style.",
+          "category": "characters",
+          "age": null,
+          "height": null,
+          "mood": null,
+          "time_of_day": null,
+          "material": null,
+          "condition": null,
+          "status": "proposed"
+        },
+        {
+          "id": "chars-elimelech-wife",
+          "name": "גברת אלימלך",
+          "description": "A capable and confident Jewish woman of middle age, wearing a neat ancient linen dress with a head covering. She moves efficiently and purposefully, with a slightly guilty but kind expression. Medium build, tidy appearance. PIXAR 3D style.",
+          "category": "characters",
+          "age": null,
+          "height": null,
+          "mood": null,
+          "time_of_day": null,
+          "material": null,
+          "condition": null,
+          "status": "proposed"
+        },
+        {
+          "id": "loc-mishna-oven-room",
+          "name": "חדר התנור המשותף",
+          "description": "A shared ancient stone baking room in a Jerusalem-era village, with thick clay walls and a low ceiling. A massive clay oven dominates the center. Several women bustle around with dough bowls. Oil lamps provide warm flickering light. Atmosphere is busy, warm, and slightly chaotic. PIXAR 3D style.",
+          "category": "style",
+          "age": null,
+          "height": null,
+          "mood": null,
+          "time_of_day": null,
+          "material": null,
+          "condition": null,
+          "status": "proposed"
+        },
+        {
+          "id": "item-dough-bowl",
+          "name": "קערת בצק",
+          "description": "A wide clay or ceramic bowl containing raw unbaked dough, slightly puffed and showing early signs of rising. The surface of the dough begins to pale and crack. The bowl is simple and functional, typical of ancient Jewish household use. PIXAR 3D style.",
+          "category": "items",
+          "age": null,
+          "height": null,
+          "mood": null,
+          "time_of_day": null,
+          "material": null,
+          "condition": null,
+          "status": "proposed"
+        }
+      ],
+      "status": "proposed"
+    }
+  ],
+  "style_description": "תמונות באווירה יהודית ומתאימה לילדים בסגנון 3D PIXAR כמו דמויות WORLD DISNEY",
+  "style_references": [
+    "scene-perek1-mishna1"
+  ]
+}

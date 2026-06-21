@@ -96,7 +96,8 @@ SYSTEM_PROMPT = (
     "- ספק תיאור ויזואלי מפורט בעברית המגדיר את המראה שלו (גיל, לבוש, מבנה גוף לדמויות; אווירה למקומות).\n\n"
     "שלב 2: חלוקה לסצנות\n"
     "חלק את התמלול לסצנות רציפות המכסות את כל זמן הפרק, ללא חפיפות או פערים. "
-    "השאיפה היא להגיע לממוצע של כ-images_per_minute סצנות לדקה.\n\n"
+    "עליך לעמוד ביעד של כ-images_per_minute סצנות לכל דקת שידור בממוצע. "
+    "שים לב: חשוב מאוד לא לתת מעט מדי סצנות; אם הפרק ארוך, ודא שמספר הסצנות הכולל אכן משקף את היעד שצוין.\n\n"
     "עבור כל סצנה:\n"
     "1. קבע תזמון מדויק (start/end) מתוך ה-SRT.\n"
     "2. זהה את טקסט המשנה המקורי (בעברית) המתאים לסצנה ושים אותו ב-mishna_text.\n"
@@ -145,9 +146,11 @@ def preview_prompt(srt_path: str, images_per_minute: float, references: dict, pl
             with open(p, "r", encoding="utf-8") as f:
                 plot_text = f.read()
                 
+    total_target_scenes = int((duration / 60) * images_per_minute)
     user_msg = (
         f"images_per_minute (יעד ממוצע): {int(images_per_minute)}\n"
-        f"אורך הפרק: {seconds_to_timestamp(duration)} ({duration:.1f} שניות)\n\n"
+        f"אורך הפרק: {seconds_to_timestamp(duration)} ({duration:.1f} שניות)\n"
+        f"סה\"כ יעד: כ-{total_target_scenes} סצנות לכל הפרק.\n\n"
     )
     
     if director_instructions:
@@ -189,9 +192,11 @@ def propose_slots(srt_path: str, images_per_minute: float, references: dict, exi
         print(f"[Claude] מעבד פרק כולל של {duration:.1f} שניות עם יעד ממוצע של {images_per_minute} תמונות לדקה")
         
         # נשלח הכל ביחד ל-Claude
+        total_target_scenes = int((duration / 60) * images_per_minute)
         user_msg = (
             f"images_per_minute (יעד ממוצע): {int(images_per_minute)}\n"
-            f"אורך הפרק: {seconds_to_timestamp(duration)} ({duration:.1f} שניות)\n\n"
+            f"אורך הפרק: {seconds_to_timestamp(duration)} ({duration:.1f} שניות)\n"
+            f"סה\"כ יעד: כ-{total_target_scenes} סצנות לכל הפרק.\n\n"
         )
         if director_instructions:
             user_msg += f"=== הוראות במאי מיוחדות ===\n{director_instructions}\n\n"

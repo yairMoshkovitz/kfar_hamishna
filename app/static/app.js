@@ -842,16 +842,64 @@ async function runProposeStream(customPrompt = null) {
   }
 }
 
+async function createPendingReferences() {
+  let newRefsFound = [];
+  project.slots.forEach(s => {
+    if (s.new_references) newRefsFound.push(...s.new_references);
+  });
+
+  if (newRefsFound.length > 0) {
+    setStatus(`יוצר ${newRefsFound.length} רפרנסים חדשים...`);
+    for (const nr of newRefsFound) {
+      if (references.find(r => r.name === nr.name)) continue;
+      await api(`/api/project/${encodeURIComponent(currentMishna)}/create-reference-image`, {
+        method: "POST",
+        body: JSON.stringify({
+          name: nr.name,
+          description: nr.description,
+          category: nr.category || "characters"
+        })
+      });
+    }
+    const refsData = await api("/api/references");
+    references = (refsData && refsData.references) || [];
+    renderGlobalRefs();
+    project.slots.forEach(s => {
+      if (s.new_references) s.new_references = [];
+    });
+    renderTimeline();
+    return true;
+  }
+  return false;
+}
+
 async function runGenerateAll() {
   const mode = $("#workMode").value;
+
+  // שלב 1: וודא שיש רפרנסים
+  const createdAny = await createPendingReferences();
+  
+  // אם יצרנו רפרנסים ואנחנו לא במצב אוטומטי - עצור כדי לתת למשתמש לראות
+  if (createdAny && mode !== "auto") {
+    setStatus("רפרנסים חדשים נוצרו. בדוק אותם לפני המשך ליצירת תמונות.", "ok");
+    setStep(inferStep());
+    return;
+  }
+
+  // שלב 2: יצירת תמונות לסצנות
   for (const minute of project.slots || []) {
     for (const scene of minute.scenes || []) {
       if (!scene.image_path) {
-          await generateScene(minute.id, scene.scene_id);
-          if (mode === "manual") { setStatus(`תמונה ל-${scene.scene_id} נוצרה. ממתין לאישור...`, "ok"); return; }
+        await generateScene(minute.id, scene.scene_id);
+        if (mode === "manual") {
+          setStatus(`תמונה ל-${scene.scene_id} נוצרה. ממתין לאישור...`, "ok");
+          setStep(inferStep());
+          return;
+        }
       }
     }
   }
+  setStep(inferStep());
 }
 
 async function runBuild() {
@@ -883,38 +931,7 @@ $("#nextStepBtn").onclick = async () => {
     } else if (currentStep === "content") {
       setStep(inferStep());
     } else if (currentStep === "references") {
-      // יצירת כל הרפרנסים החדשים שטרם נוצרו
-      let newRefsFound = [];
-      project.slots.forEach(s => {
-        if (s.new_references) newRefsFound.push(...s.new_references);
-      });
-
-      if (newRefsFound.length > 0) {
-        setStatus(`יוצר ${newRefsFound.length} רפרנסים חדשים...`);
-        for (const nr of newRefsFound) {
-          // בדוק אם הוא כבר נוצר בינתיים (למשל על ידי לחיצה ידנית)
-          if (references.find(r => r.name === nr.name)) continue;
-
-          await api(`/api/project/${encodeURIComponent(currentMishna)}/create-reference-image`, {
-            method: "POST",
-            body: JSON.stringify({
-              name: nr.name,
-              description: nr.description,
-              category: nr.category || "characters"
-            })
-          });
-          // עדכון רשימת הרפרנסים הגלובלית ייעשה בסוף או תוך כדי
-        }
-        // טעינה מחדש של הרפרנסים
-        const refsData = await api("/api/references");
-        references = (refsData && refsData.references) || [];
-        renderGlobalRefs();
-        // ניקוי new_references מהפרויקט המקומי
-        project.slots.forEach(s => {
-          if (s.new_references) s.new_references = [];
-        });
-      }
-      renderTimeline();
+      await createPendingReferences();
       setStep("images");
     } else if (currentStep === "images") {
       await runGenerateAll();

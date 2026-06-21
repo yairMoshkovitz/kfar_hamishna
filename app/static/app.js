@@ -9,11 +9,12 @@ let references = [];
 let refModalMinuteId = null;
 let refModalSceneId = null;
 
-const STEPS = ["transcription", "content", "images", "video"];
+const STEPS = ["transcription", "content", "references", "images", "video"];
 let currentStep = "transcription";
 const STEP_LABELS = {
   transcription: "המשך: מלא משנה + Prompt ←",
-  content: "המשך: צור תמונות ←",
+  content: "המשך: אשר רפרנסים ←",
+  references: "המשך: צור תמונות ←",
   images: "המשך: הרכב וידאו ←",
   video: "הסתיים ✓",
 };
@@ -36,17 +37,28 @@ function setStep(step) {
 function inferStep() {
   const minuteSlots = (project && project.slots) || [];
   if (!minuteSlots.length) return "transcription";
-  let allHaveImages = true;
+
   let allHavePrompts = true;
+  let hasNewRefs = false;
+  let allHaveImages = true;
+
   for (const minute of minuteSlots) {
+    if (minute.new_references && minute.new_references.length > 0) {
+      hasNewRefs = true;
+    }
     for (const scene of minute.scenes || []) {
-      if (!scene.image_path) allHaveImages = false;
       if (!scene.prompt || !scene.prompt.trim()) allHavePrompts = false;
+      if (!scene.image_path) allHaveImages = false;
     }
   }
+
   if (allHaveImages) return "video";
+  if (hasNewRefs) {
+    if (allHavePrompts) return "references";
+    return "content";
+  }
   if (allHavePrompts) return "images";
-  return "transcription";
+  return "content";
 }
 
 const audio = new Audio();
@@ -863,13 +875,58 @@ async function runBuild() {
 }
 
 $("#nextStepBtn").onclick = async () => {
-    $("#nextStepBtn").disabled = true;
-    try {
-      if (currentStep === "transcription") { await runProposeStream(); setStep("content"); }
-      else if (currentStep === "content") { await runGenerateAll(); setStep("images"); }
-      else if (currentStep === "images") { await runBuild(); setStep("video"); }
-    } catch (e) { setStatus("שגיאה: " + e.message, "err"); }
-    finally { if (currentStep !== "video") $("#nextStepBtn").disabled = false; }
+  $("#nextStepBtn").disabled = true;
+  try {
+    if (currentStep === "transcription") {
+      await runProposeStream();
+      setStep(inferStep());
+    } else if (currentStep === "content") {
+      setStep(inferStep());
+    } else if (currentStep === "references") {
+      // יצירת כל הרפרנסים החדשים שטרם נוצרו
+      let newRefsFound = [];
+      project.slots.forEach(s => {
+        if (s.new_references) newRefsFound.push(...s.new_references);
+      });
+
+      if (newRefsFound.length > 0) {
+        setStatus(`יוצר ${newRefsFound.length} רפרנסים חדשים...`);
+        for (const nr of newRefsFound) {
+          // בדוק אם הוא כבר נוצר בינתיים (למשל על ידי לחיצה ידנית)
+          if (references.find(r => r.name === nr.name)) continue;
+
+          await api(`/api/project/${encodeURIComponent(currentMishna)}/create-reference-image`, {
+            method: "POST",
+            body: JSON.stringify({
+              name: nr.name,
+              description: nr.description,
+              category: nr.category || "characters"
+            })
+          });
+          // עדכון רשימת הרפרנסים הגלובלית ייעשה בסוף או תוך כדי
+        }
+        // טעינה מחדש של הרפרנסים
+        const refsData = await api("/api/references");
+        references = (refsData && refsData.references) || [];
+        renderGlobalRefs();
+        // ניקוי new_references מהפרויקט המקומי
+        project.slots.forEach(s => {
+          if (s.new_references) s.new_references = [];
+        });
+      }
+      renderTimeline();
+      setStep("images");
+    } else if (currentStep === "images") {
+      await runGenerateAll();
+      setStep("video");
+    } else if (currentStep === "video") {
+      await runBuild();
+    }
+  } catch (e) {
+    setStatus("שגיאה: " + e.message, "err");
+  } finally {
+    if (currentStep !== "video") $("#nextStepBtn").disabled = false;
+  }
 };
 
 $("#proposeBtn").onclick = () => runProposeStream();

@@ -147,7 +147,7 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 
 /* Wizard */
 .wizard {
-  padding: 12px 20px;
+  padding: 12px 15px;
   background: var(--panel);
   border-bottom: 1px solid var(--line);
   display: flex;
@@ -156,13 +156,14 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   flex-wrap: wrap;
 }
 .wizard-step {
-  padding: 8px 14px;
+  padding: 8px 10px;
   border-radius: 20px;
   background: #fff;
   border: 1px solid var(--line);
-  font-size: 13px;
+  font-size: 12px;
   color: var(--muted);
   font-weight: 500;
+  white-space: nowrap;
 }
 .wizard-step.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 .wizard-step.done { background: var(--ok); color: #fff; border-color: var(--ok); }

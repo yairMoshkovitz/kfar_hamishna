@@ -224,7 +224,13 @@
       "category": "style",
       "age": null,
       "height": null,
-      "items": []
+      "items": [],
+      "versions": [
+        {
+          "file": "style.jpg",
+          "timestamp": "2026-06-21T03:20:14.830388"
+        }
+      ]
     },
     {
       "id": "ref-9f7c04ca",
@@ -232,6 +238,78 @@
       "name": "אשת ג'ינג'י",
       "description": "A warm and energetic young Jewish woman with a cheerful face, wearing a simple ancient linen dress with a head covering typical of Second Temple period women. She has kind eyes and an expressive, slightly worried expression. Medium height, modest appearance. PIXAR 3D style.",
       "category": "characters",
+      "age": null,
+      "height": null,
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-9cc4315c",
+      "file": "ref_edf42d1f.png",
+      "name": "גברת רות",
+      "description": "אישה יהודייה חביבה בגיל העמידה, לבושה בשמלת פשתן עתיקה עם כיסוי ראש צנוע. פנים עגולות ונעימות עם חיוך חם. בעלת אנרגיה ותקיפות בריאה, מופיעה לרוב במטבח ובחצר הבית. סגנון PIXAR 3D.",
+      "category": "characters",
+      "age": null,
+      "height": null,
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-14c80102",
+      "file": "ref_ab4d6fdc.png",
+      "name": "סבא ג'ינג'יהו",
+      "description": "זקן יהודי חכם ומיוחד עם שיער ג'ינג'י לבן מתולתל וזקן ג'ינג'י-לבן. עיניים חולמניות ועמוקות. לבוש בגלימה ארוכה עתיקה. מראה חולמני ורוחני. מופיע בדרך כלל עם מגילה ביד. סגנון PIXAR 3D.",
+      "category": "characters",
+      "age": null,
+      "height": null,
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-d92d8977",
+      "file": "ref_24932474.png",
+      "name": "עמנואל הכהן",
+      "description": "כהן יהודי עליז ושמנמן עם זקן שחור-אפור, לבוש בבגדי כהן עתיקים לבנים, פנים עגולות ומחייכות, עיניים קורצות. מראה של מי שאוהב לאכול ונהנה מהחיים. סגנון PIXAR 3D.",
+      "category": "characters",
+      "age": null,
+      "height": null,
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-20e92fe3",
+      "file": "ref_7cfcb443.png",
+      "name": "חנניה הכהן הגדול",
+      "description": "כהן גדול מרשים וחסון בגיל המבוגר עם זקן לבן ארוך ומסודר, לבוש בבגדי כהן גדול מפוארים. הוד מלכותי ורציני אך עם חום פנימי. גובה ממוצע, מבנה איתן. סגנון PIXAR 3D.",
+      "category": "characters",
+      "age": null,
+      "height": null,
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-aa244fab",
+      "file": "ref_634f7599.png",
+      "name": "מדורת שריפת חמץ",
+      "description": "מדורה גדולה ובוערת בחוץ, ליד מחסן אבן עתיק. האש גבוהה ועזה, לשונות להבה כתומות וצהובות. סביבה עומדים אנשים ומשליכים פיסות חמץ לאש. אווירה חמה ומצוותית. סגנון PIXAR 3D.",
+      "category": "items",
+      "age": null,
+      "height": null,
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-4d8dc0c1",
+      "file": "ref_7bfa62b4.png",
+      "name": "קערת בצק תרומה שהחמיצה",
+      "description": "קערה מעוגלת עשויה חרס, מלאה בבצק שהחמיץ ותפח. צבע הבצק צהבהב עם גוון חמצמץ. הקערה מוחזקת בשתי ידיים בזהירות. ניכר שמדובר במשהו קדוש ובעייתי גם יחד. סגנון PIXAR 3D.",
+      "category": "items",
       "age": null,
       "height": null,
       "items": [],

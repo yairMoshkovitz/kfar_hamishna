@@ -30,8 +30,8 @@
             "ref-5002c37c|style"
           ],
           "duration": 6.48,
-          "image_path": null,
-          "status": "proposed"
+          "image_path": "full-project-slot_scene-1.png",
+          "status": "image_ready"
         },
         {
           "scene_id": "scene-2",
@@ -46,8 +46,8 @@
             "ref-1640552e|מגילת כפר המשנה"
           ],
           "duration": 6.07,
-          "image_path": null,
-          "status": "proposed"
+          "image_path": "full-project-slot_scene-2.png",
+          "status": "image_ready"
         },
         {
           "scene_id": "scene-3",
@@ -62,8 +62,8 @@
             "ref-ce2a8940|מחסן יחציאל"
           ],
           "duration": 10.529,
-          "image_path": null,
-          "status": "proposed"
+          "image_path": "full-project-slot_scene-3.png",
+          "status": "image_ready"
         },
         {
           "scene_id": "scene-4",
@@ -77,8 +77,8 @@
             "ref-1640552e|מגילת כפר המשנה"
           ],
           "duration": 10.18,
-          "image_path": null,
-          "status": "proposed"
+          "image_path": "full-project-slot_scene-4.png",
+          "status": "image_ready"
         },
         {
           "scene_id": "scene-5",
@@ -93,8 +93,8 @@
             "ref-1640552e|מגילת כפר המשנה"
           ],
           "duration": 13.061,
-          "image_path": null,
-          "status": "proposed"
+          "image_path": "full-project-slot_scene-5.png",
+          "status": "image_ready"
         },
         {
           "scene_id": "scene-6",
@@ -110,8 +110,8 @@
             "chars-ginjis-grandfather|סבא ג'ינג'יהו"
           ],
           "duration": 22.281,
-          "image_path": null,
-          "status": "proposed"
+          "image_path": "full-project-slot_scene-6.png",
+          "status": "image_ready"
         },
         {
           "scene_id": "scene-7",
@@ -125,8 +125,8 @@
             "chars-old-generation-2|איציק ופיציק"
           ],
           "duration": 17.58,
-          "image_path": null,
-          "status": "proposed"
+          "image_path": "full-project-slot_scene-7.png",
+          "status": "image_ready"
         },
         {
           "scene_id": "scene-8",
@@ -141,8 +141,8 @@
             "ref-1640552e|מגילת כפר המשנה"
           ],
           "duration": 25.539,
-          "image_path": null,
-          "status": "proposed"
+          "image_path": "full-project-slot_scene-8.png",
+          "status": "image_ready"
         },
         {
           "scene_id": "scene-9",
@@ -157,8 +157,8 @@
             "ref-1640552e|מגילת כפר המשנה"
           ],
           "duration": 25.741,
-          "image_path": null,
-          "status": "proposed"
+          "image_path": "full-project-slot_scene-9.png",
+          "status": "image_ready"
         },
         {
           "scene_id": "scene-10",
@@ -173,8 +173,8 @@
             "ref-93d3e7b7|קערת סבא של ג'ינג'י"
           ],
           "duration": 43.681,
-          "image_path": null,
-          "status": "proposed"
+          "image_path": "full-project-slot_scene-10.png",
+          "status": "image_ready"
         },
         {
           "scene_id": "scene-11",
@@ -189,8 +189,8 @@
             "ref-c74a2962|ג'ינג'י"
           ],
           "duration": 23.539,
-          "image_path": null,
-          "status": "proposed"
+          "image_path": "full-project-slot_scene-11.png",
+          "status": "image_ready"
         },
         {
           "scene_id": "scene-12",
@@ -205,8 +205,8 @@
             "ref-9f7c04ca|אשת ג'ינג'י"
           ],
           "duration": 27.479,
-          "image_path": null,
-          "status": "proposed"
+          "image_path": "full-project-slot_scene-12.png",
+          "status": "image_ready"
         },
         {
           "scene_id": "scene-13",
@@ -220,8 +220,8 @@
             "item-chametz-bonfire|מדורת שריפת חמץ"
           ],
           "duration": 15.94,
-          "image_path": null,
-          "status": "proposed"
+          "image_path": "full-project-slot_scene-13.png",
+          "status": "image_ready"
         },
         {
           "scene_id": "scene-14",
@@ -235,8 +235,8 @@
             "chars-ruth|גברת רות"
           ],
           "duration": 25.04,
-          "image_path": null,
-          "status": "proposed"
+          "image_path": "full-project-slot_scene-14.png",
+          "status": "image_ready"
         },
         {
           "scene_id": "scene-15",
@@ -250,8 +250,8 @@
             "chars-immanuel-cohen|עמנואל הכהן"
           ],
           "duration": 25.719,
-          "image_path": null,
-          "status": "proposed"
+          "image_path": "full-project-slot_scene-15.png",
+          "status": "image_ready"
         },
         {
           "scene_id": "scene-16",
@@ -265,8 +265,8 @@
             "chars-hanania-cohen|חנניה הכהן הגדול"
           ],
           "duration": 27.909,
-          "image_path": null,
-          "status": "proposed"
+          "image_path": "full-project-slot_scene-16.png",
+          "status": "image_ready"
         },
         {
           "scene_id": "scene-17",
@@ -285,8 +285,8 @@
             "ref-9af6b91b|תנור פסח חרס"
           ],
           "duration": 28.82,
-          "image_path": null,
-          "status": "proposed"
+          "image_path": "full-project-slot_scene-17.png",
+          "status": "image_ready"
         },
         {
           "scene_id": "scene-18",
@@ -302,8 +302,8 @@
             "chars-old-generation-2|איציק ופיציק"
           ],
           "duration": 15.521,
-          "image_path": null,
-          "status": "proposed"
+          "image_path": "full-project-slot_scene-18.png",
+          "status": "image_ready"
         },
         {
           "scene_id": "scene-19",
@@ -319,8 +319,8 @@
             "ref-5002c37c|style"
           ],
           "duration": 6.44,
-          "image_path": null,
-          "status": "proposed"
+          "image_path": "full-project-slot_scene-19.png",
+          "status": "image_ready"
         }
       ],
       "new_references": [

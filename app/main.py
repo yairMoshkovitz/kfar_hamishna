@@ -369,13 +369,6 @@ def generate_scene(mishna_id: str, minute_id: str, scene_id: str):
     ref_paths = []
     for r in scene.get("references", []):
         p = project_store.reference_file_path(r)
-        if not p:
-            # ננסה לחפש לפי שם אם ה-ID לא נמצא
-            refs = project_store.load_references()
-            for existing_ref in refs.get("references", []):
-                if existing_ref.get("name") == r:
-                    p = project_store.reference_file_path(existing_ref["id"])
-                    break
         if p:
             ref_paths.append(p)
 

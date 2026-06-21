@@ -118,7 +118,6 @@ def studio_dir(mishna_id: str) -> Path:
 def project_path(mishna_id: str) -> Path:
     return studio_dir(mishna_id) / "project.json"
 
-
 def load_or_init_project(mishna_id: str) -> dict:
     """טוען project.json קיים, או יוצר שלד ריק מ-SRT (יוצר משבצות דקה עם sub-slots)."""
     p = project_path(mishna_id)
@@ -256,22 +255,62 @@ def load_references() -> dict:
 
 
 def reference_file_path(ref_value: str, version_index: int = -1) -> Path | None:
-    """ממיר ערך reference (id או שם קובץ) לנתיב מוחלט בדיסק.
-    אם version_index >= 0, יחזיר את הגרסה הספציפית מהרשימה.
+    """ממיר ערך reference (id, שם, או פורמט 'ID|Name') לנתיב מוחלט בדיסק.
+    אם לא נמצא לפי מזהה, מנסה לחפש לפי שם כדי לאפשר גמישות לקלוד.
     """
+    if not ref_value:
+        return None
+
+    # חילוץ ID ושם אם מופיעים בפורמט ID|Name
+    id_to_find = ref_value
+    name_to_find = None
+    if "|" in ref_value:
+        parts = [p.strip() for p in ref_value.split("|")]
+        id_to_find = parts[0]
+        if len(parts) > 1:
+            name_to_find = parts[1]
+
+    print(f"[Reference] Searching for: '{ref_value}' (ID: '{id_to_find}', Name: '{name_to_find}')")
+
     refs = load_references()
     base = ROOT / refs.get("base_dir", "data/images")
+
+    # חיפוש ברשימת הרפרנסים
     for r in refs.get("references", []):
-        if ref_value in (r.get("id"), r.get("file"), r.get("name")):
+        rid = r.get("id")
+        rname = r.get("name")
+        rfile = r.get("file")
+        
+        # התאמה לפי ID (החלק הראשון בפורמט ID|Name או ה-ref_value כולו)
+        match = (id_to_find == rid or id_to_find == rname or id_to_find == rfile)
+        
+        # אם לא מצאנו והיה לנו שם בפורמט ID|Name, ננסה להתאים גם לפיו
+        if not match and name_to_find:
+            match = (name_to_find == rid or name_to_find == rname or name_to_find == rfile)
+            
+        if match:
+            print(f"[Reference] Found match! ID: {rid}, Name: {rname}, File: {rfile}")
             if version_index >= 0 and r.get("versions") and version_index < len(r["versions"]):
                 return base / r["versions"][version_index]["file"]
             return base / r["file"]
-    # אולי הועבר שם קובץ ישיר
+
+    print(f"[Reference] No match found in index for '{ref_value}'")
+    # אולי הועבר שם קובץ ישיר (עבור תאימות לאחור או מקרים חריגים)
     candidate = base / ref_value
-    return candidate if candidate.exists() else None
+    if candidate.exists():
+        print(f"[Reference] Found as direct file: {candidate}")
+        return candidate
+        
+    return None
 
 def add_reference(filename: str, content: bytes, name: str, description: str, category: str) -> dict:
     refs = load_references()
+    
+    # בדיקה שאין רפרנס עם אותו שם בדיוק (למניעת בלבול)
+    for r in refs.get("references", []):
+        if r.get("name") == name:
+            raise ValueError(f"כבר קיים רפרנס עם השם '{name}'. נא לבחור שם ייחודי.")
+
     base = ROOT / refs.get("base_dir", "data/images")
     base.mkdir(parents=True, exist_ok=True)
     

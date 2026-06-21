@@ -482,7 +482,22 @@ function renderChips(container, refs) {
   }
   let hasMissing = false;
   refs.forEach((r) => {
-    const meta = references.find((x) => x.id === r || x.file === r);
+    // זיהוי רפרנס לפי ID, שם או שילוב ID|Name
+    let searchId = r;
+    let searchName = null;
+    if (r.includes("|")) {
+      const parts = r.split("|");
+      searchId = parts[0].trim();
+      searchName = parts[1].trim();
+    }
+
+    const meta = references.find((x) => 
+      x.id === searchId || 
+      x.name === searchId || 
+      x.file === searchId ||
+      (searchName && (x.id === searchName || x.name === searchName || x.file === searchName))
+    );
+
     const span = document.createElement("span");
     if (meta) {
       span.className = "chip";

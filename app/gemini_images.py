@@ -63,23 +63,23 @@ def generate_image(prompt: str, reference_paths: list[Path], out_path: Path, sce
     
     if scene_type == "object":
         instruction = (
-            "Use the provided reference image(s) ONLY to keep the artistic style consistent. "
-            "Focus strictly on the main object. Keep the background simple, clean and uncluttered "
-            "as this element will be integrated into other scenes. Do NOT include any characters. "
-            "Generate a single illustration for the following object: " + prompt
+            "השתמש בתמונות הרפרנס המצורפות אך ורק כדי לשמור על עקביות הסגנון האמנותי. "
+            "התמקד אך ורק באובייקט המרכזי. שמור על רקע פשוט, נקי ולא עמוס, "
+            "כיוון שאלמנט זה ישולב בסצנות אחרות. אל תכלול דמויות כלל. "
+            "צור איור יחיד עבור האובייקט הבא: " + prompt
         )
     elif scene_type == "place":
         instruction = (
-            "Use the provided reference image(s) ONLY to keep the artistic style consistent. "
-            "Focus on the environment and atmosphere. Do NOT include any characters unless "
-            "explicitly mentioned in the prompt. Generate a single illustration for the following place: " + prompt
+            "השתמש בתמונות הרפרנס המצורפות אך ורק כדי לשמור על עקביות הסגנון האמנותי. "
+            "התמקד בסביבה ובאווירה. אל תכלול דמויות אלא אם כן הן מוזכרות במפורש בפרומפט. "
+            "צור איור יחיד עבור המקום הבא: " + prompt
         )
-    else: # character
+    else:  # character
         instruction = prompt
         if reference_paths:
             instruction = (
-                "Use the provided reference image(s) to keep the characters' appearance "
-                "consistent and maintain the overall style. Generate a single illustration for the following scene: " + prompt
+                "השתמש בתמונות הרפרנס המצורפות כדי לשמור על המראה של הדמויות "
+                "ועל הסגנון הכללי. צור איור יחיד עבור הסצנה הבאה: " + prompt
             )
             
     contents.append(instruction)

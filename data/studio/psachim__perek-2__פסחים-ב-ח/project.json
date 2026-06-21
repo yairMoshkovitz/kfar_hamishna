@@ -5,5 +5,9 @@
   "srt_path": null,
   "audio_duration": 0.0,
   "images_per_minute": 4,
-  "slots": []
+  "slots": [],
+  "style_description": "תמונות באווירה יהודית ומתאימה לילדים בסגנון 3D PIXAR כמו דמויות WORLD DISNEY",
+  "style_references": [
+    "scene-perek1-mishna1"
+  ]
 }

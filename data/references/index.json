@@ -315,6 +315,66 @@
       "items": [],
       "dormant": false,
       "versions": []
+    },
+    {
+      "id": "ref-1a1201b2",
+      "file": "ref_e7e20107.png",
+      "name": "פור הסוס האפור",
+      "description": "סוס פרא אציל בצבע אפור בהיר עם עיניים גדולות וחמות. רעמה כסופה ומטופחת. גוף חזק ושרירי עם רגליים חסונות. מראה אמיץ וחברותי. סגנון PIXAR 3D.",
+      "category": "characters",
+      "age": null,
+      "height": null,
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-caaa9d40",
+      "file": "ref_2a909ee0.png",
+      "name": "שחורי הסוס השחור",
+      "description": "סוס פרא אציל בצבע שחור מבריק עם עיניים גדולות וחכמות. רעמה שחורה ומלאה. גוף חזק ואלגנטי. מראה נחוש ומחושב. סגנון PIXAR 3D.",
+      "category": "characters",
+      "age": null,
+      "height": null,
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-0179b6c0",
+      "file": "ref_c797f414.png",
+      "name": "וניל הסוס הלבן",
+      "description": "סוס פרא אציל בצבע לבן שלג נקי עם עיניים כחולות גדולות ומתוקות. רעמה לבנה ורכה. גוף עדין ויפה. מראה חמוד ומסוגנן. סגנון PIXAR 3D.",
+      "category": "characters",
+      "age": null,
+      "height": null,
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-8a09da36",
+      "file": "ref_57db590a.png",
+      "name": "מלכודת יער",
+      "description": "מלכודת ברזל עתיקה וחזקה עם שיניים מחודדות ושרשראות. קבועה באדמה. מסוגרת על רגל סוס לבן. נראית מאיימת אך ניתנת לשבירה. סגנון PIXAR 3D.",
+      "category": "items",
+      "age": null,
+      "height": null,
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-98aaaddd",
+      "file": "ref_37d5fd53.png",
+      "name": "יער ושדה פתוח",
+      "description": "יער ירוק יפהפה עם עצים גבוהים, דשא ירוק רך, פרחים צבעוניים ואור שמש חם שחודר בין הענפים. הרים ירוקים ברקע. אווירה קסומה ושמחה לילדים. סגנון PIXAR 3D.",
+      "category": "style",
+      "age": null,
+      "height": null,
+      "items": [],
+      "dormant": false,
+      "versions": []
     }
   ]
 }

@@ -39,22 +39,53 @@ def mishna_id_for(mp3_path: Path) -> str:
 
 
 def discover_mishnayot() -> list[dict]:
-    """סורק את data/podcasts ומחזיר רשימת משניות (כל mp3 = משנה)."""
+    """סורק את data/podcasts וגם את data/studio ומחזיר רשימת משניות."""
     results: list[dict] = []
-    if not PODCASTS_DIR.exists():
-        return results
-    for mp3 in sorted(PODCASTS_DIR.rglob("*.mp3")):
-        srt = mp3.with_suffix(".srt")
-        mid = mishna_id_for(mp3)
-        results.append(
-            {
-                "mishna_id": mid,
-                "title": mp3.stem,
-                "rel_path": str(mp3.relative_to(ROOT)).replace("\\", "/"),
-                "has_srt": srt.exists(),
-                "has_project": (STUDIO_DIR / mid / "project.json").exists(),
-            }
-        )
+    seen_ids = set()
+
+    # 1. סריקת Podcasts (המשניות הרגילות)
+    if PODCASTS_DIR.exists():
+        for mp3 in sorted(PODCASTS_DIR.rglob("*.mp3")):
+            srt = mp3.with_suffix(".srt")
+            mid = mishna_id_for(mp3)
+            seen_ids.add(mid)
+            results.append(
+                {
+                    "mishna_id": mid,
+                    "title": mp3.stem,
+                    "rel_path": str(mp3.relative_to(ROOT)).replace("\\", "/"),
+                    "has_srt": srt.exists(),
+                    "has_project": (STUDIO_DIR / mid / "project.json").exists(),
+                }
+            )
+
+    # 2. סריקת Studio (פרויקטים מותאמים אישית או כאלו שאין להם MP3 ב-Podcasts)
+    if STUDIO_DIR.exists():
+        for p_dir in STUDIO_DIR.iterdir():
+            if not p_dir.is_dir():
+                continue
+            mid = p_dir.name
+            if mid in seen_ids:
+                continue
+            
+            project_file = p_dir / "project.json"
+            if project_file.exists():
+                try:
+                    with open(project_file, "r", encoding="utf-8") as f:
+                        project_data = json.load(f)
+                    
+                    results.append({
+                        "mishna_id": mid,
+                        "title": project_data.get("title", mid),
+                        "rel_path": project_data.get("audio_path", ""),
+                        "has_srt": bool(project_data.get("srt_path")),
+                        "has_project": True,
+                    })
+                    seen_ids.add(mid)
+                except Exception:
+                    # אם הקובץ לא תקין, פשוט נדלג
+                    continue
+
     return results
 
 

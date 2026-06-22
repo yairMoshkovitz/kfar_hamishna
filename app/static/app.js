@@ -69,25 +69,12 @@ function updateSrtOverlay(currentTime) {
 
 async function initWavesurfer(startStr, endStr) {
     // WaveSurfer 7.x — plugins are loaded as separate globals from their own <script> tags:
-    // WaveSurfer.regions  → from wavesurfer.js@7/dist/plugins/regions.min.js
-    // WaveSurfer.timeline → from wavesurfer.js@7/dist/plugins/timeline.min.js
-    // They are NOT nested under WaveSurfer.Regions / WaveSurfer.Timeline
+    // WaveSurfer.Regions  → from wavesurfer.js@7/dist/plugins/regions.min.js
+    // WaveSurfer.Timeline → from wavesurfer.js@7/dist/plugins/timeline.min.js
 
     let wsRegionsPlugin = null;
 
     if (!wavesurfer) {
-        // In WaveSurfer 7, plugins are instantiated with .create() on the plugin class
-        // and passed in the plugins array
-        const timelinePlugin = WaveSurfer.timeline.create({
-            container: '#waveform-timeline',
-            height: 20,
-            timeInterval: 1,
-            primaryLabelInterval: 5,
-            style: { fontSize: '10px', color: 'var(--muted)' }
-        });
-
-        wsRegionsPlugin = WaveSurfer.regions.create();
-
         wavesurfer = WaveSurfer.create({
             container: '#waveform',
             waveColor: '#d8d2c4',
@@ -96,8 +83,22 @@ async function initWavesurfer(startStr, endStr) {
             height: 100,
             normalize: true,
             minPxPerSec: 50,
-            plugins: [timelinePlugin, wsRegionsPlugin]
+            autoScroll: true,
+            autoCenter: true
         });
+
+        // In WaveSurfer 7, plugins are registered with registerPlugin after creation
+        const timelinePlugin = WaveSurfer.Timeline.create({
+            container: '#waveform-timeline',
+            height: 20,
+            timeInterval: 1,
+            primaryLabelInterval: 5,
+            style: { fontSize: '10px', color: 'var(--muted)' }
+        });
+        wavesurfer.registerPlugin(timelinePlugin);
+
+        wsRegionsPlugin = WaveSurfer.Regions.create();
+        wavesurfer.registerPlugin(wsRegionsPlugin);
 
         // Update SRT overlay as audio plays
         wavesurfer.on('timeupdate', (currentTime) => {
@@ -119,6 +120,14 @@ async function initWavesurfer(startStr, endStr) {
 
         // Store the plugin reference for later calls
         wavesurfer._regionsPlugin = wsRegionsPlugin;
+
+        // stop playback button
+        const stopBtn = $("#stopWaveformBtn");
+        if (stopBtn) {
+            stopBtn.onclick = () => {
+                wavesurfer.stop();
+            };
+        }
     } else {
         // Retrieve the already-created regions plugin
         wsRegionsPlugin = wavesurfer._regionsPlugin;
@@ -151,7 +160,11 @@ async function initWavesurfer(startStr, endStr) {
 
     // Scroll waveform so the region is visible
     const padding = 5;
-    wavesurfer.setScrollTime(Math.max(0, startSec - padding));
+    wavesurfer.setTime(startSec);
+    // wavesurfer.setScrollTime is sometimes buggy in v7, let's try to ensure it scrolls
+    setTimeout(() => {
+        wavesurfer.setScrollTime(Math.max(0, startSec - padding));
+    }, 100);
 
     // Show the subtitle at the scene start immediately
     updateSrtOverlay(startSec);

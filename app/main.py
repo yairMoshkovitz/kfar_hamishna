@@ -131,19 +131,29 @@ def update_scene(mishna_id: str, minute_id: str, scene_id: str, body: SlotUpdate
         val = getattr(body, field, None)
         if val is not None:
             scene[field] = val
+    
+    # חישוב duration לסצנה הנוכחית אם הזמנים השתנו
+    from .srt_parser import timestamp_to_seconds, seconds_to_timestamp
+    if scene.get("start") and scene.get("end"):
+        s_sec = timestamp_to_seconds(scene["start"])
+        e_sec = timestamp_to_seconds(scene["end"])
+        scene["duration"] = max(0, e_sec - s_sec)
             
     # Ripple Edit בשרת - עדכון זמנים של כל הסצנות שאחרי
-    if body.end is not None and getattr(body, 'start', None) is not None:
-        from .srt_parser import timestamp_to_seconds, seconds_to_timestamp
+    if body.end is not None:
         try:
             current_start = timestamp_to_seconds(body.end)
             found = False
             for s in minute_slot.get("scenes", []):
                 if found:
-                    duration = timestamp_to_seconds(s.get("end", "00:00:00.000")) - timestamp_to_seconds(s.get("start", "00:00:00.000"))
+                    s_sec = timestamp_to_seconds(s.get("start", "00:00:00.000"))
+                    e_sec = timestamp_to_seconds(s.get("end", "00:00:00.000"))
+                    duration = e_sec - s_sec
                     if duration < 0: duration = 0
+                    
                     s["start"] = seconds_to_timestamp(current_start)
                     s["end"] = seconds_to_timestamp(current_start + duration)
+                    s["duration"] = duration
                     current_start += duration
                 if s["scene_id"] == scene_id:
                     found = True
@@ -558,23 +568,6 @@ def get_scene_gemini_prompt(mishna_id: str, minute_id: str, scene_id: str):
     return {"full_prompt": full_prompt}
 
 
-@app.put("/api/project/{mishna_id}/minute/{minute_id}/scene/{scene_id}")
-def update_scene(mishna_id: str, minute_id: str, scene_id: str, body: SlotUpdate):
-    project = project_store.load_or_init_project(mishna_id)
-    minute_slot = project_store.get_slot(project, minute_id)
-    if minute_slot is None:
-        raise HTTPException(status_code=404, detail="משבצת דקה לא נמצאה")
-    
-    scene = next((s for s in minute_slot.get("scenes", []) if s["scene_id"] == scene_id), None)
-    if scene is None:
-        raise HTTPException(status_code=404, detail="סצנה לא נמצאה")
-    
-    for field in ("mishna_text", "prompt", "references", "duration", "status"):
-        val = getattr(body, field, None)
-        if val is not None:
-            scene[field] = val
-    project_store.save_project(project)
-    return scene
 
 
 # ---------- API: מדיה ----------

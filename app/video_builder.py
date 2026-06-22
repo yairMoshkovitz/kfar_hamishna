@@ -30,14 +30,21 @@ def build_video_stream(project: dict, audio_abs: Path, out_path: Path):
     for minute_slot in minute_slots:
         for scene in minute_slot.get("scenes", []):
             if scene.get("image_path"):
+                start_sec = timestamp_to_seconds(scene.get("start", "00:00:00.000"))
+                end_sec = timestamp_to_seconds(scene.get("end", "00:00:00.000"))
+                duration = end_sec - start_sec
+                if duration <= 0:
+                    duration = scene.get("duration", 5.0)
+                
                 all_scenes.append({
                     "image_path": scene["image_path"],
                     "start": scene.get("start", ""),
-                    "duration": scene.get("duration", 5.0),
+                    "start_sec": start_sec,
+                    "duration": duration,
                 })
     
     # מיון לפי timestamp
-    all_scenes.sort(key=lambda s: timestamp_to_seconds(s["start"]) if s["start"] else 0)
+    all_scenes.sort(key=lambda s: s["start_sec"])
     
     if not all_scenes:
         yield "Error: אין סצנות עם תמונה — צור ואשר תמונות לפני הרכבה\n"

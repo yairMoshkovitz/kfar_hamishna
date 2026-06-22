@@ -262,7 +262,7 @@
         {
           "scene_id": "scene-16",
           "start": "00:10:07.097",
-          "end": "00:10:32.097",
+          "end": "00:11:06.181",
           "mishna_text": "ג'ינג'י מסתכל על הקערה ועל המגילה",
           "prompt": "Inside the ancient stone warehouse. Close-up on the red-haired freckled boy (ref-c74a2962: נער ג'ינג'י שמח עם שיער מתולתל, מנומש עם עיינים גדולות) with a pensive, emotional expression. He holds the beautiful ornate colorful ceramic bowl (item-colorful-bowl) in his hands, then his gaze drifts to the ancient parchment scroll (item-mishna-scroll: ancient parchment scroll partially unrolled with Hebrew text 'כפר המשנה', tied with cord) resting on wooden crates nearby. His expression shifts from joy to quiet internal conflict. Warm golden oil-lamp light. Pixar 3D, emotional quiet moment.",
           "references": [
@@ -270,14 +270,14 @@
             "ref-1640552e",
             "ref-93d3e7b7"
           ],
-          "duration": 25.0,
+          "duration": 59.08400000000006,
           "image_path": "full-project-slot_scene-16.png",
           "status": "image_ready"
         },
         {
           "scene_id": "scene-17",
-          "start": "00:10:32.097",
-          "end": "00:11:17.097",
+          "start": "00:11:06.181",
+          "end": "00:12:14.531",
           "mishna_text": "ג'ינג'י אומר שהוא מוותר על המגילה",
           "prompt": "Inside the ancient stone warehouse (scene-yitzchael-warehouse style). The red-haired boy (ref-c74a2962: נער ג'ינג'י שמח עם שיער מתולתל, מנומש עם עיינים גדולות) stands and speaks firmly with a forced determined expression, slightly flushed orange-red face matching his hair. He gestures toward the scroll (item-mishna-scroll) dismissively. Nearby the thin man (chars-old-generation-2) and the stern black-bearded man (chars-old-generation-4) begin to look visibly pale and uneasy — strange expressions of dizziness and fear crossing their faces. Warehouse setting, warm-to-cold shifting light. Pixar 3D.",
           "references": [
@@ -286,14 +286,14 @@
             "chars-old-generation-2",
             "chars-old-generation-4"
           ],
-          "duration": 45.0,
+          "duration": 68.35000000000002,
           "image_path": "full-project-slot_scene-17.png",
           "status": "image_ready"
         },
         {
           "scene_id": "scene-18",
-          "start": "00:11:17.097",
-          "end": "00:12:02.097",
+          "start": "00:12:14.531",
+          "end": "00:12:59.531",
           "mishna_text": "פיציק ואדון מדון מתעלפים",
           "prompt": "Inside the ancient stone warehouse. The thin man (chars-old-generation-2: חברים טובים, פיציק רזה) and the stern black-bearded man with suspenders (chars-old-generation-4: המבוגר האחראי עם זקן שחור פנים חמורות סבר קצת מרובעות, עם שלייקס) collapse dramatically onto the stone floor, both looking extremely pale and barely conscious, hands trembling. The warm warehouse owner (char-yitzchael: warm middle-aged Jewish man with short dark beard, linen tunic, sandals) rushes over with alarm. The red-haired boy (ref-c74a2962) stands nearby looking conflicted and upset but stubborn. Ancient warehouse setting, oil lamps flickering. Pixar 3D, dramatic but child-appropriate scene.",
           "references": [
@@ -309,8 +309,8 @@
         },
         {
           "scene_id": "scene-19",
-          "start": "00:12:02.097",
-          "end": "00:12:49.236",
+          "start": "00:12:59.531",
+          "end": "00:13:46.670",
           "mishna_text": "ג'ינג'י מחזיק את הקערה והמגילה — סיום",
           "prompt": "Inside the ancient stone warehouse. The red-haired boy (ref-c74a2962: נער ג'ינג'י שמח עם שיער מתולתל, מנומש עם עיינים גדולות) stands alone in the center of the frame, holding the colorful ceramic bowl (item-colorful-bowl) in both hands tightly and the parchment scroll (item-mishna-scroll) tucked under his arm. His expression is torn between determination and sadness. The two collapsed figures of Pitzik (chars-old-generation-2) and Adon Madon (chars-old-generation-4) are visible on the floor in the background. Warm oil-lamp light slowly fades to suggest an uncertain ending. Episode closing title card: 'כפר המשנה' in animated Hebrew text. Pixar 3D, emotional closing scene.",
           "references": [
@@ -320,7 +320,7 @@
             "chars-old-generation-2",
             "chars-old-generation-4"
           ],
-          "duration": 47.139,
+          "duration": 47.13900000000001,
           "image_path": "full-project-slot_scene-19.png",
           "status": "image_ready"
         }

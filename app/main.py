@@ -60,6 +60,16 @@ class GenerateWithPromptBody(BaseModel):
     prompt: str | None = None
     is_full_prompt: bool = False
 
+def _get_previous_scene(project: dict, current_minute_id: str, current_scene_id: str):
+    """מוצא את הסצנה הקודמת בפרויקט."""
+    prev_scene = None
+    for slot in project.get("slots", []):
+        for s in slot.get("scenes", []):
+            if slot["id"] == current_minute_id and s["scene_id"] == current_scene_id:
+                return prev_scene
+            prev_scene = s
+    return None
+
 @app.post("/api/project/{mishna_id}/minute/{minute_id}/scene/{scene_id}/generate")
 def generate_scene(mishna_id: str, minute_id: str, scene_id: str, body: GenerateWithPromptBody | None = None):
     project = project_store.load_or_init_project(mishna_id)
@@ -71,11 +81,23 @@ def generate_scene(mishna_id: str, minute_id: str, scene_id: str, body: Generate
     if scene is None:
         raise HTTPException(status_code=404, detail="סצנה לא נמצאה")
 
+    # התנהגות ברירת מחדל: אם אין רפרנסים, נסה להשתמש בסצנה קודמת
+    refs_to_use = list(scene.get("references", []))
+    if not refs_to_use:
+        refs_to_use = ["scene:previous"]
+
     ref_paths = []
-    for r in scene.get("references", []):
-        p = project_store.reference_file_path(r)
-        if p:
-            ref_paths.append(p)
+    for r in refs_to_use:
+        if r == "scene:previous":
+            prev = _get_previous_scene(project, minute_id, scene_id)
+            if prev and prev.get("image_path"):
+                p = project_store.studio_dir(mishna_id) / prev["image_path"]
+                if p.exists():
+                    ref_paths.append(p)
+        else:
+            p = project_store.reference_file_path(r, project=project)
+            if p:
+                ref_paths.append(p)
 
     out = project_store.studio_dir(mishna_id) / f"{minute_id}_{scene_id}.png"
     try:
@@ -515,11 +537,22 @@ def get_scene_gemini_prompt(mishna_id: str, minute_id: str, scene_id: str):
     if scene is None:
         raise HTTPException(status_code=404, detail="סצנה לא נמצאה")
 
+    refs_to_use = list(scene.get("references", []))
+    if not refs_to_use:
+        refs_to_use = ["scene:previous"]
+
     ref_paths = []
-    for r in scene.get("references", []):
-        p = project_store.reference_file_path(r)
-        if p:
-            ref_paths.append(p)
+    for r in refs_to_use:
+        if r == "scene:previous":
+            prev = _get_previous_scene(project, minute_id, scene_id)
+            if prev and prev.get("image_path"):
+                p = project_store.studio_dir(mishna_id) / prev["image_path"]
+                if p.exists():
+                    ref_paths.append(p)
+        else:
+            p = project_store.reference_file_path(r, project=project)
+            if p:
+                ref_paths.append(p)
 
     full_prompt = gemini_images.get_full_prompt(scene.get("prompt", ""), ref_paths)
     return {"full_prompt": full_prompt}

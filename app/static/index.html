@@ -268,7 +268,13 @@
           <div class="scene-section">
             <label class="section-label">רפרנסים</label>
             <div id="editSceneRefs" class="ref-chips-container"></div>
-            <button id="editSceneRefsBtn" class="secondary small-btn">ניהול רפרנסים</button>
+            <div class="ref-actions" style="display: flex; gap: 5px; margin-top: 5px;">
+              <button id="editSceneRefsBtn" class="secondary small-btn">ניהול רפרנסים</button>
+              <button id="addPrevSceneRefBtn" class="secondary small-btn" title="הוסף את הסצנה הקודמת כרפרנס">📸 +סצנה קודמת</button>
+            </div>
+            <label style="display: block; margin-top: 10px; font-size: 12px; cursor: pointer;">
+              <input type="checkbox" id="autoPrevSceneRef"> השתמש אוטומטית בסצנה קודמת כרפרנס
+            </label>
           </div>
         </aside>
       </div>

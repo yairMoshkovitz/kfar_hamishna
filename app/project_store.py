@@ -285,11 +285,29 @@ def load_references() -> dict:
         return json.load(f)
 
 
-def reference_file_path(ref_value: str, version_index: int = -1) -> Path | None:
+def reference_file_path(ref_value: str, version_index: int = -1, project: dict | None = None) -> Path | None:
     """ממיר ערך reference (id, שם, או פורמט 'ID|Name') לנתיב מוחלט בדיסק.
     אם לא נמצא לפי מזהה, מנסה לחפש לפי שם כדי לאפשר גמישות לקלוד.
     """
     if not ref_value:
+        return None
+
+    # טיפול ברפרנס לסצנה קודמת
+    if ref_value.startswith("scene:") and project:
+        parts = ref_value.split(":")
+        # פורמט: scene:previous או scene:minute_id:scene_id
+        target_scene = None
+        if parts[1] == "previous":
+            # נמצא ב-main.py לפני הקריאה לזה
+            pass 
+        elif len(parts) == 3:
+            m_id, s_id = parts[1], parts[2]
+            slot = get_slot(project, m_id)
+            if slot:
+                target_scene = next((s for s in slot.get("scenes", []) if s["scene_id"] == s_id), None)
+        
+        if target_scene and target_scene.get("image_path"):
+            return studio_dir(project["mishna_id"]) / target_scene["image_path"]
         return None
 
     # חילוץ ID ושם אם מופיעים בפורמט ID|Name

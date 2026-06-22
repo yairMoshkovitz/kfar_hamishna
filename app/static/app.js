@@ -757,7 +757,13 @@ function renderChips(container, refs) {
     );
 
     const span = document.createElement("span");
-    if (meta) {
+    if (searchId === "scene:previous") {
+      span.className = "chip scene-ref";
+      span.textContent = "📸 סצנה קודמת";
+    } else if (searchId.startsWith("scene:")) {
+        span.className = "chip scene-ref";
+        span.textContent = `🎬 ${searchId.replace("scene:", "")}`;
+    } else if (meta) {
       span.className = "chip";
       span.textContent = meta.name;
     } else {
@@ -802,6 +808,12 @@ async function openEditSceneModal(minuteId, sceneId) {
     }
 
     renderChips($("#editSceneRefs"), scene.references || []);
+    
+    const autoPrevRef = $("#autoPrevSceneRef");
+    if (autoPrevRef) {
+        autoPrevRef.checked = (scene.references || []).includes("scene:previous");
+    }
+
     $("#editSceneModal").classList.remove("hidden");
 
     await initWavesurfer(scene.start, scene.end);
@@ -843,11 +855,22 @@ $("#saveEditSceneBtn").onclick = async () => {
     const newEnd = $("#editSceneEnd").value;
     const newStart = $("#editSceneStart").value;
 
+    const autoPrevRef = $("#autoPrevSceneRef");
+    let currentRefs = scene.references || [];
+    if (autoPrevRef && autoPrevRef.checked) {
+        if (!currentRefs.includes("scene:previous")) {
+            currentRefs.push("scene:previous");
+        }
+    } else if (autoPrevRef) {
+        currentRefs = currentRefs.filter(r => r !== "scene:previous");
+    }
+
     const body = {
         mishna_text: $("#editSceneMishnaText").value,
         prompt: $("#editScenePrompt").value,
         start: newStart,
-        end: newEnd
+        end: newEnd,
+        references: currentRefs
     };
 
     try {
@@ -1033,6 +1056,17 @@ $("#refSave").onclick = async () => {
 $("#refCancel").onclick = () => $("#refModal").classList.add("hidden");
 
 $("#editSceneRefsBtn").onclick = () => openRefModal(editModalMinuteId, editModalSceneId);
+
+$("#addPrevSceneRefBtn").onclick = () => {
+    const scene = findScene(editModalMinuteId, editModalSceneId);
+    if (!scene.references) scene.references = [];
+    if (!scene.references.includes("scene:previous")) {
+        scene.references.push("scene:previous");
+        renderChips($("#editSceneRefs"), scene.references);
+        const autoPrevRef = $("#autoPrevSceneRef");
+        if (autoPrevRef) autoPrevRef.checked = true;
+    }
+};
 
 $("#mishnaSelect").onchange = loadProject;
 

@@ -61,16 +61,17 @@
             "chars-old-generation-2|איציק ופיציק",
             "ref-c74a2962|ג'ינג'י",
             "ref-ce2a8940|מחסן יחציאל",
-            "ref-1640552e|מגילת כפר המשנה"
+            "ref-1640552e|מגילת כפר המשנה",
+            "scene:previous"
           ],
           "image_path": "full-project-slot_scene-custom-dc28b3.png",
-          "status": "proposed",
+          "status": "image_ready",
           "start": "00:00:29.321",
           "end": "00:00:47.097"
         },
         {
           "scene_id": "scene-4",
-          "start": "00:00:47.097",
+          "start": "00:00:47.941",
           "end": "00:01:11.097",
           "mishna_text": "פיציק רץ לספר לאדון מדון",
           "prompt": "Busy ancient Jerusalem street market scene (scene-jerusalem-market style): Stone-paved narrow streets with market stalls selling bitter herbs, matzah, and live sheep. People in ancient Jewish tunics rush about with joyful Passover faces. In the foreground, a thin animated man (chars-old-generation-2: חברים טובים, פיציק רזה) runs urgently through the crowded market, looking around frantically searching for someone. Warm golden afternoon sunlight. Pixar 3D style, festive pre-Passover atmosphere.",

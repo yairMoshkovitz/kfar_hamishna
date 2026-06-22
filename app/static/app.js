@@ -91,8 +91,14 @@ async function initWavesurfer(startStr, endStr) {
         const timelinePlugin = WaveSurfer.Timeline.create({
             container: '#waveform-timeline',
             height: 20,
-            timeInterval: 1,
-            primaryLabelInterval: 5,
+            timeInterval: 1, // שנתה כל שנייה (כדי לראות רזולוציה טובה)
+            primaryLabelInterval: 60, // תווית של זמן (מספר) תופיע רק כל דקה
+            secondaryLabelInterval: 10, // שנתה מודגשת כל 10 שניות (אופציונלי)
+            formatTimeCallback: (seconds) => {
+                const m = Math.floor(seconds / 60);
+                const s = seconds % 60;
+                return `${m}:${s.toString().padStart(2, '0')}`;
+            },
             style: { fontSize: '10px', color: 'var(--muted)' }
         });
         wavesurfer.registerPlugin(timelinePlugin);
@@ -152,19 +158,17 @@ async function initWavesurfer(startStr, endStr) {
         wsRegion = wsRegionsPlugin.addRegion({
             start: startSec,
             end:   endSec,
-            color: 'rgba(194, 104, 63, 0.25)',
+            color: 'rgba(255, 140, 0, 0.4)', // Orange overlay
             drag:   true,
             resize: true
         });
     }
 
-    // Scroll waveform so the region is visible
-    const padding = 5;
+    // Scroll to show the region - use setScrollTime with a small offset before it
     wavesurfer.setTime(startSec);
-    // wavesurfer.setScrollTime is sometimes buggy in v7, let's try to ensure it scrolls
     setTimeout(() => {
-        wavesurfer.setScrollTime(Math.max(0, startSec - padding));
-    }, 100);
+        wavesurfer.setScrollTime(Math.max(0, startSec - 2));
+    }, 150);
 
     // Show the subtitle at the scene start immediately
     updateSrtOverlay(startSec);
@@ -182,16 +186,44 @@ async function initWavesurfer(startStr, endStr) {
     };
 }
 
-$("#playWaveformBtn").onclick = () => {
-    if (!wavesurfer) return;
-    if (wsRegion) {
-        // In WaveSurfer 7, region.play() plays from region.start to region.end
-        wavesurfer.setTime(wsRegion.start);
-        wavesurfer.play();
+const playPauseBtn = $("#playPauseWaveformBtn");
+
+if (playPauseBtn) {
+    playPauseBtn.onclick = () => {
+        if (!wavesurfer) return;
+        if (wavesurfer.isPlaying()) {
+            wavesurfer.pause();
+        } else {
+            if (wsRegion && wavesurfer.getCurrentTime() >= wsRegion.end) {
+                 wavesurfer.setTime(wsRegion.start);
+            } else if (wsRegion && wavesurfer.getCurrentTime() < wsRegion.start) {
+                 wavesurfer.setTime(wsRegion.start);
+            }
+            wavesurfer.play();
+        }
+    };
+}
+
+// Update play/pause button state
+setInterval(() => {
+    if (!wavesurfer || !playPauseBtn) return;
+    if (wavesurfer.isPlaying()) {
+        playPauseBtn.textContent = "⏸️";
+        playPauseBtn.title = "השהה";
     } else {
-        wavesurfer.playPause();
+        playPauseBtn.textContent = "▶️";
+        playPauseBtn.title = "נגן";
     }
-};
+}, 100);
+
+const playbackRateSelect = $("#playbackRateSelect");
+if (playbackRateSelect) {
+    playbackRateSelect.onchange = (e) => {
+        if (wavesurfer) {
+            wavesurfer.setPlaybackRate(parseFloat(e.target.value));
+        }
+    };
+}
 
 $("#zoomInBtn").onclick = () => {
     if(wavesurfer) wavesurfer.zoom(wavesurfer.options.minPxPerSec * 1.5);

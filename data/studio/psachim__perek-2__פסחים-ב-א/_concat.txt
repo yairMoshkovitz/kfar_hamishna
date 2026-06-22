@@ -4,6 +4,8 @@ file 'C:/Users/MyPC/Desktop/code/kfar_hamishna/data/studio/psachim__perek-2__פ�
 duration 4.500
 file 'C:/Users/MyPC/Desktop/code/kfar_hamishna/data/studio/psachim__perek-2__פסחים-ב-א/full-project-slot_scene-3.png'
 duration 16.500
+file 'C:/Users/MyPC/Desktop/code/kfar_hamishna/data/studio/psachim__perek-2__פסחים-ב-א/full-project-slot_scene-custom-dc28b3.png'
+duration 5.000
 file 'C:/Users/MyPC/Desktop/code/kfar_hamishna/data/studio/psachim__perek-2__פסחים-ב-א/full-project-slot_scene-4.png'
 duration 24.000
 file 'C:/Users/MyPC/Desktop/code/kfar_hamishna/data/studio/psachim__perek-2__פסחים-ב-א/full-project-slot_scene-5.png'

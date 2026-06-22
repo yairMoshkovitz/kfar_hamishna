@@ -57,7 +57,7 @@ class RepromptBody(BaseModel):
     instruction: str | None = None
 
 class GenerateWithPromptBody(BaseModel):
-    prompt: str
+    prompt: str | None = None
     is_full_prompt: bool = False
 
 @app.post("/api/project/{mishna_id}/minute/{minute_id}/scene/{scene_id}/generate")
@@ -79,7 +79,7 @@ def generate_scene(mishna_id: str, minute_id: str, scene_id: str, body: Generate
 
     out = project_store.studio_dir(mishna_id) / f"{minute_id}_{scene_id}.png"
     try:
-        if body and body.is_full_prompt:
+        if body and body.is_full_prompt and body.prompt:
             # שימוש בפרומפט מלא כפי שהמשתמש ערך, מבלי להרכיב אותו מחדש
             gemini_images.generate_image(body.prompt, ref_paths, out, scene_type="character", is_full_prompt=True)
             # מעדכנים את הפרומפט בסצנה שיהיה הפרומפט החדש
@@ -87,6 +87,7 @@ def generate_scene(mishna_id: str, minute_id: str, scene_id: str, body: Generate
         else:
             gemini_images.generate_image(scene.get("prompt", ""), ref_paths, out)
     except Exception as e:
+        traceback.print_exc()
         raise HTTPException(status_code=502, detail=f"שגיאת Gemini: {e}")
 
     scene["image_path"] = out.name
@@ -485,33 +486,6 @@ def update_project(mishna_id: str, body: ProposeBody):
 
 
 # ---------- API: יצירת תמונות ואישור ----------
-@app.post("/api/project/{mishna_id}/minute/{minute_id}/scene/{scene_id}/generate")
-def generate_scene(mishna_id: str, minute_id: str, scene_id: str):
-    project = project_store.load_or_init_project(mishna_id)
-    minute_slot = project_store.get_slot(project, minute_id)
-    if minute_slot is None:
-        raise HTTPException(status_code=404, detail="משבצת דקה לא נמצאה")
-    
-    scene = next((s for s in minute_slot.get("scenes", []) if s["scene_id"] == scene_id), None)
-    if scene is None:
-        raise HTTPException(status_code=404, detail="סצנה לא נמצאה")
-
-    ref_paths = []
-    for r in scene.get("references", []):
-        p = project_store.reference_file_path(r)
-        if p:
-            ref_paths.append(p)
-
-    out = project_store.studio_dir(mishna_id) / f"{minute_id}_{scene_id}.png"
-    try:
-        gemini_images.generate_image(scene.get("prompt", ""), ref_paths, out)
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"שגיאת Gemini: {e}")
-
-    scene["image_path"] = out.name
-    scene["status"] = "image_ready"
-    project_store.save_project(project)
-    return scene
 
 
 @app.post("/api/project/{mishna_id}/minute/{minute_id}/scene/{scene_id}/approve")

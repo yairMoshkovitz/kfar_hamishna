@@ -17,8 +17,6 @@ MODEL = os.environ.get("GEMINI_IMAGE_MODEL", "gemini-3-pro-image-preview")
 
 def _client() -> genai.Client:
     """יוצר לקוח Gemini. משתמש ב-proxy רק אם מוגדר GEMINI_PROXY בסביבה."""
-    # ב-google-genai ה-Client לא מקבל http_client ישירות ב-Constructor.
-    # אנחנו מגדירים את ה-proxy דרך משתני סביבה שהספרייה מכבדת (דרך httpx פנימי).
     proxy_url = os.environ.get("GEMINI_PROXY")
     
     if proxy_url:
@@ -26,12 +24,9 @@ def _client() -> genai.Client:
         os.environ["HTTP_PROXY"] = proxy_url
         os.environ["HTTPS_PROXY"] = proxy_url
     else:
-        # ניקוי משתני סביבה של פרוקסי אם אינם מוגדרים (למקרה ששאריות נשארו)
         os.environ.pop("HTTP_PROXY", None)
         os.environ.pop("HTTPS_PROXY", None)
     
-    # מכיוון שאי אפשר לבטל SSL VERIFY בקלות בתוך ה-SDK החדש,
-    # נסתמך על זה שה-Proxy או השרת מטפלים בזה.
     return genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
 
@@ -40,27 +35,8 @@ def _guess_mime(path: Path) -> str:
     return mime or "image/png"
 
 
-def generate_image(prompt: str, reference_paths: list[Path], out_path: Path, scene_type: str = "character") -> Path:
-    """יוצר תמונה אחת מ-prompt + תמונות רפרנס, שומר ל-out_path. מחזיר את הנתיב.
-    
-    scene_type: "character", "place", or "object".
-    """
-    print(f"[Gemini] מתחיל יצירת תמונה עם מודל: {MODEL} (סוג: {scene_type})")
-    print(f"[Gemini] prompt: {prompt[:100]}..." if len(prompt) > 100 else f"[Gemini] prompt: {prompt}")
-    print(f"[Gemini] מספר רפרנסים: {len(reference_paths)}")
-    
-    contents: list = []
-    # הרפרנסים קודם — הם מקבעים את הסגנון/מראה; אחריהם ההוראה הטקסטואלית.
-    for rp in reference_paths:
-        if rp and rp.exists():
-            print(f"[Gemini] טוען רפרנס: {rp.name}")
-            contents.append(
-                types.Part.from_bytes(
-                    data=rp.read_bytes(),
-                    mime_type=_guess_mime(rp),
-                )
-            )
-    
+def get_full_prompt(prompt: str, reference_paths: list[Path], scene_type: str = "character") -> str:
+    """מחזיר את הטקסט המלא שיישלח ל-Gemini כהנחיה."""
     if scene_type == "object":
         instruction = (
             "השתמש בתמונות הרפרנס המצורפות אך ורק כדי לשמור על עקביות הסגנון האמנותי. "
@@ -81,7 +57,33 @@ def generate_image(prompt: str, reference_paths: list[Path], out_path: Path, sce
                 "השתמש בתמונות הרפרנס המצורפות כדי לשמור על המראה של הדמויות "
                 "ועל הסגנון הכללי. צור איור יחיד עבור הסצנה הבאה: " + prompt
             )
-            
+    return instruction
+
+
+def generate_image(prompt: str, reference_paths: list[Path], out_path: Path, scene_type: str = "character") -> Path:
+    """יוצר תמונה אחת מ-prompt + תמונות רפרנס, שומר ל-out_path. מחזיר את הנתיב.
+    
+    scene_type: "character", "place", or "object".
+    """
+    print(f"[Gemini] מתחיל יצירת תמונה עם מודל: {MODEL} (סוג: {scene_type})")
+    
+    instruction = get_full_prompt(prompt, reference_paths, scene_type)
+    
+    print(f"[Gemini] prompt: {prompt[:100]}..." if len(prompt) > 100 else f"[Gemini] prompt: {prompt}")
+    print(f"[Gemini] מספר רפרנסים: {len(reference_paths)}")
+    
+    contents: list = []
+    # הרפרנסים קודם — הם מקבעים את הסגנון/מראה; אחריהם ההוראה הטקסטואלית.
+    for rp in reference_paths:
+        if rp and rp.exists():
+            print(f"[Gemini] טוען רפרנס: {rp.name}")
+            contents.append(
+                types.Part.from_bytes(
+                    data=rp.read_bytes(),
+                    mime_type=_guess_mime(rp),
+                )
+            )
+    
     contents.append(instruction)
 
     print(f"[Gemini] שולח בקשה ל-API...")

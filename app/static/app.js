@@ -9,6 +9,192 @@ let references = [];
 let refModalMinuteId = null;
 let refModalSceneId = null;
 
+let editModalMinuteId = null;
+let editModalSceneId = null;
+let isLoopPlaying = false;
+let loopTimer = null;
+let wavesurfer = null;
+let wsRegion = null;
+let allCues = [];
+
+function parseSrtToObjects(srtText) {
+    if (!srtText) return [];
+    const cues = [];
+    const blocks = srtText.replace(/\r\n/g, '\n').split('\n\n');
+    for (const block of blocks) {
+        if (!block.trim()) continue;
+        const lines = block.split('\n');
+        if (lines.length >= 3) {
+            const timeMatch = lines[1].match(/(\d{2}:\d{2}:\d{2},\d{3}) --> (\d{2}:\d{2}:\d{2},\d{3})/);
+            if (timeMatch) {
+                const parseTime = (t) => {
+                    const parts = t.replace(',', '.').split(':');
+                    return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseFloat(parts[2]);
+                };
+                cues.push({
+                    start: parseTime(timeMatch[1]),
+                    end: parseTime(timeMatch[2]),
+                    text: lines.slice(2).join(' ')
+                });
+            }
+        }
+    }
+    return cues;
+}
+
+async function fetchCues() {
+    if (allCues.length > 0) return;
+    try {
+        const res = await fetch(`/api/project/${encodeURIComponent(currentMishna)}/srt-content`);
+        if (res.ok) {
+            const data = await res.json();
+            // data.content contains the raw SRT string
+            allCues = parseSrtToObjects(data.content || "");
+        }
+    } catch (e) {
+        console.warn("Could not load SRT cues", e);
+    }
+}
+
+function updateSrtOverlay(currentTime) {
+    if (!Array.isArray(allCues) || allCues.length === 0) return;
+    const currentCue = allCues.find(c => currentTime >= c.start && currentTime <= c.end);
+    const overlay = $("#srtOverlay");
+    if (currentCue) {
+        overlay.textContent = currentCue.text;
+    } else {
+        overlay.textContent = "...";
+    }
+}
+
+async function initWavesurfer(startStr, endStr) {
+    // WaveSurfer 7.x — plugins are loaded as separate globals from their own <script> tags:
+    // WaveSurfer.regions  → from wavesurfer.js@7/dist/plugins/regions.min.js
+    // WaveSurfer.timeline → from wavesurfer.js@7/dist/plugins/timeline.min.js
+    // They are NOT nested under WaveSurfer.Regions / WaveSurfer.Timeline
+
+    let wsRegionsPlugin = null;
+
+    if (!wavesurfer) {
+        // In WaveSurfer 7, plugins are instantiated with .create() on the plugin class
+        // and passed in the plugins array
+        const timelinePlugin = WaveSurfer.timeline.create({
+            container: '#waveform-timeline',
+            height: 20,
+            timeInterval: 1,
+            primaryLabelInterval: 5,
+            style: { fontSize: '10px', color: 'var(--muted)' }
+        });
+
+        wsRegionsPlugin = WaveSurfer.regions.create();
+
+        wavesurfer = WaveSurfer.create({
+            container: '#waveform',
+            waveColor: '#d8d2c4',
+            progressColor: '#3f6ec2',
+            cursorColor: '#c2683f',
+            height: 100,
+            normalize: true,
+            minPxPerSec: 50,
+            plugins: [timelinePlugin, wsRegionsPlugin]
+        });
+
+        // Update SRT overlay as audio plays
+        wavesurfer.on('timeupdate', (currentTime) => {
+            updateSrtOverlay(currentTime);
+        });
+
+        // Wire up region drag/resize → update time inputs + SRT overlay live
+        wsRegionsPlugin.on('region-updated', (region) => {
+            $("#editSceneStart").value = secondsToTimestamp(region.start);
+            $("#editSceneEnd").value = secondsToTimestamp(region.end);
+            // Show the subtitle at the *start* of the region while user drags
+            updateSrtOverlay(region.start);
+        });
+
+        // Also update SRT while resizing the end handle
+        wsRegionsPlugin.on('region-update', (region) => {
+            updateSrtOverlay(region.start);
+        });
+
+        // Store the plugin reference for later calls
+        wavesurfer._regionsPlugin = wsRegionsPlugin;
+    } else {
+        // Retrieve the already-created regions plugin
+        wsRegionsPlugin = wavesurfer._regionsPlugin;
+    }
+
+    const audioUrl = `/api/project/${encodeURIComponent(currentMishna)}/audio?t=${Date.now()}`;
+
+    if (wavesurfer.getMediaElement()?.src !== new URL(audioUrl, window.location.href).href) {
+        setStatus("טוען מנתח סאונד...");
+        await wavesurfer.load(audioUrl);
+        setStatus("מוכן", "ok");
+    }
+
+    await fetchCues();
+
+    const startSec = timestampToSeconds(startStr);
+    const endSec   = timestampToSeconds(endStr);
+
+    // Clear previous region and add a fresh one
+    if (wsRegionsPlugin) {
+        wsRegionsPlugin.clearRegions();
+        wsRegion = wsRegionsPlugin.addRegion({
+            start: startSec,
+            end:   endSec,
+            color: 'rgba(194, 104, 63, 0.25)',
+            drag:   true,
+            resize: true
+        });
+    }
+
+    // Scroll waveform so the region is visible
+    const padding = 5;
+    wavesurfer.setScrollTime(Math.max(0, startSec - padding));
+
+    // Show the subtitle at the scene start immediately
+    updateSrtOverlay(startSec);
+
+    // Allow manual editing of time inputs to move the region
+    $("#editSceneStart").onchange = (e) => {
+        const sec = timestampToSeconds(e.target.value);
+        if (wsRegion) wsRegion.setOptions({ start: sec });
+        updateSrtOverlay(sec);
+    };
+    $("#editSceneEnd").onchange = (e) => {
+        const sec = timestampToSeconds(e.target.value);
+        if (wsRegion) wsRegion.setOptions({ end: sec });
+        updateSrtOverlay(sec);
+    };
+}
+
+$("#playWaveformBtn").onclick = () => {
+    if (!wavesurfer) return;
+    if (wsRegion) {
+        // In WaveSurfer 7, region.play() plays from region.start to region.end
+        wavesurfer.setTime(wsRegion.start);
+        wavesurfer.play();
+    } else {
+        wavesurfer.playPause();
+    }
+};
+
+$("#zoomInBtn").onclick = () => {
+    if(wavesurfer) wavesurfer.zoom(wavesurfer.options.minPxPerSec * 1.5);
+};
+
+$("#zoomOutBtn").onclick = () => {
+    if(wavesurfer) wavesurfer.zoom(wavesurfer.options.minPxPerSec / 1.5);
+};
+
+$("#closeEditSceneBtn").onclick = () => {
+    $("#editSceneModal").classList.add("hidden");
+    if (wavesurfer && wavesurfer.isPlaying()) {
+        wavesurfer.pause();
+    }
+};
+
 const STEPS = ["transcription", "content", "references", "images", "video"];
 let currentStep = "transcription";
 const STEP_LABELS = {
@@ -347,7 +533,6 @@ function renderTimeline() {
     return;
   }
 
-  // רינדור רפרנסים מוצעים בראש ה-Timeline
   let allProposedRefs = [];
   project.slots.forEach(s => {
     if (s.new_references) allProposedRefs.push(...s.new_references);
@@ -404,7 +589,6 @@ function renderProposedRef(ref) {
   badge.className = "scene-status-badge proposed";
 
   const img = $(".ref-image", root);
-  // אם כבר יש רפרנס כזה באינדקס (למשל אחרי יצירה), נציג את התמונה שלו
   const existing = references.find(r => r.name === ref.name);
   if (existing) {
         img.src = `/api/reference-image/${encodeURIComponent(existing.id)}`;
@@ -426,13 +610,12 @@ function renderProposedRef(ref) {
           });
           references.push(res);
           renderGlobalRefs();
-          renderTimeline(); // רינדור מחדש כדי לעדכן את הכרטיס
+          renderTimeline();
           setStatus(`רפרנס ${res.name} נוצר ✓`, "ok");
       } catch (e) { setStatus("שגיאה: " + e.message, "err"); }
   };
 
   $(".approve-ref-btn", root).onclick = () => {
-      // אם כבר קיים, פשוט נסיר מהרשימה המוצעת
       project.slots.forEach(s => {
           if (s.new_references) s.new_references = s.new_references.filter(r => r.id !== ref.id);
       });
@@ -478,6 +661,14 @@ function renderScene(minuteId, scene, sceneNumber) {
   $(".edit-refs-btn", root).onclick = () => openRefModal(minuteId, scene.scene_id);
   $(".generate-btn", root).onclick = () => generateScene(minuteId, scene.scene_id);
   $(".approve-btn", root).onclick = () => approveScene(minuteId, scene.scene_id);
+  
+  const editBtn = $(".edit-scene-advanced-btn", root);
+  if (editBtn) {
+      editBtn.onclick = () => openEditSceneModal(minuteId, scene.scene_id);
+  }
+  
+  root.ondblclick = () => openEditSceneModal(minuteId, scene.scene_id);
+  
   return node;
 }
 
@@ -494,7 +685,6 @@ function renderChips(container, refs) {
   }
   let hasMissing = false;
   refs.forEach((r) => {
-    // זיהוי רפרנס לפי ID, שם או שילוב ID|Name
     let searchId = r;
     let searchName = null;
     if (r.includes("|")) {
@@ -531,6 +721,168 @@ function findScene(minuteId, sceneId) {
   return minute ? (minute.scenes || []).find((s) => s.scene_id === sceneId) : null;
 }
 function findSceneCard(minuteId, sceneId) { return $(`.scene-card[data-minute-id="${minuteId}"][data-scene-id="${sceneId}"]`); }
+
+async function openEditSceneModal(minuteId, sceneId) {
+    editModalMinuteId = minuteId;
+    editModalSceneId = sceneId;
+    const scene = findScene(minuteId, sceneId);
+    if (!scene) return;
+
+    $("#editSceneTimeLabel").textContent = `${scene.start} → ${scene.end}`;
+    $("#editSceneMishnaText").value = scene.mishna_text || "";
+    $("#editScenePrompt").value = scene.prompt || "";
+    $("#editSceneStart").value = scene.start || "";
+    $("#editSceneEnd").value = scene.end || "";
+    $("#editSceneFullPrompt").value = "";
+    $("#editSceneFullPrompt").placeholder = "טוען פרומפט מלא...";
+
+    const img = $("#editSceneImage");
+    if (scene.image_path) {
+        img.src = `/api/project/${encodeURIComponent(currentMishna)}/minute/${minuteId}/scene/${sceneId}/image?t=${Date.now()}`;
+        img.classList.add("has");
+    } else {
+        img.src = "";
+        img.classList.remove("has");
+    }
+
+    renderChips($("#editSceneRefs"), scene.references || []);
+    $("#editSceneModal").classList.remove("hidden");
+
+    await initWavesurfer(scene.start, scene.end);
+
+    refreshGeminiPrompt();
+}
+
+async function refreshGeminiPrompt() {
+    try {
+        const res = await api(`/api/project/${encodeURIComponent(currentMishna)}/minute/${editModalMinuteId}/scene/${editModalSceneId}/gemini-prompt`);
+        $("#editSceneFullPrompt").value = res.full_prompt;
+    } catch (e) {
+        $("#editSceneFullPrompt").value = "שגיאה בטעינת פרומפט: " + e.message;
+    }
+}
+
+$("#refreshGeminiPromptBtn").onclick = refreshGeminiPrompt;
+
+function timestampToSeconds(ts) {
+    if (!ts) return 0;
+    const parts = ts.split(":");
+    if (parts.length !== 3) return 0;
+    const h = parseInt(parts[0]);
+    const m = parseInt(parts[1]);
+    const s = parseFloat(parts[2]);
+    return h * 3600 + m * 60 + s;
+}
+
+function secondsToTimestamp(sec) {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toFixed(3).padStart(6, "0")}`;
+}
+
+$("#saveEditSceneBtn").onclick = async () => {
+    const scene = findScene(editModalMinuteId, editModalSceneId);
+    const oldEnd = scene.end;
+    const newEnd = $("#editSceneEnd").value;
+    const newStart = $("#editSceneStart").value;
+
+    const body = {
+        mishna_text: $("#editSceneMishnaText").value,
+        prompt: $("#editScenePrompt").value,
+        start: newStart,
+        end: newEnd
+    };
+
+    try {
+        setStatus("שומר סצנה...");
+        const updated = await api(`/api/project/${encodeURIComponent(currentMishna)}/minute/${editModalMinuteId}/scene/${editModalSceneId}`, {
+            method: "PUT",
+            body: JSON.stringify(body)
+        });
+        Object.assign(scene, updated);
+
+        if (newEnd !== oldEnd) {
+            applyRippleEdit(editModalMinuteId, editModalSceneId, newEnd);
+        }
+
+        renderTimeline();
+        $("#editSceneModal").classList.add("hidden");
+        setStatus("סצנה נשמרה וציר הזמן עודכן ✓", "ok");
+    } catch (e) {
+        setStatus("שגיאה בשמירה: " + e.message, "err");
+    }
+};
+
+function applyRippleEdit(minuteId, sceneId, newEndStr) {
+    const newEndSec = timestampToSeconds(newEndStr);
+    let currentStartSec = newEndSec;
+    let found = false;
+
+    project.slots.forEach(slot => {
+        (slot.scenes || []).forEach(s => {
+            if (found) {
+                const duration = timestampToSeconds(s.end) - timestampToSeconds(s.start);
+                s.start = secondsToTimestamp(currentStartSec);
+                s.end = secondsToTimestamp(currentStartSec + duration);
+                currentStartSec = currentStartSec + duration;
+            }
+            if (s.scene_id === sceneId) {
+                found = true;
+            }
+        });
+    });
+}
+
+$("#generateWithFullPromptBtn").onclick = async () => {
+    const fullPrompt = $("#editSceneFullPrompt").value;
+    const body = {
+        prompt: fullPrompt,
+        is_full_prompt: true
+    };
+    
+    try {
+        setStatus("מייצר תמונה עם הפרומפט המלא...");
+        const res = await api(`/api/project/${encodeURIComponent(currentMishna)}/minute/${editModalMinuteId}/scene/${editModalSceneId}/generate`, {
+            method: "POST",
+            body: JSON.stringify(body)
+        });
+        
+        const scene = findScene(editModalMinuteId, editModalSceneId);
+        Object.assign(scene, res);
+        
+        const img = $("#editSceneImage");
+        img.src = `/api/project/${encodeURIComponent(currentMishna)}/minute/${editModalMinuteId}/scene/${editModalSceneId}/image?t=${Date.now()}`;
+        img.classList.add("has");
+        
+        renderTimeline();
+        setStatus("תמונה חדשה נוצרה ✓", "ok");
+    } catch (e) {
+        setStatus("שגיאה ביצירה: " + e.message, "err");
+    }
+};
+
+$("#addSceneBeforeBtn").onclick = async () => {
+    await addSceneAt(editModalMinuteId, editModalSceneId, "before");
+};
+
+$("#addSceneAfterBtn").onclick = async () => {
+    await addSceneAt(editModalMinuteId, editModalSceneId, "after");
+};
+
+async function addSceneAt(minuteId, sceneId, position) {
+    try {
+        setStatus("מוסיף סצנה חדשה...");
+        await api(`/api/project/${encodeURIComponent(currentMishna)}/minute/${minuteId}/scene/${sceneId}/add-${position}`, {
+            method: "POST"
+        });
+        await loadProject();
+        $("#editSceneModal").classList.add("hidden");
+        setStatus("סצנה חדשה נוספה ✓", "ok");
+    } catch (e) {
+        setStatus("שגיאה: " + e.message, "err");
+    }
+}
 
 async function askClaudeSingle(minuteId, sceneId, root) {
   const instruction = prompt("הכנס הנחיה ל-Claude:");
@@ -624,6 +976,8 @@ $("#refSave").onclick = async () => {
 };
 $("#refCancel").onclick = () => $("#refModal").classList.add("hidden");
 
+$("#editSceneRefsBtn").onclick = () => openRefModal(editModalMinuteId, editModalSceneId);
+
 $("#mishnaSelect").onchange = loadProject;
 
 $("#uploadAudioBtn").onclick = async () => {
@@ -656,7 +1010,6 @@ $("#uploadSrtBtn").onclick = async () => {
       $("#srtUploadContainer").classList.remove("missing-audio");
       $("#srtStatusLabel").textContent = "SRT קיים ✓";
       setStatus("SRT הועלה בהצלחה ✓", "ok");
-      // טעינה מחדש של הפרויקט כדי לראות אם נוצרו סלוטים
       await loadProject();
     } catch(e) { setStatus("שגיאה בהעלאת SRT: " + e.message, "err"); }
 };
@@ -781,7 +1134,6 @@ $("#urSave").onclick = async () => {
     const res = await fetch("/api/references", { method: "POST", body: fd });
     const newRef = await res.json();
     
-    // Update extra fields via PUT (since POST only takes FormData currently)
     await api(`/api/references/${encodeURIComponent(newRef.id)}`, { method: "PUT", body: JSON.stringify(body) });
     Object.assign(newRef, body);
 
@@ -876,17 +1228,14 @@ async function createPendingReferences() {
 async function runGenerateAll() {
   const mode = $("#workMode").value;
 
-  // שלב 1: וודא שיש רפרנסים
   const createdAny = await createPendingReferences();
   
-  // אם יצרנו רפרנסים ואנחנו לא במצב אוטומטי - עצור כדי לתת למשתמש לראות
   if (createdAny && mode !== "auto") {
     setStatus("רפרנסים חדשים נוצרו. בדוק אותם לפני המשך ליצירת תמונות.", "ok");
     setStep(inferStep());
     return;
   }
 
-  // שלב 2: יצירת תמונות לסצנות
   for (const minute of project.slots || []) {
     for (const scene of minute.scenes || []) {
       if (!scene.image_path) {

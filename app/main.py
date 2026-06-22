@@ -49,6 +49,136 @@ class SlotUpdate(BaseModel):
     duration: float | None = None
     type: str | None = None
     status: str | None = None
+    start: str | None = None
+    end: str | None = None
+
+# ---------- עזרי קבצים ----------
+class RepromptBody(BaseModel):
+    instruction: str | None = None
+
+class GenerateWithPromptBody(BaseModel):
+    prompt: str
+    is_full_prompt: bool = False
+
+@app.post("/api/project/{mishna_id}/minute/{minute_id}/scene/{scene_id}/generate")
+def generate_scene(mishna_id: str, minute_id: str, scene_id: str, body: GenerateWithPromptBody | None = None):
+    project = project_store.load_or_init_project(mishna_id)
+    minute_slot = project_store.get_slot(project, minute_id)
+    if minute_slot is None:
+        raise HTTPException(status_code=404, detail="משבצת דקה לא נמצאה")
+    
+    scene = next((s for s in minute_slot.get("scenes", []) if s["scene_id"] == scene_id), None)
+    if scene is None:
+        raise HTTPException(status_code=404, detail="סצנה לא נמצאה")
+
+    ref_paths = []
+    for r in scene.get("references", []):
+        p = project_store.reference_file_path(r)
+        if p:
+            ref_paths.append(p)
+
+    out = project_store.studio_dir(mishna_id) / f"{minute_id}_{scene_id}.png"
+    try:
+        if body and body.is_full_prompt:
+            # שימוש בפרומפט מלא כפי שהמשתמש ערך, מבלי להרכיב אותו מחדש
+            gemini_images.generate_image(body.prompt, ref_paths, out, scene_type="character", is_full_prompt=True)
+            # מעדכנים את הפרומפט בסצנה שיהיה הפרומפט החדש
+            scene["prompt"] = body.prompt
+        else:
+            gemini_images.generate_image(scene.get("prompt", ""), ref_paths, out)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"שגיאת Gemini: {e}")
+
+    scene["image_path"] = out.name
+    scene["status"] = "image_ready"
+    project_store.save_project(project)
+    return scene
+@app.put("/api/project/{mishna_id}/minute/{minute_id}/scene/{scene_id}")
+def update_scene(mishna_id: str, minute_id: str, scene_id: str, body: SlotUpdate):
+    project = project_store.load_or_init_project(mishna_id)
+    minute_slot = project_store.get_slot(project, minute_id)
+    if minute_slot is None:
+        raise HTTPException(status_code=404, detail="משבצת דקה לא נמצאה")
+    
+    scene = next((s for s in minute_slot.get("scenes", []) if s["scene_id"] == scene_id), None)
+    if scene is None:
+        raise HTTPException(status_code=404, detail="סצנה לא נמצאה")
+    
+    for field in ("mishna_text", "prompt", "references", "duration", "status", "start", "end"):
+        val = getattr(body, field, None)
+        if val is not None:
+            scene[field] = val
+            
+    # Ripple Edit בשרת - עדכון זמנים של כל הסצנות שאחרי
+    if body.end is not None and getattr(body, 'start', None) is not None:
+        from .srt_parser import timestamp_to_seconds, seconds_to_timestamp
+        try:
+            current_start = timestamp_to_seconds(body.end)
+            found = False
+            for s in minute_slot.get("scenes", []):
+                if found:
+                    duration = timestamp_to_seconds(s.get("end", "00:00:00.000")) - timestamp_to_seconds(s.get("start", "00:00:00.000"))
+                    if duration < 0: duration = 0
+                    s["start"] = seconds_to_timestamp(current_start)
+                    s["end"] = seconds_to_timestamp(current_start + duration)
+                    current_start += duration
+                if s["scene_id"] == scene_id:
+                    found = True
+        except Exception as e:
+            print(f"Error in Ripple Edit: {e}")
+            
+    project_store.save_project(project)
+    return scene
+
+@app.post("/api/project/{mishna_id}/minute/{minute_id}/scene/{scene_id}/add-{position}")
+def add_scene(mishna_id: str, minute_id: str, scene_id: str, position: str):
+    if position not in ("before", "after"):
+        raise HTTPException(status_code=400, detail="Position must be 'before' or 'after'")
+        
+    project = project_store.load_or_init_project(mishna_id)
+    minute_slot = project_store.get_slot(project, minute_id)
+    if minute_slot is None:
+        raise HTTPException(status_code=404, detail="משבצת דקה לא נמצאה")
+        
+    scenes = minute_slot.get("scenes", [])
+    idx = next((i for i, s in enumerate(scenes) if s["scene_id"] == scene_id), -1)
+    
+    if idx == -1:
+        raise HTTPException(status_code=404, detail="סצנה לא נמצאה")
+        
+    import uuid
+    new_scene_id = f"scene-custom-{uuid.uuid4().hex[:6]}"
+    
+    target_scene = scenes[idx]
+    
+    # חלוקת הזמן של הסצנה הנוכחית לחצי
+    from .srt_parser import timestamp_to_seconds, seconds_to_timestamp
+    start_sec = timestamp_to_seconds(target_scene.get("start", "00:00:00.000"))
+    end_sec = timestamp_to_seconds(target_scene.get("end", "00:00:02.000"))
+    mid_sec = start_sec + (end_sec - start_sec) / 2
+    
+    new_scene = {
+        "scene_id": new_scene_id,
+        "mishna_text": "",
+        "prompt": "סצנה חדשה - יש לערוך",
+        "references": [],
+        "image_path": None,
+        "status": "proposed"
+    }
+    
+    if position == "before":
+        new_scene["start"] = seconds_to_timestamp(start_sec)
+        new_scene["end"] = seconds_to_timestamp(mid_sec)
+        target_scene["start"] = seconds_to_timestamp(mid_sec)
+        scenes.insert(idx, new_scene)
+    else:
+        target_scene["end"] = seconds_to_timestamp(mid_sec)
+        new_scene["start"] = seconds_to_timestamp(mid_sec)
+        new_scene["end"] = seconds_to_timestamp(end_sec)
+        scenes.insert(idx + 1, new_scene)
+        
+    project_store.save_project(project)
+    return {"status": "ok", "new_scene": new_scene}
 
 class ReferenceUpdate(BaseModel):
     name: str | None = None
@@ -400,6 +530,27 @@ def approve_scene(mishna_id: str, minute_id: str, scene_id: str):
     return scene
 
 
+@app.get("/api/project/{mishna_id}/minute/{minute_id}/scene/{scene_id}/gemini-prompt")
+def get_scene_gemini_prompt(mishna_id: str, minute_id: str, scene_id: str):
+    project = project_store.load_or_init_project(mishna_id)
+    minute_slot = project_store.get_slot(project, minute_id)
+    if minute_slot is None:
+        raise HTTPException(status_code=404, detail="משבצת דקה לא נמצאה")
+    
+    scene = next((s for s in minute_slot.get("scenes", []) if s["scene_id"] == scene_id), None)
+    if scene is None:
+        raise HTTPException(status_code=404, detail="סצנה לא נמצאה")
+
+    ref_paths = []
+    for r in scene.get("references", []):
+        p = project_store.reference_file_path(r)
+        if p:
+            ref_paths.append(p)
+
+    full_prompt = gemini_images.get_full_prompt(scene.get("prompt", ""), ref_paths)
+    return {"full_prompt": full_prompt}
+
+
 @app.put("/api/project/{mishna_id}/minute/{minute_id}/scene/{scene_id}")
 def update_scene(mishna_id: str, minute_id: str, scene_id: str, body: SlotUpdate):
     project = project_store.load_or_init_project(mishna_id)
@@ -465,6 +616,21 @@ async def upload_srt(mishna_id: str, file: UploadFile):
         
     project_store.save_project(project)
     return {"status": "ok", "srt_path": project["srt_path"]}
+
+
+@app.get("/api/project/{mishna_id}/srt-content")
+def get_srt_content(mishna_id: str):
+    project = project_store.load_or_init_project(mishna_id)
+    srt_path = project.get("srt_path")
+    if not srt_path:
+        raise HTTPException(status_code=404, detail="No SRT file for this project")
+    
+    p = _abs(srt_path)
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="SRT file not found")
+        
+    with open(p, "r", encoding="utf-8") as f:
+        return {"content": f.read()}
 
 
 @app.get("/api/project/{mishna_id}/minute/{minute_id}/scene/{scene_id}/image")

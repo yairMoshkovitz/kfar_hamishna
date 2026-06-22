@@ -211,7 +211,7 @@
         {
           "scene_id": "scene-13",
           "start": "00:04:06.419",
-          "end": "00:04:22.359",
+          "end": "00:04:14.389",
           "mishna_text": "שיטת רבי מאיר: מבערים הכל לפני שבת",
           "prompt": "גברת רות מזכירה את השבת ההיא: ג'ינג'י מסביר ומציג שלט עם שיטת רבי מאיר. בתמונה ויזואלית - לפני שבת, שולחן עם שני סוגי מזון: חולין ותרומה, שניהם נזרקים למדורה לפני כניסת השבת. פני כולם מרוצות. ברקע השמש שוקעת. כתובית 'רבי מאיר' מרחפת. סגנון PIXAR 3D.",
           "references": [
@@ -222,6 +222,16 @@
           "duration": 15.94,
           "image_path": "full-project-slot_scene-13.png",
           "status": "image_ready"
+        },
+        {
+          "scene_id": "scene-custom-5f36ed",
+          "mishna_text": "",
+          "prompt": "סצנה חדשה - יש לערוך",
+          "references": [],
+          "image_path": null,
+          "status": "proposed",
+          "start": "00:04:14.389",
+          "end": "00:04:22.359"
         },
         {
           "scene_id": "scene-14",
@@ -251,7 +261,7 @@
           ],
           "duration": 25.719,
           "image_path": "full-project-slot_scene-15.png",
-          "status": "image_ready"
+          "status": "image_approved"
         },
         {
           "scene_id": "scene-16",

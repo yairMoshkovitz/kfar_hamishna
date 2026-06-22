@@ -29,7 +29,7 @@
         {
           "scene_id": "scene-2",
           "start": "00:00:09.000",
-          "end": "00:00:13.500",
+          "end": "00:00:14.493",
           "mishna_text": "פסחים, פרק ג', משנה ג'",
           "prompt": "A friendly Pixar 3D animated title card appears over a warm stone background: Hebrew text 'פרק ג, משנה ג' glows gently. Soft background of ancient Jerusalem stone walls. Calm, inviting atmosphere for children aged 10+. Warm amber lighting.",
           "references": [],
@@ -39,8 +39,8 @@
         },
         {
           "scene_id": "scene-3",
-          "start": "00:00:13.500",
-          "end": "00:00:30.000",
+          "start": "00:00:14.493",
+          "end": "00:00:22.743",
           "mishna_text": "חזרה על הפרק הקודם — הקערה והמגילה",
           "prompt": "Inside a dim ancient stone storage room in Jerusalem — the warehouse style. A young red-haired freckled boy (ref-c74a2962: נער ג'ינג'י שמח עם שיער מתולתל, מנומש עם עיינים גדולות) holds a beautiful ornate ceramic bowl with vibrant multicolored painted patterns (item-colorful-bowl). Beside him is a thin man (chars-old-generation-2: חברים טובים, פיציק רזה) looking surprised and confused as he stares at an ancient parchment scroll (item-mishna-scroll) with Hebrew text. Stone walls, wooden crates around them. Soft oil-lamp lighting. Pixar 3D style, calm children's animation.",
           "references": [
@@ -54,9 +54,24 @@
           "status": "image_ready"
         },
         {
+          "scene_id": "scene-custom-dc28b3",
+          "mishna_text": "איציק מתפלא על המגילה",
+          "prompt": "איציק עומד נפעם ולא מבין כיצד לפני 200 שנה שמעו על כפר משנה הוא נבהל\nהוא נראה מפוחד ומבולבל ג'ינג'י מסתכל עליו במבט לא מבין אבל ממתיק סוד.\nהרקע נהיה קצת יותר חשוך",
+          "references": [
+            "chars-old-generation-2",
+            "ref-c74a2962",
+            "ref-1640552e",
+            "ref-ce2a8940"
+          ],
+          "image_path": null,
+          "status": "proposed",
+          "start": "00:00:22.743",
+          "end": "00:00:30.993"
+        },
+        {
           "scene_id": "scene-4",
-          "start": "00:00:30.000",
-          "end": "00:00:54.000",
+          "start": "00:00:30.993",
+          "end": "00:00:54.993",
           "mishna_text": "פיציק רץ לספר לאדון מדון",
           "prompt": "Busy ancient Jerusalem street market scene (scene-jerusalem-market style): Stone-paved narrow streets with market stalls selling bitter herbs, matzah, and live sheep. People in ancient Jewish tunics rush about with joyful Passover faces. In the foreground, a thin animated man (chars-old-generation-2: חברים טובים, פיציק רזה) runs urgently through the crowded market, looking around frantically searching for someone. Warm golden afternoon sunlight. Pixar 3D style, festive pre-Passover atmosphere.",
           "references": [
@@ -69,8 +84,8 @@
         },
         {
           "scene_id": "scene-5",
-          "start": "00:00:54.000",
-          "end": "00:01:52.000",
+          "start": "00:00:54.993",
+          "end": "00:01:52.993",
           "mishna_text": "אדון מדון ובן אבטיח עם תנור הפסח",
           "prompt": "On a busy ancient Jerusalem stone street, a stern middle-aged man with a black beard and suspenders (chars-old-generation-4: המבוגר האחראי עם זקן שחור פנים חמורות סבר קצת מרובעות, עם שלייקס) stands next to an enormously tall and muscular giant man wearing a simple ancient tunic and straw hat (ref-921fc685: A giant, enormously tall and muscular man with a big friendly face, simple ancient tunic, and a straw hat). The giant holds with ONE hand effortlessly a massive old clay oven (item-passover-oven: massive ancient clay oven, nearly as tall as a short adult man, cylindrical shape, thick terracotta walls, wide opening at top) balanced on his head. The stern man points and gestures instructions. Pixar 3D style, Second Temple period Jerusalem streets with stone buildings. Afternoon warm light.",
           "references": [
@@ -84,8 +99,8 @@
         },
         {
           "scene_id": "scene-6",
-          "start": "00:01:52.000",
-          "end": "00:02:30.000",
+          "start": "00:01:52.993",
+          "end": "00:02:30.993",
           "mishna_text": "פיציק מגיע אל אדון מדון",
           "prompt": "Ancient Jerusalem stone street. A thin animated man (chars-old-generation-2: חברים טובים, פיציק רזה) runs up breathlessly to a stern black-bearded man with suspenders (chars-old-generation-4: המבוגר האחראי עם זקן שחור פנים חמורות סבר קצת מרובעות, עם שלייקס). Pitzik gestures urgently and speaks with wide eyes. In the background, the enormous gentle giant (ref-921fc685) still holds the giant clay oven on his head, waiting patiently with a friendly confused expression. Stone buildings of ancient Jerusalem surround them. Warm afternoon sunlight. Pixar 3D, Second Temple period. תוסיף לגינגי כיפה",
           "references": [
@@ -100,8 +115,8 @@
         },
         {
           "scene_id": "scene-7",
-          "start": "00:02:30.000",
-          "end": "00:04:10.000",
+          "start": "00:02:30.993",
+          "end": "00:04:10.993",
           "mishna_text": "אדון מדון מסביר לבן אבטיח את הדרך",
           "prompt": "Ancient Jerusalem street. The stern man with black beard and suspenders (chars-old-generation-4: המבוגר האחראי עם זקן שחור פנים חמורות סבר קצת מרובעות, עם שלייקס) gestures with both arms giving complex directions, pointing left and right, while the enormously tall gentle giant (ref-921fc685: A giant, enormously tall and muscular man with a big friendly face, simple ancient tunic, and straw hat) stands towering above, still holding the massive clay terracotta oven (item-passover-oven) on his shoulder, looking down with a warm but confused expression. A thin man (chars-old-generation-2) watches from the side looking impatient. Stone street of ancient Jerusalem, afternoon light. Pixar 3D children's animation style.",
           "references": [
@@ -116,8 +131,8 @@
         },
         {
           "scene_id": "scene-8",
-          "start": "00:04:10.000",
-          "end": "00:05:15.000",
+          "start": "00:04:10.993",
+          "end": "00:05:15.993",
           "mishna_text": "פיציק מספר לאדון מדון על המגילה",
           "prompt": "Quiet ancient Jerusalem side street. A thin animated man (chars-old-generation-2: חברים טובים, פיציק רזה) faces a stern black-bearded man with suspenders (chars-old-generation-4: המבוגר האחראי עם זקן שחור פנים חמורות סבר קצת מרובעות, עם שלייקס). Pitzik speaks urgently, holding out his hands expressively. Adon Madon looks increasingly shocked and puzzled as he hears about the scroll. Stone walls around them, a few passersby in ancient tunics visible in background. Warm afternoon light. Pixar 3D style.",
           "references": [
@@ -130,8 +145,8 @@
         },
         {
           "scene_id": "scene-9",
-          "start": "00:05:15.000",
-          "end": "00:05:45.000",
+          "start": "00:05:15.993",
+          "end": "00:05:45.993",
           "mishna_text": "שניהם רצו למחסן של יחציאל",
           "prompt": "Two animated men run together through ancient stone-paved Jerusalem streets: a thin man (chars-old-generation-2: חברים טובים, פיציק רזה) and a stern black-bearded man with suspenders (chars-old-generation-4: המבוגר האחראי עם זקן שחור פנים חמורות סבר קצת מרובעות, עם שלייקס). They rush urgently toward a stone warehouse building. In the background the enormous gentle giant (ref-921fc685) can be seen in the distance carrying the clay oven. Second Temple period Jerusalem stone streets, warm afternoon. Pixar 3D style.",
           "references": [
@@ -145,8 +160,8 @@
         },
         {
           "scene_id": "scene-10",
-          "start": "00:05:45.000",
-          "end": "00:06:10.000",
+          "start": "00:05:45.993",
+          "end": "00:06:10.993",
           "mishna_text": "בן אבטיח מניח את תנור הפסחים במחסן",
           "prompt": "Inside a large ancient stone storage room (scene-yitzchael-warehouse: large stone storage room, clay walls, wooden crates, oil lamps). The enormously tall gentle giant (ref-921fc685: A giant, enormously tall and muscular man with a big friendly face, simple ancient tunic, and straw hat) carefully lowers the massive clay terracotta oven (item-passover-oven) to the exact spot on the floor indicated by a warm middle-aged man (char-yitzchael: warm middle-aged Jewish man with short dark beard, linen tunic, sandals, kind eyes, welcoming smile). The giant smiles warmly in satisfaction. Pixar 3D style, dim earthy warm lighting.",
           "references": [
@@ -161,8 +176,8 @@
         },
         {
           "scene_id": "scene-11",
-          "start": "00:06:10.000",
-          "end": "00:06:45.000",
+          "start": "00:06:10.993",
+          "end": "00:06:45.993",
           "mishna_text": "יחציאל מסביר על חבורת הפסח",
           "prompt": "Inside the ancient stone warehouse (scene-yitzchael-warehouse style). A warm middle-aged man (char-yitzchael: warm middle-aged Jewish man with short dark beard, linen tunic, sandals, calm demeanor, welcoming smile) gestures proudly around the now-organized storage room. The massive clay oven (item-passover-oven) sits in the center. Around him stand the enormous gentle giant (ref-921fc685), the thin man (chars-old-generation-2), the stern man (chars-old-generation-4), and the red-haired boy (ref-c74a2962: נער ג'ינג'י שמח עם שיער מתולתל, מנומש עם עיינים גדולות). All faces show excitement and joy about the Passover feast preparations. Pixar 3D, warm oil-lamp light.",
           "references": [
@@ -180,8 +195,8 @@
         },
         {
           "scene_id": "scene-12",
-          "start": "00:06:45.000",
-          "end": "00:07:20.000",
+          "start": "00:06:45.993",
+          "end": "00:07:20.993",
           "mishna_text": "סיפור הקערה — בן בוני הכין בצק בקערה הטמאה",
           "prompt": "Inside the ancient stone warehouse. The warm middle-aged warehouse owner (char-yitzchael: warm middle-aged Jewish man with short dark beard, linen tunic, sandals) holds up the beautiful ornate colorful ceramic bowl (item-colorful-bowl: ornate ceramic bowl with vibrant multicolored painted patterns). He tells the story with an animated expression. Nearby the red-haired boy (ref-c74a2962: נער ג'ינג'י שמח עם שיער מתולתל, מנומש) and the thin man (chars-old-generation-2) listen with wide interested eyes. In the background a well-dressed young Jewish man (char-benny-buni: well-dressed young Jewish man in fine woven robes, neat hairstyle, thoughtful worried expression) is imagined/shown kneading dough in the bowl. Pixar 3D, warm lighting.",
           "references": [
@@ -197,8 +212,8 @@
         },
         {
           "scene_id": "scene-13",
-          "start": "00:07:20.000",
-          "end": "00:08:00.000",
+          "start": "00:07:20.993",
+          "end": "00:08:00.993",
           "mishna_text": "הדיון — מה לעשות עם החלה הטמאה ביום טוב",
           "prompt": "Inside the ancient stone warehouse (scene-yitzchael-warehouse style). The red-haired boy (ref-c74a2962: נער ג'ינג'י שמח עם שיער מתולתל, מנומש עם עיינים גדולות) raises a finger and speaks with a thoughtful expression, making a point about the impure dough. The stern man (chars-old-generation-4: המבוגר האחראי עם זקן שחור פנים חמורות סבר קצת מרובעות) looks skeptical. The warehouse owner (char-yitzchael) nods carefully. A symbolic visual of dough in a bowl (item-colorful-bowl) with a question mark floating above it. Warm oil-lamp light. Pixar 3D, calm discussion atmosphere.",
           "references": [
@@ -213,8 +228,8 @@
         },
         {
           "scene_id": "scene-14",
-          "start": "00:08:00.000",
-          "end": "00:09:00.000",
+          "start": "00:08:00.993",
+          "end": "00:09:00.993",
           "mishna_text": "רבי אליעזר — לא תיקרא לה שם עד שתיאפה; רבי יהודה בן ביתרה — יטיל בצונן",
           "prompt": "Inside the ancient stone warehouse. The warehouse owner (char-yitzchael: warm middle-aged Jewish man with short dark beard, linen tunic, sandals, kind eyes) stands explaining with gestures, holding up fingers to count solutions. Visual panels or thought bubbles show: 1) Matzot baking in the large clay oven (item-passover-oven) — Rabbi Eliezer's solution; 2) Dough being submerged in a clay pot of cold water — Rabbi Yehuda ben Beteira's solution. The red-haired boy (ref-c74a2962: נער ג'ינג'י שמח עם שיער מתולתל) claps with delight. Pixar 3D style, warm light.",
           "references": [
@@ -228,8 +243,8 @@
         },
         {
           "scene_id": "scene-15",
-          "start": "00:09:00.000",
-          "end": "00:09:50.000",
+          "start": "00:09:00.993",
+          "end": "00:09:50.993",
           "mishna_text": "רבי יהושע — מפרישה ומניחה עד הערב",
           "prompt": "Inside the ancient stone warehouse. The warehouse owner (char-yitzchael: warm middle-aged Jewish man with short dark beard, linen tunic, sandals) gestures calmly with open hands, explaining that the separated challah portion can simply be set aside until evening. A visual of the colorful ceramic bowl (item-colorful-bowl) with a small piece of dough set aside on a cloth nearby. Everyone around — the red-haired boy (ref-c74a2962), the thin man (chars-old-generation-2), the stern man (chars-old-generation-4) — listens with fascinated expressions. Pixar 3D, warm atmosphere.",
           "references": [
@@ -245,8 +260,8 @@
         },
         {
           "scene_id": "scene-16",
-          "start": "00:09:50.000",
-          "end": "00:10:15.000",
+          "start": "00:09:50.993",
+          "end": "00:10:15.993",
           "mishna_text": "ג'ינג'י מסתכל על הקערה ועל המגילה",
           "prompt": "Inside the ancient stone warehouse. Close-up on the red-haired freckled boy (ref-c74a2962: נער ג'ינג'י שמח עם שיער מתולתל, מנומש עם עיינים גדולות) with a pensive, emotional expression. He holds the beautiful ornate colorful ceramic bowl (item-colorful-bowl) in his hands, then his gaze drifts to the ancient parchment scroll (item-mishna-scroll: ancient parchment scroll partially unrolled with Hebrew text 'כפר המשנה', tied with cord) resting on wooden crates nearby. His expression shifts from joy to quiet internal conflict. Warm golden oil-lamp light. Pixar 3D, emotional quiet moment.",
           "references": [
@@ -260,8 +275,8 @@
         },
         {
           "scene_id": "scene-17",
-          "start": "00:10:15.000",
-          "end": "00:11:00.000",
+          "start": "00:10:15.993",
+          "end": "00:11:00.993",
           "mishna_text": "ג'ינג'י אומר שהוא מוותר על המגילה",
           "prompt": "Inside the ancient stone warehouse (scene-yitzchael-warehouse style). The red-haired boy (ref-c74a2962: נער ג'ינג'י שמח עם שיער מתולתל, מנומש עם עיינים גדולות) stands and speaks firmly with a forced determined expression, slightly flushed orange-red face matching his hair. He gestures toward the scroll (item-mishna-scroll) dismissively. Nearby the thin man (chars-old-generation-2) and the stern black-bearded man (chars-old-generation-4) begin to look visibly pale and uneasy — strange expressions of dizziness and fear crossing their faces. Warehouse setting, warm-to-cold shifting light. Pixar 3D.",
           "references": [
@@ -276,8 +291,8 @@
         },
         {
           "scene_id": "scene-18",
-          "start": "00:11:00.000",
-          "end": "00:11:45.000",
+          "start": "00:11:00.993",
+          "end": "00:11:45.993",
           "mishna_text": "פיציק ואדון מדון מתעלפים",
           "prompt": "Inside the ancient stone warehouse. The thin man (chars-old-generation-2: חברים טובים, פיציק רזה) and the stern black-bearded man with suspenders (chars-old-generation-4: המבוגר האחראי עם זקן שחור פנים חמורות סבר קצת מרובעות, עם שלייקס) collapse dramatically onto the stone floor, both looking extremely pale and barely conscious, hands trembling. The warm warehouse owner (char-yitzchael: warm middle-aged Jewish man with short dark beard, linen tunic, sandals) rushes over with alarm. The red-haired boy (ref-c74a2962) stands nearby looking conflicted and upset but stubborn. Ancient warehouse setting, oil lamps flickering. Pixar 3D, dramatic but child-appropriate scene.",
           "references": [
@@ -293,8 +308,8 @@
         },
         {
           "scene_id": "scene-19",
-          "start": "00:11:45.000",
-          "end": "00:12:32.139",
+          "start": "00:11:45.993",
+          "end": "00:12:33.132",
           "mishna_text": "ג'ינג'י מחזיק את הקערה והמגילה — סיום",
           "prompt": "Inside the ancient stone warehouse. The red-haired boy (ref-c74a2962: נער ג'ינג'י שמח עם שיער מתולתל, מנומש עם עיינים גדולות) stands alone in the center of the frame, holding the colorful ceramic bowl (item-colorful-bowl) in both hands tightly and the parchment scroll (item-mishna-scroll) tucked under his arm. His expression is torn between determination and sadness. The two collapsed figures of Pitzik (chars-old-generation-2) and Adon Madon (chars-old-generation-4) are visible on the floor in the background. Warm oil-lamp light slowly fades to suggest an uncertain ending. Episode closing title card: 'כפר המשנה' in animated Hebrew text. Pixar 3D, emotional closing scene.",
           "references": [

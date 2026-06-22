@@ -109,18 +109,29 @@ async function initWavesurfer(startStr, endStr) {
         // Update SRT overlay as audio plays
         wavesurfer.on('timeupdate', (currentTime) => {
             updateSrtOverlay(currentTime);
+            const timeDisplay = $("#currentTimeDisplay");
+            if (timeDisplay) timeDisplay.textContent = secondsToTimestamp(currentTime);
         });
 
         // Wire up region drag/resize → update time inputs + SRT overlay live
         wsRegionsPlugin.on('region-updated', (region) => {
-            $("#editSceneStart").value = secondsToTimestamp(region.start);
-            $("#editSceneEnd").value = secondsToTimestamp(region.end);
+            const startTs = secondsToTimestamp(region.start);
+            const endTs = secondsToTimestamp(region.end);
+            $("#editSceneStart").value = startTs;
+            $("#editSceneEnd").value = endTs;
+            $("#editSceneTimeLabel").textContent = `${startTs} → ${endTs}`;
+            
             // Show the subtitle at the *start* of the region while user drags
             updateSrtOverlay(region.start);
         });
 
         // Also update SRT while resizing the end handle
         wsRegionsPlugin.on('region-update', (region) => {
+            const startTs = secondsToTimestamp(region.start);
+            const endTs = secondsToTimestamp(region.end);
+            $("#editSceneStart").value = startTs;
+            $("#editSceneEnd").value = endTs;
+            $("#editSceneTimeLabel").textContent = `${startTs} → ${endTs}`;
             updateSrtOverlay(region.start);
         });
 

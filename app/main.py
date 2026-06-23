@@ -51,6 +51,8 @@ class SlotUpdate(BaseModel):
     status: str | None = None
     start: str | None = None
     end: str | None = None
+    effect: str | None = None
+    intensity: str | None = None
 
 # ---------- עזרי קבצים ----------
 class RepromptBody(BaseModel):
@@ -127,7 +129,7 @@ def update_scene(mishna_id: str, minute_id: str, scene_id: str, body: SlotUpdate
     if scene is None:
         raise HTTPException(status_code=404, detail="סצנה לא נמצאה")
     
-    for field in ("mishna_text", "prompt", "references", "duration", "status", "start", "end"):
+    for field in ("mishna_text", "prompt", "references", "duration", "status", "start", "end", "effect", "intensity"):
         val = getattr(body, field, None)
         if val is not None:
             scene[field] = val
@@ -195,6 +197,8 @@ def add_scene(mishna_id: str, minute_id: str, scene_id: str, position: str):
         "mishna_text": "",
         "prompt": "סצנה חדשה - יש לערוך",
         "references": [],
+        "effect": "ken_burns",
+        "intensity": "medium",
         "image_path": None,
         "status": "proposed"
     }

@@ -375,6 +375,54 @@
       "items": [],
       "dormant": false,
       "versions": []
+    },
+    {
+      "id": "ref-6293326c",
+      "file": "ref_74592b03.png",
+      "name": "מאיר הלוי",
+      "description": "איש לוי מבוגר בגיל העמידה עם זקן שחור-אפור ועיניים חמות ומלאות חיים. לבוש בגלימה ירוקה ארוכה עם קישוטים לויים. רכוב על חמור לבן. מראה שמח ושר תמיד, מנצח מקהלת הלויים. סגנון PIXAR 3D.",
+      "category": "characters",
+      "age": null,
+      "height": null,
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-6b635c22",
+      "file": "ref_2ee4f938.png",
+      "name": "חמורו של מאיר הלוי",
+      "description": "חמור לבן נקי עם עיניים גדולות וביטוי ידידותי. פרווה לבנה ומטופחת. גוף בינוני עם ראש גדול וצדפי גדולות. מראה חביב ושמח. סגנון PIXAR 3D.",
+      "category": "characters",
+      "age": null,
+      "height": null,
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-2de1b9e5",
+      "file": "ref_16a90c4d.png",
+      "name": "נקודת הצופים",
+      "description": "נקודת גבול עתיקה מחוץ לירושלים, עם עמוד אבן גדול וסימן חצוב עליו 'צופים'. מסביב שדה ירוק ודרך אבן מובילה לכיוון ירושלים שנראית ברקע. אווירה של גבול משמעותי. סגנון PIXAR 3D.",
+      "category": "style",
+      "age": null,
+      "height": null,
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-d38681ba",
+      "file": "ref_796fd966.png",
+      "name": "מדורת בשר קודש",
+      "description": "מדורה קטנה בוערת בצד הדרך, על אדמת שדה. האש כתומה וחמה. בשר מוחזק מעל האש. אווירה של קיום מצווה. סגנון PIXAR 3D.",
+      "category": "items",
+      "age": null,
+      "height": null,
+      "items": [],
+      "dormant": false,
+      "versions": []
     }
   ]
 }

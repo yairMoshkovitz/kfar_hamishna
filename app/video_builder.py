@@ -1,4 +1,8 @@
-"""הרכבת וידאו מצגת ב-ffmpeg: תמונות לפי תזמון + שכבת אודיו = mp4 מסונכרן."""
+"""הרכבת וידאו מצגת ב-ffmpeg: תמונות לפי תזמון + אפקטי תנועה + שכבת אודיו = mp4 מסונכרן.
+
+כל תמונה הופכת לקליפ וידאו קצר (ללא אודיו) עם אפקט zoompan, ואז הקליפים מחוברים.
+האודיו מתווסף פעם אחת בלבד, כשכבה רציפה אחת מעל כל הווידאו — אין תפרים באודיו.
+"""
 from __future__ import annotations
 
 import shutil
@@ -7,9 +11,11 @@ import os
 from pathlib import Path
 
 from .srt_parser import timestamp_to_seconds
+from . import effects
 
 WIDTH = 1920
 HEIGHT = 1080
+FPS = 25
 
 
 def _ffmpeg() -> str:
@@ -41,68 +47,119 @@ def build_video_stream(project: dict, audio_abs: Path, out_path: Path):
                     "start": scene.get("start", ""),
                     "start_sec": start_sec,
                     "duration": duration,
+                    "effect": scene.get("effect", effects.DEFAULT_EFFECT),
+                    "intensity": scene.get("intensity", effects.DEFAULT_INTENSITY),
                 })
-    
+
     # מיון לפי timestamp
     all_scenes.sort(key=lambda s: s["start_sec"])
-    
+
     if not all_scenes:
         yield "Error: אין סצנות עם תמונה — צור ואשר תמונות לפני הרכבה\n"
         return
 
-    studio = out_path.parent
-    list_file = studio / "_concat.txt"
+    # ---------- תזמון מוחלט: כל סצנה מוחזקת על המסך עד שהסצנה הבאה מתחילה ----------
+    # כך הזמן המצטבר של הקליפים תואם בדיוק את ה-timestamp של כל סצנה, והאודיו נשאר מסונכרן.
+    for i, scene in enumerate(all_scenes):
+        if i + 1 < len(all_scenes):
+            # משך = הפער עד תחילת הסצנה הבאה (בולע רווחים, מתעלם מחפיפות קלות)
+            scene["duration"] = all_scenes[i + 1]["start_sec"] - scene["start_sec"]
+        # הסצנה האחרונה שומרת על ה-duration המקורי שלה (end-start)
 
-    lines = []
-    for scene in all_scenes:
+    # פער פתיחה לפני הסצנה הראשונה — קטע שחור כדי שהסצנה הראשונה תיפול ב-timestamp הנכון
+    lead_in = max(0.0, all_scenes[0]["start_sec"])
+
+    studio = out_path.parent
+    ffmpeg = _ffmpeg()
+    total = len(all_scenes)
+
+    # ---------- שלב א': קליפ וידאו קצר (ללא אודיו) לכל תמונה, עם אפקט ----------
+    clip_paths: list[Path] = []
+
+    # קליפ שחור פותח אם הסצנה הראשונה לא מתחילה ב-0 — שומר על סנכרון עם האודיו מההתחלה
+    if lead_in > 0.05:
+        black_clip = studio / "_clip_lead.mp4"
+        black_cmd = [
+            ffmpeg, "-y",
+            "-f", "lavfi",
+            "-i", f"color=c=black:s={WIDTH}x{HEIGHT}:r={FPS}",
+            "-t", f"{lead_in:.3f}",
+            "-c:v", "libx264",
+            "-pix_fmt", "yuv420p",
+            "-an",
+            str(black_clip),
+        ]
+        yield f"מעבד קטע פתיחה שחור ({lead_in:.2f} שניות)...\n"
+        result = subprocess.run(
+            black_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            text=True, encoding="utf-8", errors="replace",
+        )
+        if result.returncode != 0:
+            yield (result.stdout or "")
+            yield f"ERROR: יצירת קטע פתיחה נכשלה (קוד {result.returncode})\n"
+            return
+        clip_paths.append(black_clip)
+
+    for i, scene in enumerate(all_scenes):
         img = (studio / Path(scene["image_path"]).name)
         if not img.exists():
             img = Path(scene["image_path"])
         dur = max(0.5, scene["duration"])
-        posix = str(img.resolve()).replace("\\", "/")
-        lines.append(f"file '{posix}'")
-        lines.append(f"duration {dur:.3f}")
-    
-    # concat demuxer דורש חזרה על הקובץ האחרון
-    last_img = (studio / Path(all_scenes[-1]["image_path"]).name)
-    if not last_img.exists():
-        last_img = Path(all_scenes[-1]["image_path"])
-    lines.append(f"file '{str(last_img.resolve()).replace(chr(92), '/')}'")
+        clip = studio / f"_clip_{i:04d}.mp4"
+        vf = effects.build_vf(scene["effect"], scene["intensity"], dur, FPS)
 
+        clip_cmd = [
+            ffmpeg, "-y",
+            "-i", str(img),
+            "-vf", vf,
+            "-c:v", "libx264",
+            "-pix_fmt", "yuv420p",
+            "-r", str(FPS),
+            "-an",  # ללא אודיו — האודיו מתווסף רק בהרכבה הסופית
+            str(clip),
+        ]
+        yield f"מעבד קליפ {i + 1}/{total} (אפקט: {scene['effect']}/{scene['intensity']})...\n"
+        result = subprocess.run(
+            clip_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            text=True, encoding="utf-8", errors="replace",
+        )
+        if result.returncode != 0:
+            yield (result.stdout or "")
+            yield f"ERROR: יצירת קליפ {i + 1} נכשלה (קוד {result.returncode})\n"
+            return
+        clip_paths.append(clip)
+
+    # ---------- שלב ב': רשימת concat של הקליפים ----------
+    list_file = studio / "_concat.txt"
+    lines = [f"file '{str(c.resolve()).replace(chr(92), '/')}'" for c in clip_paths]
     list_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-    vf = (
-        f"scale={WIDTH}:{HEIGHT}:force_original_aspect_ratio=decrease,"
-        f"pad={WIDTH}:{HEIGHT}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p"
-    )
-
+    # ---------- שלב ג': חיבור הווידאו + הוספת האודיו הרציף פעם אחת ----------
     cmd = [
-        _ffmpeg(),
-        "-y",
+        ffmpeg, "-y",
         "-f", "concat",
         "-safe", "0",
         "-i", str(list_file),
         "-i", str(audio_abs),
-        "-vf", vf,
-        "-c:v", "libx264",
-        "-r", "25",
+        "-c:v", "copy",
         "-c:a", "aac",
         "-b:a", "192k",
         "-shortest",
         str(out_path),
     ]
 
+    yield f"מרכיב וידאו סופי מ-{total} קליפים + אודיו...\n"
     yield f"Starting FFMPEG with command: {' '.join(cmd)}\n"
 
-    # מריץ את התהליך ומאזין ל-stderr (שם ffmpeg מוציא לוגים)
     process = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT, # ffmpeg logs to stderr by default
+        stderr=subprocess.STDOUT,
         text=True,
         encoding="utf-8",
+        errors="replace",
         bufsize=1,
-        universal_newlines=True
+        universal_newlines=True,
     )
 
     if process.stdout:
@@ -110,6 +167,18 @@ def build_video_stream(project: dict, audio_abs: Path, out_path: Path):
             yield line
 
     process.wait()
+
+    # ניקוי קבצי הביניים
+    for c in clip_paths:
+        try:
+            c.unlink()
+        except OSError:
+            pass
+    try:
+        list_file.unlink()
+    except OSError:
+        pass
+
     if process.returncode == 0:
         yield "SUCCESS: וידאו הורכב בהצלחה\n"
     else:

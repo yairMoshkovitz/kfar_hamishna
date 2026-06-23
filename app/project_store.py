@@ -123,6 +123,8 @@ def _create_minute_slots(total_duration: float, images_per_minute, srt_path: str
                 "prompt": "",
                 "references": [],
                 "duration": 0.0,
+                "effect": "ken_burns",
+                "intensity": "medium",
                 "image_path": None,
                 "status": "proposed",
             })

@@ -24,6 +24,8 @@ class ProposedScene(BaseModel):
     prompt: str = Field(description="פרומפט מפורט בעברית ליצירת תמונה ב-Gemini, התואם לתוכן ולסגנון הציורי של כפר המשנה")
     references: list[str] = Field(default_factory=list, description="רשימת מזהי רפרנס מהאינדקס בפורמט 'ID|Name' (למשל 'rab-chisda|רב חסדא')")
     duration: float = Field(description="כמה שניות התמונה נשארת על המסך")
+    effect: str = Field(default="ken_burns", description="אפקט תנועה לתמונה. אחד מ: static, zoom_in, zoom_out, pan_left, pan_right, pan_up, pan_down, ken_burns")
+    intensity: str = Field(default="medium", description="עוצמת האפקט: subtle (עדין), medium (בינוני), strong (חזק)")
 
 
 class ProposedReference(BaseModel):
@@ -102,7 +104,14 @@ SYSTEM_PROMPT = (
     "1. קבע תזמון מדויק (start/end) מתוך ה-SRT.\n"
     "2. זהה את טקסט המשנה המקורי (בעברית) המתאים לסצנה ושים אותו ב-mishna_text.\n"
     "3. בחר את הרפרנסים המופיעים בסצנה מתוך האינדקס (הקיים או החדש שהצעת) בפורמט 'ID|שם'.\n"
-    "4. כתוב Prompt ויזואלי מפורט בעברית. ה-Prompt חייב לכלול תיאור של ההתרחשות, הרקע, ופעולות הדמויות המשתתפות.\n\n"
+    "4. כתוב Prompt ויזואלי מפורט בעברית. ה-Prompt חייב לכלול תיאור של ההתרחשות, הרקע, ופעולות הדמויות המשתתפות.\n"
+    "5. בחר אפקט תנועה (effect) ועוצמה (intensity) לתמונה כדי שהסרטון יהיה דינמי וחי:\n"
+    "   - האפקטים האפשריים: static (ללא תנועה), zoom_in (התקרבות), zoom_out (התרחקות), "
+    "pan_left/pan_right/pan_up/pan_down (הזזה לכיוון), ken_burns (זום + הזזה משולבים).\n"
+    "   - העוצמות: subtle (עדין), medium (בינוני), strong (חזק).\n"
+    "   - בחר לפי תוכן הסצנה: zoom_in לרגעי מתח או התקרבות לדמות; zoom_out לחשיפת תמונה רחבה; "
+    "pan לנופים/סצנות רחבות; ken_burns כברירת מחדל לסצנות רגילות; static לרגעים סטטיים או טקסט.\n"
+    "   - חשוב לגוון: אל תחזור על אותו אפקט באותה עוצמה בכמה סצנות רצופות.\n\n"
     "דגשים חשובים:\n"
     "- **התאמה לתזמון**: חשוב מאוד שהפרומפט הויזואלי והתמונה שתיווצר ישקפו את מה ששומעים ב**התחלת** קטע הזמן של הסצנה (בזמן ה-start), ולא באמצע או בסוף הקטע. התאם את התיאור הוויזואלי כך שהתמונה תתאים בדיוק למילים הראשונות שנשמעות כשהסצנה מתחילה.\n"
     "- שמור על עקביות: אם דמות הופיעה בסצנה אחת, השתמש באותו ID ושם שלה גם בסצנות הבאות.\n"
@@ -263,6 +272,8 @@ def propose_slots(srt_path: str, images_per_minute: float, references: dict, exi
             "prompt": scene.prompt,
             "references": scene.references,
             "duration": scene.duration,
+            "effect": scene.effect,
+            "intensity": scene.intensity,
             "image_path": None,
             "status": "proposed",
         })

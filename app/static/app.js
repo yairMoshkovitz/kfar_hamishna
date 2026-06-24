@@ -826,10 +826,13 @@ async function openEditSceneModal(minuteId, sceneId) {
     if (!scene) return;
 
     $("#editSceneTimeLabel").textContent = `${scene.start} → ${scene.end}`;
+    $("#editSceneLocation").value = scene.location || "";
     $("#editSceneMishnaText").value = scene.mishna_text || "";
     $("#editScenePrompt").value = scene.prompt || "";
     $("#editSceneStart").value = scene.start || "";
     $("#editSceneEnd").value = scene.end || "";
+    $("#editSceneEffect").value = scene.effect || "ken_burns";
+    $("#editSceneIntensity").value = scene.intensity || "medium";
     $("#editSceneFullPrompt").value = "";
     $("#editSceneFullPrompt").placeholder = "טוען פרומפט מלא...";
 
@@ -860,6 +863,8 @@ async function refreshGeminiPrompt() {
     try {
         const res = await api(`/api/project/${encodeURIComponent(currentMishna)}/minute/${editModalMinuteId}/scene/${editModalSceneId}/gemini-prompt`);
         $("#editSceneFullPrompt").value = res.full_prompt;
+        const styleEl = $("#editSceneStyle");
+        if (styleEl) styleEl.value = res.style_description || "";
     } catch (e) {
         $("#editSceneFullPrompt").value = "שגיאה בטעינת פרומפט: " + e.message;
     }
@@ -903,6 +908,9 @@ $("#saveEditSceneBtn").onclick = async () => {
     const body = {
         mishna_text: $("#editSceneMishnaText").value,
         prompt: $("#editScenePrompt").value,
+        location: $("#editSceneLocation").value,
+        effect: $("#editSceneEffect").value,
+        intensity: $("#editSceneIntensity").value,
         start: newStart,
         end: newEnd,
         references: currentRefs
@@ -982,6 +990,21 @@ $("#addSceneBeforeBtn").onclick = async () => {
 
 $("#addSceneAfterBtn").onclick = async () => {
     await addSceneAt(editModalMinuteId, editModalSceneId, "after");
+};
+
+$("#deleteSceneBtn").onclick = async () => {
+    if (!confirm("למחוק את הסצנה? פעולה זו אינה הפיכה.")) return;
+    try {
+        setStatus("מוחק סצנה...");
+        await api(`/api/project/${encodeURIComponent(currentMishna)}/minute/${editModalMinuteId}/scene/${editModalSceneId}`, {
+            method: "DELETE"
+        });
+        await loadProject();
+        $("#editSceneModal").classList.add("hidden");
+        setStatus("הסצנה נמחקה ✓", "ok");
+    } catch (e) {
+        setStatus("שגיאה במחיקה: " + e.message, "err");
+    }
 };
 
 async function addSceneAt(minuteId, sceneId, position) {

@@ -228,6 +228,11 @@
       <div class="edit-scene-layout">
         <div class="edit-scene-main">
           <div class="scene-section">
+            <label class="section-label">📍 מיקום</label>
+            <input type="text" id="editSceneLocation" placeholder="שם המקום (מחסן, חדר, רחוב...)" style="width: 100%;" />
+          </div>
+
+          <div class="scene-section">
             <label class="section-label">טקסט המשנה</label>
             <textarea id="editSceneMishnaText" rows="3"></textarea>
           </div>
@@ -244,6 +249,12 @@
             </div>
             <textarea id="editSceneFullPrompt" rows="8" style="background: #f8f9fa; font-family: monospace; font-size: 12px;"></textarea>
             <p class="hint">עריכת טקסט זה תשפיע ישירות על התמונה שתיווצר אם תלחץ על "צור עם פרומפט זה".</p>
+          </div>
+
+          <div class="scene-section">
+            <label class="section-label">סגנון שנשלח ל-Gemini</label>
+            <textarea id="editSceneStyle" rows="3" readonly style="background: #f1f3f5; font-size: 12px; color: var(--muted);" placeholder="לא הוגדר סגנון (ניתן לערוך בהגדרות סגנון)"></textarea>
+            <p class="hint">הסגנון מוגדר עבור כל הפרויקט דרך "הגדרות סגנון".</p>
           </div>
           
         </div>
@@ -262,6 +273,31 @@
             <div class="time-inputs" style="margin-top: 5px;">
               <label>התחלה: <input type="text" id="editSceneStart" class="time-input" placeholder="00:00:00.000"></label>
               <label>סיום: <input type="text" id="editSceneEnd" class="time-input" placeholder="00:00:00.000"></label>
+            </div>
+          </div>
+
+          <div class="scene-section" style="margin-top: 15px;">
+            <label class="section-label">🎬 אפקט תנועה</label>
+            <div class="time-inputs" style="margin-top: 5px;">
+              <label>אפקט:
+                <select id="editSceneEffect">
+                  <option value="static">ללא תנועה</option>
+                  <option value="zoom_in">זום פנימה</option>
+                  <option value="zoom_out">זום החוצה</option>
+                  <option value="pan_left">תזוזה שמאלה</option>
+                  <option value="pan_right">תזוזה ימינה</option>
+                  <option value="pan_up">תזוזה למעלה</option>
+                  <option value="pan_down">תזוזה למטה</option>
+                  <option value="ken_burns">קן ברנס</option>
+                </select>
+              </label>
+              <label>עוצמה:
+                <select id="editSceneIntensity">
+                  <option value="subtle">עדינה</option>
+                  <option value="medium">בינונית</option>
+                  <option value="strong">חזקה</option>
+                </select>
+              </label>
             </div>
           </div>
 
@@ -305,6 +341,7 @@
       <div class="modal-actions" style="margin-top: 20px;">
         <button id="addSceneBeforeBtn" class="secondary">➕ הוסף סצנה לפני</button>
         <button id="addSceneAfterBtn" class="secondary">➕ הוסף סצנה אחרי</button>
+        <button id="deleteSceneBtn" class="danger">🗑️ מחק סצנה</button>
         <div style="flex: 1;"></div>
         <button id="generateWithFullPromptBtn" class="accent">🎨 צור עם הפרומפט המלא</button>
         <button id="saveEditSceneBtn" class="primary">💾 שמור הכל</button>

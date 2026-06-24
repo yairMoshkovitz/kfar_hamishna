@@ -83,6 +83,7 @@ button {
 button:hover { background: #f0ece2; }
 button.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
 button.accent { background: var(--accent); color: #fff; border-color: var(--accent); }
+button.danger { background: #e03131; color: #fff; border-color: #e03131; }
 button:disabled { opacity: .5; cursor: not-allowed; }
 
 .status {

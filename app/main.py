@@ -590,7 +590,43 @@ def get_scene_gemini_prompt(mishna_id: str, minute_id: str, scene_id: str):
                 labeled_refs.append({"path": meta["path"], "label": _ref_label(meta)})
 
     full_prompt = gemini_images.get_full_prompt(scene.get("prompt", ""), labeled_refs)
-    return {"full_prompt": full_prompt}
+    return {"full_prompt": full_prompt, "style_description": project.get("style_description", "")}
+
+
+@app.delete("/api/project/{mishna_id}/minute/{minute_id}/scene/{scene_id}")
+def delete_scene(mishna_id: str, minute_id: str, scene_id: str):
+    project = project_store.load_or_init_project(mishna_id)
+    minute_slot = project_store.get_slot(project, minute_id)
+    if minute_slot is None:
+        raise HTTPException(status_code=404, detail="משבצת דקה לא נמצאה")
+
+    scenes = minute_slot.get("scenes", [])
+    idx = next((i for i, s in enumerate(scenes) if s["scene_id"] == scene_id), -1)
+    if idx == -1:
+        raise HTTPException(status_code=404, detail="סצנה לא נמצאה")
+
+    removed = scenes.pop(idx)
+
+    # מתיחת הסצנה הקודמת (אם קיימת) לכסות את הזמן שהתפנה, אחרת הסצנה הבאה
+    from .srt_parser import timestamp_to_seconds, seconds_to_timestamp
+    if scenes:
+        if idx > 0:
+            prev = scenes[idx - 1]
+            prev["end"] = removed.get("end", prev.get("end"))
+            try:
+                prev["duration"] = max(0, timestamp_to_seconds(prev["end"]) - timestamp_to_seconds(prev["start"]))
+            except Exception:
+                pass
+        else:
+            nxt = scenes[0]
+            nxt["start"] = removed.get("start", nxt.get("start"))
+            try:
+                nxt["duration"] = max(0, timestamp_to_seconds(nxt["end"]) - timestamp_to_seconds(nxt["start"]))
+            except Exception:
+                pass
+
+    project_store.save_project(project)
+    return {"status": "ok", "deleted": scene_id}
 
 
 

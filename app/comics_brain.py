@@ -18,6 +18,8 @@ from pydantic import BaseModel, Field
 from .claude_brain import MODEL, ProposedReference, _client, _format_references
 
 
+VALID_SIZES = ("third", "half", "two_thirds", "full", "tall", "big", "splash")
+
 VALID_SHAPES = (
     "rect", "rounded", "circle", "ellipse", "triangle", "diamond",
     "hexagon", "octagon", "parallelogram", "chevron", "star", "burst",
@@ -40,7 +42,17 @@ class ComicPanel(BaseModel):
     location: str = Field(default="", description="שם המקום הפיזי שבו מתרחש הפאנל")
     dialogue: list[DialogueLine] = Field(default_factory=list, description="בועות דיבור בפאנל (יכול להיות ריק)")
     caption: str = Field(default="", description="כיתוב קריינות/תיבת טקסט לפאנל (יכול להיות ריק)")
-    size: str = Field(default="regular", description="גודל הפאנל בעמוד: regular (רגיל), wide (רחב), tall (גבוה), big (גדול). השתמש ב-big/wide לרגעים דרמטיים")
+    size: str = Field(default="half", description=(
+        "גודל הפאנל ברשת העמוד (6 עמודות דקות × 4 טורים). ערכים: "
+        "third (שליש רוחב, 2 עמודות × טור 1 — צר, לרצף מהיר/תקריב), "
+        "half (חצי רוחב, 3×1 — ברירת המחדל הנפוצה), "
+        "two_thirds (שני-שליש רוחב, 4×1), "
+        "full (רוחב מלא, 6×1 — רצועה לרגע מבסס/נוף), "
+        "tall (צר וגבוה, 2 עמודות × 2 טורים — פורטרט), "
+        "big (גוש גדול, 3×2), "
+        "splash (עמוד שלם, 6×4 — לרגע דרמטי מאוד). "
+        "תכנן שכל טור יתמלא: חצי+חצי, או שלושה שלישים, או שליש+שני-שליש, או רצועה מלאה."
+    ))
     shape: str = Field(default="rect", description=(
         "צורת מסגרת הפאנל בעמוד. ערכים אפשריים: "
         "rect (מלבן רגיל - ברירת מחדל לרוב הפאנלים), "
@@ -86,10 +98,24 @@ SYSTEM_PROMPT = (
     "5. location — שם המקום הפיזי.\n"
     "6. dialogue — בועות הדיבור בפאנל (speaker + text). אם אין דיבור, השאר רשימה ריקה.\n"
     "7. caption — תיבת קריינות אם יש (למשל 'בינתיים, בצד השני של העיר...'). אם אין, השאר ריק.\n\n"
+    "8. size — גודל הפאנל ברשת העמוד (ראה 'פריסת העמוד' למטה).\n"
+    "9. shape — צורת מסגרת הפאנל (rect ברוב המקרים; צורה מיוחדת רק לרגע דרמטי).\n\n"
+    "פריסת העמוד (חשוב מאוד!):\n"
+    "כל עמוד קומיקס הוא רשת של 6 עמודות דקות רוחבית × 4 טורים (שורות) לגובה — סה\"כ עד 24 תאים.\n"
+    "הפאנלים מסודרים אוטומטית לפי סדר panel_number, מימין לשמאל (קריאה בעברית) וטור אחר טור: "
+    "פאנל ממלא תאים, וכשהשורה הנוכחית מתמלאת עוברים לשורה הבאה, וכשהעמוד (4 טורים) מתמלא — מתחיל עמוד חדש.\n"
+    "כל גודל (size) תופס רוחב×גובה בתאים: third=2×1, half=3×1, two_thirds=4×1, full=6×1, "
+    "tall=2×2, big=3×2, splash=6×4.\n"
+    "**תכנן את הגדלים כך שכל טור (שורה של 6 עמודות) יתמלא בדיוק** — לדוגמה: שני פאנלים half (3+3), "
+    "או שלושה פאנלים third (2+2+2), או third+two_thirds (2+4), או פאנל full יחיד (6). "
+    "הימנע מהשארת חורים בטור. שאף לעמודים מאוזנים ומגוונים.\n"
+    "השתמש ב-full/big/splash לרגעים דרמטיים או מבססים, וב-third לרצף מהיר, תקריבים או רגעים קצרים.\n"
+    "שים לב: אם בחרת shape לא-מלבני (circle/triangle/burst וכו') התמונה תיחתך לצורה — שמור את "
+    "הנושא המרכזי במרכז הפאנל.\n\n"
     "עקרונות במאי:\n"
     "- עגן כל פאנל במקום פיזי ושמור על עקביות דמויות (אותו ID/שם לאורך הקומיקס).\n"
     "- בחר את הרגע הדרמטי/המעניין ביותר בכל קטע.\n"
-    "- גוון בזוויות ובקומפוזיציה בין פאנלים (תקריב, רחב, מלמעלה).\n"
+    "- גוון בזוויות ובקומפוזיציה בין פאנלים (תקריב, רחב, מלמעלה) וגם בגדלים ובצורות.\n"
     "- כמות הפאנלים צריכה לשקף את עושר התיאור; אל תדחס יותר מדי לפאנל אחד."
 )
 
@@ -171,7 +197,7 @@ def propose_panels(description: str, references: dict, style_description: str = 
             "location": panel.location,
             "dialogue": [{"speaker": d.speaker, "text": d.text} for d in panel.dialogue],
             "caption": panel.caption,
-            "size": panel.size if panel.size in ("regular", "wide", "tall", "big") else "regular",
+            "size": panel.size if panel.size in VALID_SIZES else "half",
             "shape": panel.shape if panel.shape in VALID_SHAPES else "rect",
             "image_path": None,
             "status": "proposed",

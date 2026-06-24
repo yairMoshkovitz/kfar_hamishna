@@ -226,7 +226,7 @@ function renderPanelsInner() {
 
     // תמונה + בועות
     const preview = node.querySelector(".panel-image-preview");
-    preview.classList.add("shape-" + (panel.shape || "rect"));
+    node.querySelector(".panel-clip").classList.add("shape-" + (panel.shape || "rect"));
     const img = node.querySelector(".panel-image");
     if (panel.image_path) {
       preview.classList.add("has-image");
@@ -380,8 +380,8 @@ async function savePanelLayout(sceneId, card) {
   // עדכון מקומי מיידי לתצוגה חלקה
   const panel = getPanels().find((p) => p.scene_id === sceneId);
   if (panel) { panel.size = size; panel.shape = shape; }
-  const preview = card.querySelector(".panel-image-preview");
-  preview.className = preview.className.replace(/shape-\S+/g, "").trim() + " shape-" + shape;
+  const clip = card.querySelector(".panel-clip");
+  clip.className = clip.className.replace(/shape-\S+/g, "").trim() + " shape-" + shape;
   renderPreviewSidebar();
   try {
     await api(`/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${sceneId}`, {
@@ -594,15 +594,23 @@ function bindEvents() {
 }
 
 // ---------- עיצוב עמוד (פריסה + ייצוא) ----------
-const PAGE_COLS = 2;
+const PAGE_COLS = 6;
 const PAGE_ROWS = 4;
 
 const SIZE_DIMS = {
-  regular: { w: 1, h: 1 },
-  wide: { w: 2, h: 1 },
-  tall: { w: 1, h: 2 },
-  big: { w: 2, h: 2 },
+  // אוצר מילים חדש (רשת 6×4)
+  third: { w: 2, h: 1 },
+  half: { w: 3, h: 1 },
+  two_thirds: { w: 4, h: 1 },
+  full: { w: 6, h: 1 },
+  tall: { w: 2, h: 2 },
+  big: { w: 3, h: 2 },
+  splash: { w: 6, h: 4 },
+  // aliases לתאימות לאחור
+  regular: { w: 3, h: 1 },
+  wide: { w: 6, h: 1 },
 };
+const DEFAULT_DIM = SIZE_DIMS.half;
 
 function paginate(panels) {
   const pages = [];
@@ -633,7 +641,7 @@ function paginate(panels) {
 
   newPage();
   panels.forEach((panel) => {
-    const { w, h } = SIZE_DIMS[panel.size] || SIZE_DIMS.regular;
+    const { w, h } = SIZE_DIMS[panel.size] || DEFAULT_DIM;
     let spot = findSpot(w, h);
     if (!spot) {
       newPage();
@@ -659,21 +667,24 @@ function buildPagesInto(container, emptyMsg) {
     page.className = "comic-page";
     placements.forEach(({ panel, row, col, w, h }) => {
       const cell = document.createElement("div");
-      cell.className = "page-panel size-" + (panel.size || "regular") + " shape-" + (panel.shape || "rect");
+      cell.className = "page-panel size-" + (panel.size || "half");
       cell.style.gridColumn = `${col + 1} / span ${w}`;
       cell.style.gridRow = `${row + 1} / span ${h}`;
 
+      const clip = document.createElement("div");
+      clip.className = "panel-clip shape-" + (panel.shape || "rect");
       if (panel.image_path) {
         const img = document.createElement("img");
         img.crossOrigin = "anonymous";
         img.src = `/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${panel.scene_id}/image?t=${Date.now()}`;
-        cell.appendChild(img);
+        clip.appendChild(img);
       } else {
         const ph = document.createElement("div");
         ph.className = "no-image-placeholder";
         ph.innerHTML = "<span>🖼️</span>";
-        cell.appendChild(ph);
+        clip.appendChild(ph);
       }
+      cell.appendChild(clip);
 
       const bubbles = document.createElement("div");
       bubbles.className = "panel-bubbles";

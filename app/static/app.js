@@ -611,6 +611,8 @@ function renderTimeline() {
     tel.appendChild(refSection);
   }
 
+  renderLocationsSummary(tel);
+
   const minuteTemplate = $("#minuteCardTemplate");
   project.slots.forEach((minuteSlot) => {
     const minuteNode = minuteTemplate.content.cloneNode(true);
@@ -627,6 +629,34 @@ function renderTimeline() {
     }
     tel.appendChild(minuteNode);
   });
+}
+
+function renderLocationsSummary(tel) {
+  // אוסף את כל המקומות הייחודיים של הפרק עם מספר הסצנות בכל מקום
+  const counts = new Map();
+  (project.slots || []).forEach(slot => {
+    (slot.scenes || []).forEach(scene => {
+      const loc = (scene.location || "").trim();
+      if (!loc) return;
+      counts.set(loc, (counts.get(loc) || 0) + 1);
+    });
+  });
+  if (counts.size === 0) return;
+
+  const section = document.createElement("section");
+  section.className = "minute-card locations-summary-section";
+  const chips = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([loc, n]) => `<span class="location-chip">📍 ${loc} <b>×${n}</b></span>`)
+    .join("");
+  section.innerHTML = `
+    <div class="minute-header">
+      <h2 class="minute-title">מקומות בפרק (${counts.size})</h2>
+      <span class="minute-time-range">סצנות לפי מיקום פיזי</span>
+    </div>
+    <div class="locations-chips">${chips}</div>
+  `;
+  tel.appendChild(section);
 }
 
 function renderProposedRef(ref) {
@@ -693,6 +723,11 @@ function renderScene(minuteId, scene, sceneNumber) {
   const badge = $(".scene-status-badge", root);
   badge.textContent = statusLabel(scene.status);
   badge.className = "scene-status-badge " + scene.status;
+  const locInput = $(".location-text", root);
+  if (locInput) {
+    locInput.value = scene.location || "";
+    locInput.onchange = () => saveScene(minuteId, scene.scene_id, root);
+  }
   $(".mishna-text", root).value = scene.mishna_text || "";
   $(".mishna-text", root).onchange = () => saveScene(minuteId, scene.scene_id, root);
   $(".prompt-text", root).value = scene.prompt || "";
@@ -982,6 +1017,8 @@ async function askClaudeSingle(minuteId, sceneId, root) {
 
 async function saveScene(minuteId, sceneId, root) {
   const body = { mishna_text: $(".mishna-text", root).value, prompt: $(".prompt-text", root).value };
+  const locEl = $(".location-text", root);
+  if (locEl) body.location = locEl.value;
   try {
     const updated = await api(`/api/project/${encodeURIComponent(currentMishna)}/minute/${minuteId}/scene/${sceneId}`, { method: "PUT", body: JSON.stringify(body) });
     const scene = findScene(minuteId, sceneId);

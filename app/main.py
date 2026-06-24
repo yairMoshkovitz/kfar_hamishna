@@ -53,6 +53,7 @@ class SlotUpdate(BaseModel):
     end: str | None = None
     effect: str | None = None
     intensity: str | None = None
+    location: str | None = None
 
 # ---------- עזרי קבצים ----------
 class RepromptBody(BaseModel):
@@ -61,6 +62,25 @@ class RepromptBody(BaseModel):
 class GenerateWithPromptBody(BaseModel):
     prompt: str | None = None
     is_full_prompt: bool = False
+
+_CATEGORY_LABEL = {
+    "characters": "דמות",
+    "items": "חפץ",
+    "style": "מקום/סגנון",
+    "scene": "סצנה",
+}
+
+
+def _ref_label(meta: dict) -> str:
+    """בונה תווית טקסטואלית לרפרנס: סוג «שם» — תיאור, לשליחה ל-Gemini לצד התמונה."""
+    kind = _CATEGORY_LABEL.get(meta.get("category", ""), "רפרנס")
+    name = meta.get("name", "") or "ללא שם"
+    desc = (meta.get("description", "") or "").strip()
+    label = f"{kind} «{name}»"
+    if desc:
+        label += f" — {desc}"
+    return label
+
 
 def _get_previous_scene(project: dict, current_minute_id: str, current_scene_id: str):
     """מוצא את הסצנה הקודמת בפרויקט."""
@@ -88,28 +108,28 @@ def generate_scene(mishna_id: str, minute_id: str, scene_id: str, body: Generate
     if not refs_to_use:
         refs_to_use = ["scene:previous"]
 
-    ref_paths = []
+    labeled_refs = []
     for r in refs_to_use:
         if r == "scene:previous":
             prev = _get_previous_scene(project, minute_id, scene_id)
             if prev and prev.get("image_path"):
                 p = project_store.studio_dir(mishna_id) / prev["image_path"]
                 if p.exists():
-                    ref_paths.append(p)
+                    labeled_refs.append({"path": p, "label": "הסצנה הקודמת (לשמירת רצף ויזואלי וסגנון)"})
         else:
-            p = project_store.reference_file_path(r, project=project)
-            if p:
-                ref_paths.append(p)
+            meta = project_store.reference_meta(r, project=project)
+            if meta:
+                labeled_refs.append({"path": meta["path"], "label": _ref_label(meta)})
 
     out = project_store.studio_dir(mishna_id) / f"{minute_id}_{scene_id}.png"
     try:
         if body and body.is_full_prompt and body.prompt:
             # שימוש בפרומפט מלא כפי שהמשתמש ערך, מבלי להרכיב אותו מחדש
-            gemini_images.generate_image(body.prompt, ref_paths, out, scene_type="character", is_full_prompt=True)
+            gemini_images.generate_image(body.prompt, labeled_refs, out, scene_type="character", is_full_prompt=True)
             # מעדכנים את הפרומפט בסצנה שיהיה הפרומפט החדש
             scene["prompt"] = body.prompt
         else:
-            gemini_images.generate_image(scene.get("prompt", ""), ref_paths, out)
+            gemini_images.generate_image(scene.get("prompt", ""), labeled_refs, out)
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=502, detail=f"שגיאת Gemini: {e}")
@@ -129,7 +149,7 @@ def update_scene(mishna_id: str, minute_id: str, scene_id: str, body: SlotUpdate
     if scene is None:
         raise HTTPException(status_code=404, detail="סצנה לא נמצאה")
     
-    for field in ("mishna_text", "prompt", "references", "duration", "status", "start", "end", "effect", "intensity"):
+    for field in ("mishna_text", "prompt", "references", "duration", "status", "start", "end", "effect", "intensity", "location"):
         val = getattr(body, field, None)
         if val is not None:
             scene[field] = val
@@ -197,6 +217,7 @@ def add_scene(mishna_id: str, minute_id: str, scene_id: str, position: str):
         "mishna_text": "",
         "prompt": "סצנה חדשה - יש לערוך",
         "references": [],
+        "location": "",
         "effect": "ken_burns",
         "intensity": "medium",
         "image_path": None,
@@ -555,20 +576,20 @@ def get_scene_gemini_prompt(mishna_id: str, minute_id: str, scene_id: str):
     if not refs_to_use:
         refs_to_use = ["scene:previous"]
 
-    ref_paths = []
+    labeled_refs = []
     for r in refs_to_use:
         if r == "scene:previous":
             prev = _get_previous_scene(project, minute_id, scene_id)
             if prev and prev.get("image_path"):
                 p = project_store.studio_dir(mishna_id) / prev["image_path"]
                 if p.exists():
-                    ref_paths.append(p)
+                    labeled_refs.append({"path": p, "label": "הסצנה הקודמת (לשמירת רצף ויזואלי וסגנון)"})
         else:
-            p = project_store.reference_file_path(r, project=project)
-            if p:
-                ref_paths.append(p)
+            meta = project_store.reference_meta(r, project=project)
+            if meta:
+                labeled_refs.append({"path": meta["path"], "label": _ref_label(meta)})
 
-    full_prompt = gemini_images.get_full_prompt(scene.get("prompt", ""), ref_paths)
+    full_prompt = gemini_images.get_full_prompt(scene.get("prompt", ""), labeled_refs)
     return {"full_prompt": full_prompt}
 
 

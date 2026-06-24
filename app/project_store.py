@@ -123,6 +123,7 @@ def _create_minute_slots(total_duration: float, images_per_minute, srt_path: str
                 "prompt": "",
                 "references": [],
                 "duration": 0.0,
+                "location": "",
                 "effect": "ken_burns",
                 "intensity": "medium",
                 "image_path": None,
@@ -285,6 +286,46 @@ def load_references() -> dict:
         return {"base_dir": "data/images", "references": []}
     with open(REFERENCES_INDEX, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def reference_meta(ref_value: str, version_index: int = -1, project: dict | None = None) -> dict | None:
+    """כמו reference_file_path, אך מחזיר גם מטא-דאטה: {path, name, description, category}.
+
+    מחזיר None אם לא נמצא נתיב. עבור scene:* המטא-דאטה מינימלית (name='הסצנה הקודמת').
+    """
+    path = reference_file_path(ref_value, version_index=version_index, project=project)
+    if path is None:
+        return None
+
+    # רפרנס לסצנה קודמת — אין לו רשומה באינדקס
+    if ref_value.startswith("scene:"):
+        return {"path": path, "name": "הסצנה הקודמת", "description": "", "category": "scene"}
+
+    # חילוץ ID/שם ואיתור הרשומה באינדקס לקבלת name/description
+    id_to_find = ref_value
+    name_to_find = None
+    if "|" in ref_value:
+        parts = [p.strip() for p in ref_value.split("|")]
+        id_to_find = parts[0]
+        if len(parts) > 1:
+            name_to_find = parts[1]
+
+    refs = load_references()
+    for r in refs.get("references", []):
+        rid, rname, rfile = r.get("id"), r.get("name"), r.get("file")
+        match = (id_to_find in (rid, rname, rfile))
+        if not match and name_to_find:
+            match = (name_to_find in (rid, rname, rfile))
+        if match:
+            return {
+                "path": path,
+                "name": r.get("name", "") or "",
+                "description": r.get("description", "") or "",
+                "category": r.get("category", "") or "",
+            }
+
+    # נמצא נתיב אך לא רשומה (קובץ ישיר) — נחזיר שם מהקובץ
+    return {"path": path, "name": name_to_find or id_to_find or path.stem, "description": "", "category": ""}
 
 
 def reference_file_path(ref_value: str, version_index: int = -1, project: dict | None = None) -> Path | None:

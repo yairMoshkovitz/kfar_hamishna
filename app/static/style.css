@@ -317,6 +317,35 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   font-family: inherit;
 }
 
+.scene-section input.location-text {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.locations-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.location-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card, #fff);
+  font-size: 13px;
+}
+
+.location-chip b { color: var(--muted); font-weight: 600; }
+
 .scene-controls {
   display: flex;
   gap: 6px;

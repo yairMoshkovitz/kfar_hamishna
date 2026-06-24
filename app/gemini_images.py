@@ -35,55 +35,88 @@ def _guess_mime(path: Path) -> str:
     return mime or "image/png"
 
 
-def get_full_prompt(prompt: str, reference_paths: list[Path], scene_type: str = "character") -> str:
+def _normalize_refs(references: list) -> list[tuple[Path, str | None]]:
+    """מנרמל רשימת רפרנסים לצורת (path, label). תומך גם ב-Path וגם ב-dict{path,label}."""
+    out: list[tuple[Path, str | None]] = []
+    for item in references or []:
+        if item is None:
+            continue
+        if isinstance(item, dict):
+            p = item.get("path")
+            label = item.get("label")
+        else:
+            p, label = item, None
+        if p:
+            out.append((Path(p), label))
+    return out
+
+
+def get_full_prompt(prompt: str, references: list, scene_type: str = "character", is_full_prompt: bool = False) -> str:
     """מחזיר את הטקסט המלא שיישלח ל-Gemini כהנחיה."""
+    has_refs = bool(_normalize_refs(references))
+
+    # פרומפט מלא: המשתמש ערך אותו ידנית — לא לעטוף בהנחיות נוספות.
+    if is_full_prompt:
+        return prompt
+
+    refs_note = (
+        " צורפו תמונות רפרנס מתויגות; השתמש בכל אחת אך ורק עבור הדמות/החפץ/המקום שצוין בתווית שלידה."
+        if has_refs else ""
+    )
+
     if scene_type == "object":
         instruction = (
             "השתמש בתמונות הרפרנס המצורפות אך ורק כדי לשמור על עקביות הסגנון האמנותי. "
             "התמקד אך ורק באובייקט המרכזי. שמור על רקע פשוט, נקי ולא עמוס, "
-            "כיוון שאלמנט זה ישולב בסצנות אחרות. אל תכלול דמויות כלל. "
-            "צור איור יחיד עבור האובייקט הבא: " + prompt
+            "כיוון שאלמנט זה ישולב בסצנות אחרות. אל תכלול דמויות כלל." + refs_note +
+            " צור איור יחיד עבור האובייקט הבא: " + prompt
         )
     elif scene_type == "place":
         instruction = (
             "השתמש בתמונות הרפרנס המצורפות אך ורק כדי לשמור על עקביות הסגנון האמנותי. "
-            "התמקד בסביבה ובאווירה. אל תכלול דמויות אלא אם כן הן מוזכרות במפורש בפרומפט. "
-            "צור איור יחיד עבור המקום הבא: " + prompt
+            "התמקד בסביבה ובאווירה. אל תכלול דמויות אלא אם כן הן מוזכרות במפורש בפרומפט." + refs_note +
+            " צור איור יחיד עבור המקום הבא: " + prompt
         )
     else:  # character
         instruction = prompt
-        if reference_paths:
+        if has_refs:
             instruction = (
                 "השתמש בתמונות הרפרנס המצורפות כדי לשמור על המראה של הדמויות "
-                "ועל הסגנון הכללי. צור איור יחיד עבור הסצנה הבאה: " + prompt
+                "ועל הסגנון הכללי." + refs_note +
+                " צור איור יחיד עבור הסצנה הבאה: " + prompt
             )
     return instruction
 
 
-def generate_image(prompt: str, reference_paths: list[Path], out_path: Path, scene_type: str = "character") -> Path:
+def generate_image(prompt: str, references: list, out_path: Path, scene_type: str = "character", is_full_prompt: bool = False) -> Path:
     """יוצר תמונה אחת מ-prompt + תמונות רפרנס, שומר ל-out_path. מחזיר את הנתיב.
-    
+
+    references: רשימה של Path או של dict{path, label}. כשיש label, נשלחת תווית טקסט
+    מיד לפני כל תמונה כדי ש-Gemini ידע איזו דמות/חפץ/מקום כל תמונה מייצגת.
     scene_type: "character", "place", or "object".
     """
     print(f"[Gemini] מתחיל יצירת תמונה עם מודל: {MODEL} (סוג: {scene_type})")
-    
-    instruction = get_full_prompt(prompt, reference_paths, scene_type)
-    
+
+    refs = _normalize_refs(references)
+    instruction = get_full_prompt(prompt, references, scene_type, is_full_prompt=is_full_prompt)
+
     print(f"[Gemini] prompt: {prompt[:100]}..." if len(prompt) > 100 else f"[Gemini] prompt: {prompt}")
-    print(f"[Gemini] מספר רפרנסים: {len(reference_paths)}")
-    
+    print(f"[Gemini] מספר רפרנסים: {len(refs)}")
+
     contents: list = []
-    # הרפרנסים קודם — הם מקבעים את הסגנון/מראה; אחריהם ההוראה הטקסטואלית.
-    for rp in reference_paths:
+    # לכל רפרנס: תווית טקסט (אם יש) ואז התמונה — כך Gemini יודע מי מי.
+    for rp, label in refs:
         if rp and rp.exists():
-            print(f"[Gemini] טוען רפרנס: {rp.name}")
+            print(f"[Gemini] טוען רפרנס: {rp.name} ({label or 'ללא תווית'})")
+            if label:
+                contents.append(f"תמונת הרפרנס הבאה היא {label}. שמור על מראה זהה לחלוטין.")
             contents.append(
                 types.Part.from_bytes(
                     data=rp.read_bytes(),
                     mime_type=_guess_mime(rp),
                 )
             )
-    
+
     contents.append(instruction)
 
     print(f"[Gemini] שולח בקשה ל-API...")

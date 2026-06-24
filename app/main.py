@@ -59,6 +59,7 @@ class SlotUpdate(BaseModel):
     caption: str | None = None
     description: str | None = None
     size: str | None = None
+    shape: str | None = None
 
 # ---------- עזרי קבצים ----------
 class RepromptBody(BaseModel):
@@ -75,6 +76,20 @@ _SIZE_ASPECT_HINT = {
     "wide": "הרכב את התמונה ביחס רוחבי (landscape, בערך 16:9). פרוס את הדמויות לרוחב ושמור עליהן במלואן בקדר הרחב.",
     "tall": "הרכב את התמונה ביחס אנכי-גבוה (portrait, בערך 9:16). מקם את הדמויות לאורך הציר האנכי ושמור עליהן במלואן.",
     "big": "הרכב תמונה גדולה ודרמטית ביחס ריבועי (1:1) עם קומפוזיציה רחבה ועשירה בפרטים.",
+}
+
+# רמז קומפוזיציה לפי צורת הפאנל: מסגרת הפאנל תיחתך לצורה, לכן יש לשמור את הנושא
+# המרכזי במרכז הקדר ולהשאיר מרווח בקצוות ובפינות כדי שדמויות לא ייחתכו.
+_NON_RECT_HINT = (
+    " שים לב: מסגרת הפאנל אינה מלבנית אלא בצורת {shape}, והתמונה תיחתך לצורה זו. "
+    "מקם את הנושא המרכזי והדמויות בדיוק במרכז הקדר, השאר מרווח נדיב בקצוות ובפינות, "
+    "ואל תמקם פרטים חשובים בפינות התמונה כדי שלא ייחתכו."
+)
+_SHAPE_NAMES_HE = {
+    "rounded": "פינות מעוגלות", "circle": "עיגול", "ellipse": "אליפסה",
+    "triangle": "משולש", "diamond": "מעוין", "hexagon": "משושה",
+    "octagon": "מתומן", "parallelogram": "מקבילית (חיתוך אלכסוני)",
+    "chevron": "חץ", "star": "כוכב", "burst": "פיצוץ משונן",
 }
 
 _CATEGORY_LABEL = {
@@ -147,6 +162,9 @@ def generate_scene(mishna_id: str, minute_id: str, scene_id: str, body: Generate
             aspect = _SIZE_ASPECT_HINT.get(scene.get("size"))
             if aspect:
                 prompt = f"{prompt}\n\n{aspect}"
+            shape_name = _SHAPE_NAMES_HE.get(scene.get("shape"))
+            if shape_name:
+                prompt = f"{prompt}{_NON_RECT_HINT.format(shape=shape_name)}"
             gemini_images.generate_image(prompt, labeled_refs, out)
     except Exception as e:
         traceback.print_exc()
@@ -167,7 +185,7 @@ def update_scene(mishna_id: str, minute_id: str, scene_id: str, body: SlotUpdate
     if scene is None:
         raise HTTPException(status_code=404, detail="סצנה לא נמצאה")
     
-    for field in ("mishna_text", "prompt", "references", "duration", "status", "start", "end", "effect", "intensity", "location", "dialogue", "caption", "description", "size"):
+    for field in ("mishna_text", "prompt", "references", "duration", "status", "start", "end", "effect", "intensity", "location", "dialogue", "caption", "description", "size", "shape"):
         val = getattr(body, field, None)
         if val is not None:
             scene[field] = val

@@ -185,6 +185,11 @@ function refLabel(value) {
 
 // ---------- רינדור פאנלים ----------
 function renderPanels() {
+  renderPanelsInner();
+  renderPreviewSidebar();
+}
+
+function renderPanelsInner() {
   const root = $("#panels");
   root.innerHTML = "";
   if (!project) {
@@ -213,6 +218,7 @@ function renderPanels() {
     node.querySelector(".prompt-text").value = panel.prompt || "";
     node.querySelector(".caption-text").value = panel.caption || "";
     node.querySelector(".panel-size").value = panel.size || "regular";
+    node.querySelector(".panel-shape").value = panel.shape || "rect";
 
     renderStatusBadge(node.querySelector(".scene-status-badge"), panel.status);
     renderRefChips(node.querySelector(".ref-chips-container"), panel.references || []);
@@ -220,12 +226,17 @@ function renderPanels() {
 
     // תמונה + בועות
     const preview = node.querySelector(".panel-image-preview");
+    preview.classList.add("shape-" + (panel.shape || "rect"));
     const img = node.querySelector(".panel-image");
     if (panel.image_path) {
       preview.classList.add("has-image");
       img.src = `/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${panel.scene_id}/image?t=${Date.now()}`;
     }
     renderBubbles(node.querySelector(".panel-bubbles"), panel.dialogue || [], panel.caption || "");
+
+    // שינוי גודל/צורה — שמירה אוטומטית ורענון תצוגה מקדימה
+    node.querySelector(".panel-size").addEventListener("change", () => savePanelLayout(panel.scene_id, card));
+    node.querySelector(".panel-shape").addEventListener("change", () => savePanelLayout(panel.scene_id, card));
 
     // אירועים
     node.querySelector(".generate-btn").addEventListener("click", () => generatePanel(panel.scene_id, card));
@@ -309,19 +320,28 @@ function collectDialogue(card) {
 
 function renderBubbles(container, dialogue, caption) {
   container.innerHTML = "";
+  // קריינות תמיד למעלה, בועות דיבור למטה
+  const top = document.createElement("div");
+  top.className = "bubbles-top";
+  const bottom = document.createElement("div");
+  bottom.className = "bubbles-bottom";
+
   if (caption) {
     const cap = document.createElement("div");
     cap.className = "comic-caption";
     cap.textContent = caption;
-    container.appendChild(cap);
+    top.appendChild(cap);
   }
   dialogue.forEach((d) => {
     if (!d.text) return;
     const b = document.createElement("div");
     b.className = "comic-bubble";
     b.innerHTML = (d.speaker ? `<span class="bubble-speaker">${escapeHtml(d.speaker)}</span>` : "") + escapeHtml(d.text);
-    container.appendChild(b);
+    bottom.appendChild(b);
   });
+
+  container.appendChild(top);
+  container.appendChild(bottom);
 }
 
 function escapeHtml(s) {
@@ -337,6 +357,7 @@ function panelPayload(card) {
     prompt: card.querySelector(".prompt-text").value,
     caption: card.querySelector(".caption-text").value,
     size: card.querySelector(".panel-size").value,
+    shape: card.querySelector(".panel-shape").value,
     dialogue: collectDialogue(card),
   };
 }
@@ -350,6 +371,28 @@ async function savePanel(sceneId, card) {
   });
   await loadComic(currentComic);
   setStatus("נשמר ✓", "ok");
+}
+
+// שמירת גודל/צורה בלבד (אגב שינוי בורר) — מעדכן מקומית, שומר ומרענן תצוגה מקדימה
+async function savePanelLayout(sceneId, card) {
+  const size = card.querySelector(".panel-size").value;
+  const shape = card.querySelector(".panel-shape").value;
+  // עדכון מקומי מיידי לתצוגה חלקה
+  const panel = getPanels().find((p) => p.scene_id === sceneId);
+  if (panel) { panel.size = size; panel.shape = shape; }
+  const preview = card.querySelector(".panel-image-preview");
+  preview.className = preview.className.replace(/shape-\S+/g, "").trim() + " shape-" + shape;
+  renderPreviewSidebar();
+  try {
+    await api(`/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${sceneId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ size, shape }),
+    });
+    setStatus("פריסה עודכנה ✓", "ok");
+  } catch (e) {
+    setStatus("שגיאה: " + e.message, "err");
+  }
 }
 
 async function generatePanel(sceneId, card) {
@@ -544,6 +587,10 @@ function bindEvents() {
   $("#viewLayoutBtn").addEventListener("click", () => showView("layout"));
   $("#downloadPdfBtn").addEventListener("click", downloadPdf);
   $("#downloadPngBtn").addEventListener("click", downloadPngs);
+
+  // סרגל תצוגה מקדימה
+  $("#togglePreviewBtn").addEventListener("click", () => togglePreview(false));
+  $("#showPreviewBtn").addEventListener("click", () => togglePreview(true));
 }
 
 // ---------- עיצוב עמוד (פריסה + ייצוא) ----------
@@ -599,12 +646,11 @@ function paginate(panels) {
   return pages;
 }
 
-function renderPages() {
-  const container = $("#pagesContainer");
+function buildPagesInto(container, emptyMsg) {
   container.innerHTML = "";
   const panels = getPanels();
   if (!project || panels.length === 0) {
-    container.innerHTML = `<p class="empty-hint">אין פאנלים להציג. חזור ל"עריכה" וצור פאנלים תחילה.</p>`;
+    if (emptyMsg) container.innerHTML = `<p class="empty-hint">${emptyMsg}</p>`;
     return;
   }
   const pages = paginate(panels);
@@ -613,7 +659,7 @@ function renderPages() {
     page.className = "comic-page";
     placements.forEach(({ panel, row, col, w, h }) => {
       const cell = document.createElement("div");
-      cell.className = "page-panel size-" + (panel.size || "regular");
+      cell.className = "page-panel size-" + (panel.size || "regular") + " shape-" + (panel.shape || "rect");
       cell.style.gridColumn = `${col + 1} / span ${w}`;
       cell.style.gridRow = `${row + 1} / span ${h}`;
 
@@ -640,13 +686,32 @@ function renderPages() {
   });
 }
 
+function renderPages() {
+  buildPagesInto($("#pagesContainer"), 'אין פאנלים להציג. חזור ל"עריכה" וצור פאנלים תחילה.');
+}
+
+function renderPreviewSidebar() {
+  const sidebar = $("#previewSidebar");
+  if (!sidebar || sidebar.classList.contains("collapsed")) return;
+  buildPagesInto($("#previewPages"), "אין עדיין פאנלים.");
+}
+
+function togglePreview(show) {
+  const sidebar = $("#previewSidebar");
+  const collapsed = show === undefined ? !sidebar.classList.contains("collapsed") : !show;
+  sidebar.classList.toggle("collapsed", collapsed);
+  $("#showPreviewBtn").classList.toggle("hidden", !collapsed);
+  if (!collapsed) renderPreviewSidebar();
+}
+
 function showView(view) {
   const layout = view === "layout";
-  $("#panels").classList.toggle("hidden", layout);
+  $("#editArea").classList.toggle("hidden", layout);
   $("#pagesView").classList.toggle("hidden", !layout);
   $("#viewEditBtn").className = layout ? "secondary" : "primary";
   $("#viewLayoutBtn").className = layout ? "primary" : "secondary";
   if (layout) renderPages();
+  else renderPreviewSidebar();
 }
 
 async function waitForImages(el) {

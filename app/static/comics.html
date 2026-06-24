@@ -43,7 +43,18 @@
     </aside>
 
     <div class="main-content">
-      <main id="panels" class="panels-grid"></main>
+      <div id="editArea" class="edit-area">
+        <main id="panels" class="panels-grid"></main>
+
+        <aside id="previewSidebar" class="preview-sidebar">
+          <div class="preview-head">
+            <span>👁️ תצוגה מקדימה של העמוד</span>
+            <button id="togglePreviewBtn" class="small-btn" title="הסתר/הצג">⟩</button>
+          </div>
+          <div id="previewPages" class="preview-pages preview-scaled"></div>
+        </aside>
+        <button id="showPreviewBtn" class="small-btn preview-reopen hidden" title="הצג תצוגה מקדימה">👁️</button>
+      </div>
 
       <section id="pagesView" class="pages-view hidden">
         <div class="pages-toolbar">
@@ -145,14 +156,33 @@
         <label class="section-label">📍 מיקום</label>
         <input class="location-text" type="text" placeholder="מקום..." />
       </div>
-      <div class="scene-section">
-        <label class="section-label">📐 גודל בעמוד</label>
-        <select class="panel-size">
-          <option value="regular">רגיל (1×1)</option>
-          <option value="wide">רחב (2×1)</option>
-          <option value="tall">גבוה (1×2)</option>
-          <option value="big">גדול (2×2)</option>
-        </select>
+      <div class="panel-layout-row">
+        <div class="scene-section">
+          <label class="section-label">📐 גודל</label>
+          <select class="panel-size">
+            <option value="regular">רגיל (1×1)</option>
+            <option value="wide">רחב (2×1)</option>
+            <option value="tall">גבוה (1×2)</option>
+            <option value="big">גדול (2×2)</option>
+          </select>
+        </div>
+        <div class="scene-section">
+          <label class="section-label">🔷 צורה</label>
+          <select class="panel-shape">
+            <option value="rect">מלבן (רגיל)</option>
+            <option value="rounded">פינות מעוגלות</option>
+            <option value="circle">עיגול</option>
+            <option value="ellipse">אליפסה</option>
+            <option value="triangle">משולש</option>
+            <option value="diamond">מעוין</option>
+            <option value="hexagon">משושה</option>
+            <option value="octagon">מתומן</option>
+            <option value="parallelogram">מקבילית / אלכסון</option>
+            <option value="chevron">חץ</option>
+            <option value="star">כוכב</option>
+            <option value="burst">פיצוץ (burst)</option>
+          </select>
+        </div>
       </div>
       <div class="scene-section">
         <label class="section-label">Prompt לתמונה</label>

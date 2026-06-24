@@ -18,6 +18,12 @@ from pydantic import BaseModel, Field
 from .claude_brain import MODEL, ProposedReference, _client, _format_references
 
 
+VALID_SHAPES = (
+    "rect", "rounded", "circle", "ellipse", "triangle", "diamond",
+    "hexagon", "octagon", "parallelogram", "chevron", "star", "burst",
+)
+
+
 # ---------- סכמות פלט מובנה ----------
 class DialogueLine(BaseModel):
     """שורת דיבור בבועה אחת בתוך פאנל."""
@@ -35,6 +41,22 @@ class ComicPanel(BaseModel):
     dialogue: list[DialogueLine] = Field(default_factory=list, description="בועות דיבור בפאנל (יכול להיות ריק)")
     caption: str = Field(default="", description="כיתוב קריינות/תיבת טקסט לפאנל (יכול להיות ריק)")
     size: str = Field(default="regular", description="גודל הפאנל בעמוד: regular (רגיל), wide (רחב), tall (גבוה), big (גדול). השתמש ב-big/wide לרגעים דרמטיים")
+    shape: str = Field(default="rect", description=(
+        "צורת מסגרת הפאנל בעמוד. ערכים אפשריים: "
+        "rect (מלבן רגיל - ברירת מחדל לרוב הפאנלים), "
+        "rounded (פינות מעוגלות - לרגעים רכים/חמים), "
+        "circle (עיגול - לקלוז-אפ, פלאשבק, או הצצה רגעית), "
+        "ellipse (אליפסה), "
+        "triangle (משולש), "
+        "diamond (מעוין - להדגשה), "
+        "hexagon (משושה), "
+        "octagon (מתומן), "
+        "parallelogram (מקבילית/חיתוך אלכסוני - מצוין לסצנות אקשן, תנועה ומתח), "
+        "chevron (חץ), "
+        "star (כוכב), "
+        "burst (פיצוץ משונן - לרגעי הלם, פיצוץ, התרגשות או הפתעה). "
+        "בחר צורה מיוחדת רק לרגע דרמטי שמצדיק זאת, אחרת השתמש ב-rect."
+    ))
 
 
 class ComicProposal(BaseModel):
@@ -150,6 +172,7 @@ def propose_panels(description: str, references: dict, style_description: str = 
             "dialogue": [{"speaker": d.speaker, "text": d.text} for d in panel.dialogue],
             "caption": panel.caption,
             "size": panel.size if panel.size in ("regular", "wide", "tall", "big") else "regular",
+            "shape": panel.shape if panel.shape in VALID_SHAPES else "rect",
             "image_path": None,
             "status": "proposed",
         })

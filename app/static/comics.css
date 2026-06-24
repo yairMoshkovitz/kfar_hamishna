@@ -72,47 +72,61 @@
   opacity: 0.4;
 }
 
-/* בועות דיבור מוצגות מעל התמונה */
+/* בועות דיבור מוצגות מעל התמונה.
+   הגדלים ב-em כדי שיתאימו ביחס לכל גודל תצוגה (כרטיס/עמוד/תצוגה מקדימה).
+   font-size הבסיסי נקבע ע"י המכל (.panel-image-preview / .comic-page). */
 .panel-bubbles {
   position: absolute;
   inset: 0;
   pointer-events: none;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  gap: 6px;
-  padding: 8px;
+  justify-content: space-between; /* קריינות למעלה, דיבור למטה */
+  gap: 0.4em;
+  padding: 0.55em;
 }
+
+.bubbles-top,
+.bubbles-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4em;
+}
+.bubbles-bottom { justify-content: flex-end; }
 
 .comic-bubble {
   background: #fff;
-  border: 2px solid #111;
-  border-radius: 14px;
-  padding: 5px 10px;
-  font-size: 13px;
+  border: 0.12em solid #111;
+  border-radius: 1em;
+  padding: 0.3em 0.6em;
+  font-size: 0.82em;
   font-weight: 600;
-  line-height: 1.25;
-  max-width: 85%;
+  line-height: 1.2;
+  max-width: 88%;
   align-self: flex-start;
-  box-shadow: 1px 1px 0 #111;
+  box-shadow: 0.07em 0.07em 0 #111;
 }
 
 .comic-bubble .bubble-speaker {
   display: block;
-  font-size: 10px;
+  font-size: 0.78em;
   color: #c0392b;
   font-weight: 700;
 }
 
 .comic-caption {
   background: #fff3cd;
-  border: 2px solid #111;
-  font-size: 12px;
+  border: 0.12em solid #111;
+  font-size: 0.8em;
   font-weight: 600;
-  padding: 4px 8px;
+  padding: 0.28em 0.5em;
   align-self: stretch;
-  border-radius: 4px;
+  border-radius: 0.3em;
 }
+
+/* font-size בסיסי פרופורציונלי לרוחב המכל */
+.panel-image-preview { font-size: 15px; }
+.comic-page { font-size: calc(var(--page-w) / 44); }
 
 /* עורך הדיאלוג */
 .dialogue-row {
@@ -214,6 +228,70 @@ a.button:hover { background: #f0ece2; }
   aspect-ratio: 1 / 1;
 }
 
+/* ===== צורות פאנל (clip-path) ===== */
+.shape-rect {}
+.shape-rounded { border-radius: 22px !important; }
+.shape-circle { clip-path: circle(50%); border: none !important; }
+.shape-ellipse { clip-path: ellipse(50% 50%); border: none !important; }
+.shape-triangle { clip-path: polygon(50% 0%, 100% 100%, 0% 100%); border: none !important; }
+.shape-diamond { clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); border: none !important; }
+.shape-hexagon { clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); border: none !important; }
+.shape-octagon { clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%); border: none !important; }
+.shape-parallelogram { clip-path: polygon(18% 0%, 100% 0%, 82% 100%, 0% 100%); border: none !important; }
+.shape-chevron { clip-path: polygon(0% 0%, 82% 0%, 100% 50%, 82% 100%, 0% 100%, 18% 50%); border: none !important; }
+.shape-star { clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); border: none !important; }
+.shape-burst { clip-path: polygon(50% 0%, 60% 18%, 78% 8%, 75% 28%, 95% 28%, 80% 45%, 100% 55%, 80% 62%, 92% 82%, 70% 78%, 68% 100%, 50% 84%, 32% 100%, 30% 78%, 8% 82%, 20% 62%, 0% 55%, 20% 45%, 5% 28%, 25% 28%, 22% 8%, 40% 18%); border: none !important; }
+
+/* שורת גודל+צורה בכרטיס הפאנל */
+.panel-layout-row { display: flex; gap: 8px; }
+.panel-layout-row .scene-section { flex: 1; }
+
+/* ===== אזור עריכה + סרגל תצוגה מקדימה ===== */
+.edit-area {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+.edit-area > .panels-grid { flex: 1; min-width: 0; }
+
+.preview-sidebar {
+  width: 340px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 12px;
+  max-height: calc(100vh - 90px);
+  overflow: auto;
+  background: #fff;
+  border: 1px solid var(--line, #ddd);
+  border-radius: 10px;
+  padding: 10px;
+  margin: 16px 0;
+}
+.preview-sidebar.collapsed { display: none; }
+.preview-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.preview-pages { display: flex; flex-direction: column; gap: 16px; align-items: center; }
+.preview-scaled .comic-page {
+  --page-w: 300px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.2);
+  padding: 12px;
+  gap: 7px;
+}
+.preview-reopen {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  z-index: 5;
+  font-size: 18px;
+  padding: 8px 12px;
+}
+
 /* ===== מתג תצוגה ===== */
 .view-toggle {
   display: flex;
@@ -291,14 +369,5 @@ a.button:hover { background: #f0ece2; }
   justify-content: center;
 }
 
-/* הבועות בתוך עמוד מסודרות מעל התמונה (מיחזור עיצוב הבועות) */
-.comic-page .panel-bubbles {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  gap: 6px;
-  padding: 8px;
-}
+/* הבועות בתוך עמוד יורשות את העיצוב הפרופורציונלי (em) מ-.panel-bubbles,
+   כאשר font-size הבסיסי נקבע ע"י .comic-page לפי רוחב העמוד. */

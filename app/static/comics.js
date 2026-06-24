@@ -32,6 +32,98 @@ function getPanels() {
   return slot ? slot.scenes || [] : [];
 }
 
+function getNewRefs() {
+  if (!project) return [];
+  const slot = (project.slots || []).find((s) => s.id === COMIC_SLOT_ID);
+  return slot ? slot.new_references || [] : [];
+}
+
+// ---------- רפרנסים חדשים שהוצעו ע"י Claude ----------
+function renderProposedRefs(root) {
+  const proposed = getNewRefs();
+  if (proposed.length === 0) return;
+
+  const section = document.createElement("section");
+  section.className = "proposed-refs-section";
+  section.innerHTML = `
+    <h3 class="proposed-refs-title">🆕 דמויות/מקומות חדשים שהוצעו — ייצר ואשר לפני יצירת התמונות</h3>
+    <div class="proposed-refs-grid"></div>`;
+  const grid = section.querySelector(".proposed-refs-grid");
+
+  proposed.forEach((ref) => grid.appendChild(buildProposedRefCard(ref)));
+  root.appendChild(section);
+}
+
+function buildProposedRefCard(ref) {
+  const card = document.createElement("article");
+  card.className = "panel-card proposed-ref-card";
+
+  const existing = references.find((r) => r.name === ref.name);
+  card.innerHTML = `
+    <div class="panel-header">
+      <span class="panel-number">${categoryLabel(ref.category)}</span>
+      <span class="scene-status-badge">${existing ? "קיים באינדקס" : "מוצע"}</span>
+    </div>
+    <div class="panel-image-preview ${existing ? "has-image" : ""}">
+      ${existing ? `<img src="/api/reference-image/${encodeURIComponent(existing.id)}" alt="" />` : ""}
+      <div class="no-image-placeholder"><span>🖼️</span></div>
+    </div>
+    <div class="scene-section">
+      <label class="section-label">שם</label>
+      <input class="pr-name" type="text" value="${escapeAttr(ref.name || "")}" />
+    </div>
+    <div class="scene-section">
+      <label class="section-label">תיאור ויזואלי</label>
+      <textarea class="pr-desc" rows="3">${escapeHtml(ref.description || "")}</textarea>
+    </div>
+    <div class="scene-controls">
+      <button class="pr-generate primary small-btn">🎨 ייצר רפרנס</button>
+      <button class="pr-approve secondary small-btn">✓ אשר</button>
+    </div>`;
+
+  card.querySelector(".pr-generate").addEventListener("click", async () => {
+    setStatus(`מייצר רפרנס: ${card.querySelector(".pr-name").value}...`);
+    try {
+      const res = await api(`/api/project/${encodeURIComponent(currentComic)}/create-reference-image`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: card.querySelector(".pr-name").value,
+          description: card.querySelector(".pr-desc").value,
+          category: ref.category || "characters",
+          age: ref.age,
+          height: ref.height,
+        }),
+      });
+      references.push(res);
+      removeNewRef(ref.id);
+      renderGlobalRefs();
+      renderPanels();
+      setStatus(`הרפרנס "${res.name}" נוצר ונוסף לאינדקס ✓`, "ok");
+    } catch (e) {
+      setStatus("שגיאה ביצירת רפרנס: " + e.message, "err");
+    }
+  });
+
+  card.querySelector(".pr-approve").addEventListener("click", () => {
+    removeNewRef(ref.id);
+    renderPanels();
+    setStatus("הרפרנס אושר", "ok");
+  });
+
+  return card;
+}
+
+function removeNewRef(id) {
+  (project.slots || []).forEach((s) => {
+    if (s.new_references) s.new_references = s.new_references.filter((r) => r.id !== id);
+  });
+}
+
+function categoryLabel(cat) {
+  return { characters: "דמות חדשה", style: "מקום חדש", items: "חפץ חדש" }[cat] || "רפרנס חדש";
+}
+
 // ---------- רשימת קומיקסים ----------
 async function loadComicsList() {
   const all = await api("/api/mishnayot");
@@ -99,9 +191,13 @@ function renderPanels() {
     root.innerHTML = `<p class="empty-hint">בחר קומיקס או צור חדש כדי להתחיל.</p>`;
     return;
   }
+  renderProposedRefs(root);
+
   const panels = getPanels();
   if (panels.length === 0) {
-    root.innerHTML = `<p class="empty-hint">אין עדיין פאנלים. לחץ "פרק לפאנלים (Claude)" כדי לייצר.</p>`;
+    if (!getNewRefs().length) {
+      root.innerHTML = `<p class="empty-hint">אין עדיין פאנלים. לחץ "פרק לפאנלים (Claude)" כדי לייצר.</p>`;
+    }
     return;
   }
   const tpl = $("#panelTemplate");
@@ -116,6 +212,7 @@ function renderPanels() {
     node.querySelector(".location-text").value = panel.location || "";
     node.querySelector(".prompt-text").value = panel.prompt || "";
     node.querySelector(".caption-text").value = panel.caption || "";
+    node.querySelector(".panel-size").value = panel.size || "regular";
 
     renderStatusBadge(node.querySelector(".scene-status-badge"), panel.status);
     renderRefChips(node.querySelector(".ref-chips-container"), panel.references || []);
@@ -159,9 +256,28 @@ function renderStatusBadge(el, status) {
 function renderRefChips(container, refs) {
   container.innerHTML = "";
   refs.forEach((value) => {
+    let searchId = value, searchName = null;
+    if (value.includes("|")) {
+      const parts = value.split("|");
+      searchId = parts[0].trim();
+      searchName = (parts[1] || "").trim();
+    }
+    const meta = references.find(
+      (x) => x.id === searchId || x.name === searchId || x.file === searchId ||
+             (searchName && (x.id === searchName || x.name === searchName || x.file === searchName))
+    );
     const chip = document.createElement("span");
-    chip.className = "ref-chip";
-    chip.textContent = refLabel(value);
+    if (searchId === "scene:previous") {
+      chip.className = "chip scene-ref";
+      chip.textContent = "📸 סצנה קודמת";
+    } else if (meta) {
+      chip.className = "chip";
+      chip.textContent = meta.name;
+    } else {
+      chip.className = "chip missing";
+      chip.textContent = `⚠️ ${searchName || searchId}`;
+      chip.title = "רפרנס חסר במאגר";
+    }
     container.appendChild(chip);
   });
 }
@@ -220,6 +336,7 @@ function panelPayload(card) {
     location: card.querySelector(".location-text").value,
     prompt: card.querySelector(".prompt-text").value,
     caption: card.querySelector(".caption-text").value,
+    size: card.querySelector(".panel-size").value,
     dialogue: collectDialogue(card),
   };
 }
@@ -421,6 +538,180 @@ function bindEvents() {
   // מודאל רפרנסים
   $("#refSave").addEventListener("click", saveRefModal);
   $("#refCancel").addEventListener("click", () => $("#refModal").classList.add("hidden"));
+
+  // מתג תצוגה + ייצוא
+  $("#viewEditBtn").addEventListener("click", () => showView("edit"));
+  $("#viewLayoutBtn").addEventListener("click", () => showView("layout"));
+  $("#downloadPdfBtn").addEventListener("click", downloadPdf);
+  $("#downloadPngBtn").addEventListener("click", downloadPngs);
+}
+
+// ---------- עיצוב עמוד (פריסה + ייצוא) ----------
+const PAGE_COLS = 2;
+const PAGE_ROWS = 4;
+
+const SIZE_DIMS = {
+  regular: { w: 1, h: 1 },
+  wide: { w: 2, h: 1 },
+  tall: { w: 1, h: 2 },
+  big: { w: 2, h: 2 },
+};
+
+function paginate(panels) {
+  const pages = [];
+  let grid = null;
+  let placements = null;
+
+  const newPage = () => {
+    grid = Array.from({ length: PAGE_ROWS }, () => Array(PAGE_COLS).fill(false));
+    placements = [];
+    pages.push(placements);
+  };
+
+  const fits = (row, col, w, h) => {
+    if (col + w > PAGE_COLS || row + h > PAGE_ROWS) return false;
+    for (let r = row; r < row + h; r++)
+      for (let c = col; c < col + w; c++) if (grid[r][c]) return false;
+    return true;
+  };
+  const occupy = (row, col, w, h) => {
+    for (let r = row; r < row + h; r++)
+      for (let c = col; c < col + w; c++) grid[r][c] = true;
+  };
+  const findSpot = (w, h) => {
+    for (let r = 0; r < PAGE_ROWS; r++)
+      for (let c = 0; c < PAGE_COLS; c++) if (fits(r, c, w, h)) return { row: r, col: c };
+    return null;
+  };
+
+  newPage();
+  panels.forEach((panel) => {
+    const { w, h } = SIZE_DIMS[panel.size] || SIZE_DIMS.regular;
+    let spot = findSpot(w, h);
+    if (!spot) {
+      newPage();
+      spot = findSpot(w, h) || { row: 0, col: 0 };
+    }
+    occupy(spot.row, spot.col, w, h);
+    placements.push({ panel, ...spot, w, h });
+  });
+
+  return pages;
+}
+
+function renderPages() {
+  const container = $("#pagesContainer");
+  container.innerHTML = "";
+  const panels = getPanels();
+  if (!project || panels.length === 0) {
+    container.innerHTML = `<p class="empty-hint">אין פאנלים להציג. חזור ל"עריכה" וצור פאנלים תחילה.</p>`;
+    return;
+  }
+  const pages = paginate(panels);
+  pages.forEach((placements) => {
+    const page = document.createElement("div");
+    page.className = "comic-page";
+    placements.forEach(({ panel, row, col, w, h }) => {
+      const cell = document.createElement("div");
+      cell.className = "page-panel size-" + (panel.size || "regular");
+      cell.style.gridColumn = `${col + 1} / span ${w}`;
+      cell.style.gridRow = `${row + 1} / span ${h}`;
+
+      if (panel.image_path) {
+        const img = document.createElement("img");
+        img.crossOrigin = "anonymous";
+        img.src = `/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${panel.scene_id}/image?t=${Date.now()}`;
+        cell.appendChild(img);
+      } else {
+        const ph = document.createElement("div");
+        ph.className = "no-image-placeholder";
+        ph.innerHTML = "<span>🖼️</span>";
+        cell.appendChild(ph);
+      }
+
+      const bubbles = document.createElement("div");
+      bubbles.className = "panel-bubbles";
+      renderBubbles(bubbles, panel.dialogue || [], panel.caption || "");
+      cell.appendChild(bubbles);
+
+      page.appendChild(cell);
+    });
+    container.appendChild(page);
+  });
+}
+
+function showView(view) {
+  const layout = view === "layout";
+  $("#panels").classList.toggle("hidden", layout);
+  $("#pagesView").classList.toggle("hidden", !layout);
+  $("#viewEditBtn").className = layout ? "secondary" : "primary";
+  $("#viewLayoutBtn").className = layout ? "primary" : "secondary";
+  if (layout) renderPages();
+}
+
+async function waitForImages(el) {
+  const imgs = $$("img", el);
+  await Promise.all(
+    imgs.map((img) =>
+      img.complete && img.naturalWidth
+        ? Promise.resolve()
+        : new Promise((res) => {
+            img.onload = res;
+            img.onerror = res;
+          })
+    )
+  );
+}
+
+async function renderPageCanvas(pageEl) {
+  await waitForImages(pageEl);
+  return html2canvas(pageEl, { scale: 2, useCORS: true, backgroundColor: "#ffffff", logging: false });
+}
+
+async function downloadPdf() {
+  const pages = $$(".comic-page", $("#pagesContainer"));
+  if (pages.length === 0) return;
+  setExport("מכין PDF...");
+  try {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const W = 210, H = 297;
+    for (let i = 0; i < pages.length; i++) {
+      setExport(`מעבד עמוד ${i + 1}/${pages.length}...`);
+      const canvas = await renderPageCanvas(pages[i]);
+      const imgData = canvas.toDataURL("image/jpeg", 0.92);
+      if (i > 0) pdf.addPage();
+      pdf.addImage(imgData, "JPEG", 0, 0, W, H);
+    }
+    pdf.save(`${currentComic || "comic"}.pdf`);
+    setExport("PDF הורד ✓");
+  } catch (e) {
+    setExport("שגיאה: " + e.message);
+  }
+}
+
+async function downloadPngs() {
+  const pages = $$(".comic-page", $("#pagesContainer"));
+  if (pages.length === 0) return;
+  setExport("מכין PNG...");
+  try {
+    for (let i = 0; i < pages.length; i++) {
+      setExport(`מעבד עמוד ${i + 1}/${pages.length}...`);
+      const canvas = await renderPageCanvas(pages[i]);
+      const a = document.createElement("a");
+      a.href = canvas.toDataURL("image/png");
+      a.download = `${currentComic || "comic"}-page-${i + 1}.png`;
+      a.click();
+      await new Promise((r) => setTimeout(r, 300));
+    }
+    setExport("PNG הורד ✓");
+  } catch (e) {
+    setExport("שגיאה: " + e.message);
+  }
+}
+
+function setExport(msg) {
+  $("#exportStatus").textContent = msg || "";
 }
 
 async function init() {

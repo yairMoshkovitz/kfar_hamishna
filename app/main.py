@@ -58,6 +58,7 @@ class SlotUpdate(BaseModel):
     dialogue: list[dict] | None = None
     caption: str | None = None
     description: str | None = None
+    size: str | None = None
 
 # ---------- עזרי קבצים ----------
 class RepromptBody(BaseModel):
@@ -66,6 +67,15 @@ class RepromptBody(BaseModel):
 class GenerateWithPromptBody(BaseModel):
     prompt: str | None = None
     is_full_prompt: bool = False
+
+# רמז יחס-גובה-רוחב וקומפוזיציה ל-Gemini לפי גודל הפאנל בקומיקס,
+# כדי שהתמונה תתאים לתא בעמוד ושהדמויות לא ייחתכו.
+_SIZE_ASPECT_HINT = {
+    "regular": "הרכב את התמונה ביחס ריבועי (1:1). ודא שהדמויות והאלמנטים המרכזיים נמצאים במלואם בתוך הקדר הריבועי.",
+    "wide": "הרכב את התמונה ביחס רוחבי (landscape, בערך 16:9). פרוס את הדמויות לרוחב ושמור עליהן במלואן בקדר הרחב.",
+    "tall": "הרכב את התמונה ביחס אנכי-גבוה (portrait, בערך 9:16). מקם את הדמויות לאורך הציר האנכי ושמור עליהן במלואן.",
+    "big": "הרכב תמונה גדולה ודרמטית ביחס ריבועי (1:1) עם קומפוזיציה רחבה ועשירה בפרטים.",
+}
 
 _CATEGORY_LABEL = {
     "characters": "דמות",
@@ -133,7 +143,11 @@ def generate_scene(mishna_id: str, minute_id: str, scene_id: str, body: Generate
             # מעדכנים את הפרומפט בסצנה שיהיה הפרומפט החדש
             scene["prompt"] = body.prompt
         else:
-            gemini_images.generate_image(scene.get("prompt", ""), labeled_refs, out)
+            prompt = scene.get("prompt", "")
+            aspect = _SIZE_ASPECT_HINT.get(scene.get("size"))
+            if aspect:
+                prompt = f"{prompt}\n\n{aspect}"
+            gemini_images.generate_image(prompt, labeled_refs, out)
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=502, detail=f"שגיאת Gemini: {e}")
@@ -153,7 +167,7 @@ def update_scene(mishna_id: str, minute_id: str, scene_id: str, body: SlotUpdate
     if scene is None:
         raise HTTPException(status_code=404, detail="סצנה לא נמצאה")
     
-    for field in ("mishna_text", "prompt", "references", "duration", "status", "start", "end", "effect", "intensity", "location", "dialogue", "caption", "description"):
+    for field in ("mishna_text", "prompt", "references", "duration", "status", "start", "end", "effect", "intensity", "location", "dialogue", "caption", "description", "size"):
         val = getattr(body, field, None)
         if val is not None:
             scene[field] = val

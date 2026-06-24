@@ -6,6 +6,8 @@
   <title>כפר המשנה — מצב קומיקס</title>
   <link rel="stylesheet" href="/style.css" />
   <link rel="stylesheet" href="/comics.css" />
+  <script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -25,6 +27,10 @@
           <option value="manual">ידני</option>
         </select>
       </div>
+      <div class="view-toggle">
+        <button id="viewEditBtn" class="primary" title="עריכת פאנלים">✏️ עריכה</button>
+        <button id="viewLayoutBtn" class="secondary" title="עיצוב עמוד והורדה">📄 עיצוב עמוד</button>
+      </div>
     </div>
   </header>
 
@@ -38,6 +44,15 @@
 
     <div class="main-content">
       <main id="panels" class="panels-grid"></main>
+
+      <section id="pagesView" class="pages-view hidden">
+        <div class="pages-toolbar">
+          <button id="downloadPdfBtn" class="accent">⬇️ הורד PDF</button>
+          <button id="downloadPngBtn" class="accent">⬇️ הורד PNG (לעמוד)</button>
+          <span id="exportStatus" class="export-status"></span>
+        </div>
+        <div id="pagesContainer" class="pages-container"></div>
+      </section>
     </div>
   </div>
 
@@ -129,6 +144,15 @@
       <div class="scene-section">
         <label class="section-label">📍 מיקום</label>
         <input class="location-text" type="text" placeholder="מקום..." />
+      </div>
+      <div class="scene-section">
+        <label class="section-label">📐 גודל בעמוד</label>
+        <select class="panel-size">
+          <option value="regular">רגיל (1×1)</option>
+          <option value="wide">רחב (2×1)</option>
+          <option value="tall">גבוה (1×2)</option>
+          <option value="big">גדול (2×2)</option>
+        </select>
       </div>
       <div class="scene-section">
         <label class="section-label">Prompt לתמונה</label>

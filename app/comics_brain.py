@@ -34,6 +34,7 @@ class ComicPanel(BaseModel):
     location: str = Field(default="", description="שם המקום הפיזי שבו מתרחש הפאנל")
     dialogue: list[DialogueLine] = Field(default_factory=list, description="בועות דיבור בפאנל (יכול להיות ריק)")
     caption: str = Field(default="", description="כיתוב קריינות/תיבת טקסט לפאנל (יכול להיות ריק)")
+    size: str = Field(default="regular", description="גודל הפאנל בעמוד: regular (רגיל), wide (רחב), tall (גבוה), big (גדול). השתמש ב-big/wide לרגעים דרמטיים")
 
 
 class ComicProposal(BaseModel):
@@ -148,6 +149,7 @@ def propose_panels(description: str, references: dict, style_description: str = 
             "location": panel.location,
             "dialogue": [{"speaker": d.speaker, "text": d.text} for d in panel.dialogue],
             "caption": panel.caption,
+            "size": panel.size if panel.size in ("regular", "wide", "tall", "big") else "regular",
             "image_path": None,
             "status": "proposed",
         })

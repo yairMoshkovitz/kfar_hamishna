@@ -56,6 +56,7 @@ def discover_mishnayot() -> list[dict]:
                     "rel_path": str(mp3.relative_to(ROOT)).replace("\\", "/"),
                     "has_srt": srt.exists(),
                     "has_project": (STUDIO_DIR / mid / "project.json").exists(),
+                    "mode": "studio",
                 }
             )
 
@@ -80,6 +81,7 @@ def discover_mishnayot() -> list[dict]:
                         "rel_path": project_data.get("audio_path", ""),
                         "has_srt": bool(project_data.get("srt_path")),
                         "has_project": True,
+                        "mode": project_data.get("mode", "studio"),
                     })
                     seen_ids.add(mid)
                 except Exception:
@@ -273,6 +275,39 @@ def create_custom_project(mishna_id: str, plot: str, srt_text: str, images_per_m
     }
     save_project(project)
     return project
+
+COMIC_SLOT_ID = "comic-slot"
+
+
+def create_comics_project(mishna_id: str, title: str, description: str,
+                          panels_target: int = 6, style_description: str = "") -> dict:
+    """יוצר פרויקט קומיקס חדש (mode='comics') עם משבצת פאנלים יחידה וריקה."""
+    d = studio_dir(mishna_id)
+    if (d / "project.json").exists():
+        raise ValueError(f"כבר קיים פרויקט עם המזהה '{mishna_id}'.")
+
+    # ברירת מחדל לרפרנס סגנון
+    refs = load_references()
+    default_ref_id = None
+    for r in refs.get("references", []):
+        if r.get("file") == DEFAULT_STYLE_REF_NAME or r.get("name") == DEFAULT_STYLE_REF_NAME:
+            default_ref_id = r["id"]
+            break
+
+    project = {
+        "mishna_id": mishna_id,
+        "title": title or mishna_id,
+        "mode": "comics",
+        "description": description,
+        "panels_target": panels_target,
+        "director_instructions": "",
+        "style_description": style_description or DEFAULT_STYLE_DESCRIPTION,
+        "style_references": [default_ref_id] if default_ref_id else [],
+        "slots": [{"id": COMIC_SLOT_ID, "scenes": [], "status": "proposed"}],
+    }
+    save_project(project)
+    return project
+
 
 def get_slot(project: dict, slot_id: str) -> dict | None:
     for s in project.get("slots", []):

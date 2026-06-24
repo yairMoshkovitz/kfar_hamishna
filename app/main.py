@@ -19,7 +19,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import claude_brain, gemini_images, project_store, video_builder
+from . import claude_brain, comics_brain, gemini_images, project_store, video_builder
 
 ROOT = project_store.ROOT
 app = FastAPI(title="כפר המשנה — Studio")
@@ -54,6 +54,10 @@ class SlotUpdate(BaseModel):
     effect: str | None = None
     intensity: str | None = None
     location: str | None = None
+    # שדות מצב קומיקס
+    dialogue: list[dict] | None = None
+    caption: str | None = None
+    description: str | None = None
 
 # ---------- עזרי קבצים ----------
 class RepromptBody(BaseModel):
@@ -149,7 +153,7 @@ def update_scene(mishna_id: str, minute_id: str, scene_id: str, body: SlotUpdate
     if scene is None:
         raise HTTPException(status_code=404, detail="סצנה לא נמצאה")
     
-    for field in ("mishna_text", "prompt", "references", "duration", "status", "start", "end", "effect", "intensity", "location"):
+    for field in ("mishna_text", "prompt", "references", "duration", "status", "start", "end", "effect", "intensity", "location", "dialogue", "caption", "description"):
         val = getattr(body, field, None)
         if val is not None:
             scene[field] = val
@@ -438,6 +442,107 @@ def get_project(mishna_id: str):
         return project_store.load_or_init_project(mishna_id)
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+# ---------- API: מצב קומיקס ----------
+class CreateComicsBody(BaseModel):
+    comic_id: str
+    title: str | None = None
+    description: str
+    panels_target: int = 6
+    style_description: str | None = None
+
+
+class ComicsProposeBody(BaseModel):
+    description: str | None = None
+    panels_target: int | None = None
+    director_instructions: str | None = None
+    style_description: str | None = None
+    custom_prompt: str | None = None
+
+
+@app.post("/api/comics/create")
+def create_comics(body: CreateComicsBody):
+    try:
+        return project_store.create_comics_project(
+            project_store._slugify(body.comic_id),
+            body.title or body.comic_id,
+            body.description,
+            body.panels_target,
+            body.style_description or "",
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/comics/{mishna_id}")
+def update_comics(mishna_id: str, body: ComicsProposeBody):
+    """שומר תיאור/סגנון/הוראות במאי של קומיקס ללא הרצת Claude."""
+    project = project_store.load_or_init_project(mishna_id)
+    if body.description is not None:
+        project["description"] = body.description
+    if body.panels_target is not None:
+        project["panels_target"] = body.panels_target
+    if body.director_instructions is not None:
+        project["director_instructions"] = body.director_instructions
+    if body.style_description is not None:
+        project["style_description"] = body.style_description
+    project_store.save_project(project)
+    return project
+
+
+@app.get("/api/comics/{mishna_id}/prompt-preview")
+def comics_prompt_preview(mishna_id: str):
+    project = project_store.load_or_init_project(mishna_id)
+    refs = project_store.load_references()
+    prompt_text = comics_brain.preview_prompt(
+        description=project.get("description", ""),
+        references=refs,
+        style_description=project.get("style_description", ""),
+        director_instructions=project.get("director_instructions", ""),
+        panels_target=project.get("panels_target"),
+    )
+    return {"prompt": prompt_text}
+
+
+@app.post("/api/comics/{mishna_id}/propose")
+def comics_propose(mishna_id: str, body: ComicsProposeBody):
+    """מציע פאנלים לקומיקס באמצעות Claude ושומר אותם בפרויקט."""
+    project = project_store.load_or_init_project(mishna_id)
+
+    if body.description is not None:
+        project["description"] = body.description
+    if body.panels_target is not None:
+        project["panels_target"] = body.panels_target
+    if body.director_instructions is not None:
+        project["director_instructions"] = body.director_instructions
+    if body.style_description is not None:
+        project["style_description"] = body.style_description
+
+    refs = project_store.load_references()
+    try:
+        result = comics_brain.propose_panels(
+            description=project.get("description", ""),
+            references=refs,
+            style_description=project.get("style_description", ""),
+            director_instructions=project.get("director_instructions", ""),
+            panels_target=project.get("panels_target"),
+            custom_prompt=body.custom_prompt,
+        )
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=502, detail=f"שגיאת Claude: {type(e).__name__}: {e}")
+
+    slot = project_store.get_slot(project, project_store.COMIC_SLOT_ID)
+    if slot is None:
+        slot = {"id": project_store.COMIC_SLOT_ID, "scenes": [], "status": "proposed"}
+        project.setdefault("slots", []).append(slot)
+    slot["scenes"] = result["scenes"]
+    slot["new_references"] = result["new_references"]
+    project_store.save_project(project)
+    return project
 
 
 # ---------- API: הצעת Claude ----------

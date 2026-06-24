@@ -5,7 +5,7 @@
     {
       "id": "chars-old-generation-1",
       "file": "ref_v2_f426d2d8.png",
-      "name": "הרב קדוש",
+      "name": "הרב קדוש (דור 1)",
       "description": "רב הכפר יהודי חביב וחיכן עם זקן גדול ולבן לבוש בחליפה שחורה ומגבעת עם ציציות בחוץ. בדרך כלל עם ספר ביחד",
       "category": "characters",
       "age": "60",
@@ -15,12 +15,13 @@
           "file": "דמויות כפר המשנה הדור הישן (1).jpeg",
           "timestamp": "2026-06-19T19:02:06.770756"
         }
-      ]
+      ],
+      "dormant": true
     },
     {
       "id": "chars-old-generation-2",
       "file": "ref_v2_7f2fb9e7.png",
-      "name": "איציק ופיציק",
+      "name": "איציק ופיציק (דור 1)",
       "description": "חברים טובים, איציק שמן ופיציק רזה.\nהם הדמויות העלילתיות יותר בכפר רבים ומשלימים לסירוגים",
       "category": "characters",
       "age": "30",
@@ -30,43 +31,48 @@
           "file": "דמויות כפר המשנה הדור הישן (2).jpeg",
           "timestamp": "2026-06-19T19:02:36.753326"
         }
-      ]
+      ],
+      "dormant": true
     },
     {
       "id": "chars-old-generation-4",
       "file": "דמויות כפר המשנה הדור הישן (4).jpeg",
-      "name": "אדון מדון",
+      "name": "אדון מדון (דור 1)",
       "description": "המבוגר האחראי עם זקן שחור פנים חמורות סבר קצת מרובעות, עם שלייקס",
       "category": "characters",
       "age": "45",
-      "height": "180"
+      "height": "180",
+      "dormant": true
     },
     {
       "id": "chars-old-generation-5",
       "file": "דמויות כפר המשנה הדור הישן (5).jpeg",
-      "name": "ג'ון בריון",
+      "name": "ג'ון בריון (דור 1)",
       "description": "אדם עם גוף ולב ענק אבל עם שכל לא גדול\nמאוד גדול שמן וחזק.\nתמיד אוהב לעזור ולבוש בפשוט עם כובע קש",
       "category": "characters",
       "age": "35",
-      "height": "200"
+      "height": "200",
+      "dormant": true
     },
     {
       "id": "chars-old-generation-6",
       "file": "דמויות כפר המשנה הדור הישן (6).jpeg",
-      "name": "סלסלוני",
+      "name": "סלסלוני (דור 1)",
       "description": "ה\"חכם\" בכפר ידען ותמיד יש לו מה להגיד.\nרזה מאוד וגבוה עם פאות ארוכות מסתלסלות ומשקפיים",
       "category": "characters",
       "age": "28",
-      "height": "185"
+      "height": "185",
+      "dormant": true
     },
     {
       "id": "chars-old-generation-7",
       "file": "דמויות כפר המשנה הדור הישן (7).jpeg",
-      "name": "נח",
+      "name": "נח (דור 1)",
       "description": "ה\"עצלן\" של הכפר יש לו לב טוב, אבל מאוד לא אוהב לקום מהכסא.\nשמנמן.\nבדרך כלל נראה אותו על הכסא נדנדה שלו",
       "category": "characters",
       "age": "30",
-      "height": "160"
+      "height": "160",
+      "dormant": true
     },
     {
       "id": "scene-perek1-mishna1",
@@ -430,6 +436,226 @@
       "name": "רחובות ירושלים ערב פסח",
       "description": "רחוב אבן צר ועמוס בירושלים העתיקה ערב פסח. דוכנים צבעוניים עם מרור, מצות וכבשים חיים. אנשים בלבוש עתיק (כותנות ורדידים) עוברים בהמולה שמחה. אבני ריצוף לבנות ושמש זהובה. סגנון PIXAR 3D.",
       "category": "style",
+      "age": null,
+      "height": null,
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-22d38e3d",
+      "file": "logo.png",
+      "name": "לוגו",
+      "description": "יש פה את הלוגו של כפר המשנה\r\nיש כמה דמויות עם הכיתוב כפר המשנה",
+      "category": "items",
+      "age": null,
+      "height": null,
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-417cdcc3",
+      "file": "מוישה זוכמיר.png",
+      "name": "מוישה זוכמיר",
+      "description": "איש יהודי חדש בכפר המשנה, גיל ביניים, עם זקן קצר חום, לבוש בחליפה פשוטה וכובע. מבט חכם ועצמאי, מראה של מי שרק עבר דירה ומנסה להסתדר. סגנון PIXAR 3D.",
+      "category": "characters",
+      "age": null,
+      "height": null,
+      "items": [],
+      "dormant": false,
+      "versions": [
+        {
+          "file": "ref_54329bbd.png"
+        }
+      ]
+    },
+    {
+      "id": "ref-afd5e951",
+      "file": "ref_912366a4.png",
+      "name": "סוכת מוישה הנמוכה",
+      "description": "סוכה נמוכה מאוד, בגובה שולחן כתיבה (כתשעה טפחים), עם קירות עץ פשוטים ומספר ענפים דלים על הגג. נראית כמעט כמו בית כלב גדול. אווירת סוכות עתיקה, סגנון PIXAR 3D.",
+      "category": "style",
+      "age": null,
+      "height": null,
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-670181cc",
+      "file": "ref_32b6cd13.png",
+      "name": "סוכת איציק הדלילה",
+      "description": "סוכה עם ארבעה עמודים ורק ארבעה-חמישה ענפים דלילים כסכך. מבעד לגג רואים יותר שמש מאשר צל. אווירה חמה ומוקפת אור. סגנון PIXAR 3D.",
+      "category": "style",
+      "age": null,
+      "height": null,
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-c4d274af",
+      "file": "ref_812ee51d.png",
+      "name": "סוכת ג'ון בריון הגבוהה",
+      "description": "סוכה ענקית גבוהה שלוש קומות (כעשרה מטרים), קירות עץ חזקים, אבל הסכך למעלה כל כך גבוה שכמעט לא נראה מלמטה. אווירה מרשימה אך בעייתית. סגנון PIXAR 3D.",
+      "category": "style",
+      "age": null,
+      "height": null,
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-a95ced41",
+      "file": "ref_125aed85.png",
+      "name": "סוכת נוח חסרת הדפנות",
+      "description": "סוכה עם שני קירות בלבד משני צדדים ופתוחה לחלוטין מהצדדים האחרים. סכך מעליה. כיסא נדנדה נמצא בתוכה. אווירה פתוחה ונופית. סגנון PIXAR 3D.",
+      "category": "style",
+      "age": null,
+      "height": null,
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-af823b0a",
+      "file": "ref_114d753d.png",
+      "name": "סוכת סלסלוני המפוארת",
+      "description": "סוכה מפוארת ויפה הבנויה על תל, עם קירות מסודרים וסכך ירוק עשיר. נראית בנויה מזמן אך שמורה היטב. אווירה של גאווה ותשוקה. סגנון PIXAR 3D.",
+      "category": "style",
+      "age": null,
+      "height": null,
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-c3a2f314",
+      "file": "ref_33930dfd.png",
+      "name": "חצר איציק",
+      "description": "חצר בית פשוטה בכפר יהודי עתיק, עם אבנים ועפר, גדר עץ נמוכה. ערימות עצים מפוזרות בפינה. אווירה כפרית ויומיומית. סגנון PIXAR 3D.",
+      "category": "style",
+      "age": null,
+      "height": null,
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-276112dc",
+      "file": "ref_df97df91.png",
+      "name": "רחובות כפר המשנה",
+      "description": "רחובות עפר צרים בכפר יהודי קטן, בתים אבן פשוטים משני הצדדים, דקל פה ושם, אווירת ערב חג. אנשים בלבוש עתיק הולכים ועסוקים בבניית סוכות. סגנון PIXAR 3D.",
+      "category": "style",
+      "age": null,
+      "height": null,
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-3db58d29",
+      "file": "הרב צדיק קדוש.webp",
+      "name": "הרב קדוש",
+      "description": "רב הכפר יהודי חביב וחיכן עם זקן גדול ולבן לבוש בחליפה שחורה ומגבעת עם ציציות בחוץ. בדרך כלל עם ספר ביחד",
+      "category": "characters",
+      "age": "60",
+      "height": "160",
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-a3f2dba3",
+      "file": "אדון מדון.png",
+      "name": "אדון מדון",
+      "description": "המבוגר האחראי עם זקן שחור פנים חמורות סבר קצת מרובעות, עם שלייקס",
+      "category": "characters",
+      "age": "45",
+      "height": "180",
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-e53007f9",
+      "file": "גון ביריון.png",
+      "name": "ג'ון בריון",
+      "description": "אדם עם גוף ולב ענק אבל עם שכל לא גדול\nמאוד גדול שמן וחזק.\nתמיד אוהב לעזור ולבוש בפשוט עם כובע קש",
+      "category": "characters",
+      "age": "35",
+      "height": "200",
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-1ea14262",
+      "file": "סלסלוני מקרוני.png",
+      "name": "סלסלוני",
+      "description": "ה\"חכם\" בכפר ידען ותמיד יש לו מה להגיד.\nרזה מאוד וגבוה עם פאות ארוכות מסתלסלות ומשקפיים",
+      "category": "characters",
+      "age": "28",
+      "height": "185",
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-b64a29e5",
+      "file": "נוח שנוח לו.png",
+      "name": "נח",
+      "description": "ה\"עצלן\" של הכפר יש לו לב טוב, אבל מאוד לא אוהב לקום מהכסא.\nשמנמן.\nבדרך כלל נראה אותו על הכסא נדנדה שלו",
+      "category": "characters",
+      "age": "30",
+      "height": "160",
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-7c1aff5a",
+      "file": "איציק.png",
+      "name": "איציק",
+      "description": "חבר טוב ועלילתי בכפר, שמנמן וטוב לב. חברו הקרוב של פיציק, רבים ומשלימים לסירוגין.",
+      "category": "characters",
+      "age": "30",
+      "height": "170",
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-9a640366",
+      "file": "פיציק.png",
+      "name": "פיציק",
+      "description": "חבר טוב ועלילתי בכפר, רזה וזריז. חברו הקרוב של איציק, רבים ומשלימים לסירוגין.",
+      "category": "characters",
+      "age": "30",
+      "height": "170",
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-c62a43f6",
+      "file": "מיני גון.png",
+      "name": "מיני גון",
+      "description": "גרסת ילד/מיני של ג'ון בריון — ילד גדול וחזק עם לב ענק, פנים ידידותיות וחיוך תמים. לבוש פשוט. סגנון PIXAR 3D.",
+      "category": "characters",
+      "age": null,
+      "height": null,
+      "items": [],
+      "dormant": false,
+      "versions": []
+    },
+    {
+      "id": "ref-87c10b5e",
+      "file": "שרוליק הקטן.png",
+      "name": "שרוליק הקטן",
+      "description": "ילד קטן ושובב מהכפר, עם עיניים גדולות וסקרניות וחיוך קונדסי. דמות חמודה ונמרצת. סגנון PIXAR 3D.",
+      "category": "characters",
       "age": null,
       "height": null,
       "items": [],

@@ -255,6 +255,8 @@ function renderPanelsInner() {
     });
 
     root.appendChild(node);
+    // גרירה/שינוי-גודל של בועות מעל התמונה (card כבר ב-DOM אחרי append)
+    enableBubbleEditing(card);
   });
 }
 
@@ -318,6 +320,9 @@ function addDialogueRow(container, d) {
   // שדות מיקום (rect/anchor) שנקבעו ע"י Claude נשמרים ולא הולכים לאיבוד בשמירה ידנית
   if (d.rect) row.dataset.rect = JSON.stringify(d.rect);
   if (d.anchor) row.dataset.anchor = JSON.stringify(d.anchor);
+  if (d.tail_points) row.dataset.tailPoints = JSON.stringify(d.tail_points);
+  const fontVal = d.font_size || 1;
+  const tailVal = d.tail_width || 0.45;
   const opts = BUBBLE_KINDS
     .map(([v, label]) => `<option value="${v}"${(d.kind || "speech") === v ? " selected" : ""}>${label}</option>`)
     .join("");
@@ -325,8 +330,36 @@ function addDialogueRow(container, d) {
     <input class="dlg-speaker" placeholder="דובר" value="${escapeAttr(d.speaker || "")}" />
     <input class="dlg-text" placeholder="טקסט הבועה" value="${escapeAttr(d.text || "")}" />
     <select class="dlg-kind" title="סוג בועה">${opts}</select>
+    <label class="dlg-font" title="גודל כתב בבועה">
+      <span class="dlg-font-ico">א</span>
+      <input type="range" class="dlg-font-input" min="0.6" max="2" step="0.1" value="${fontVal}" />
+      <span class="dlg-font-val">${fontVal.toFixed(1)}</span>
+    </label>
+    <label class="dlg-tail" title="עובי הזנב">
+      <span class="dlg-tail-ico">◣</span>
+      <input type="range" class="dlg-tail-input" min="0.15" max="1.1" step="0.05" value="${tailVal}" />
+    </label>
     <button class="dlg-remove danger small-btn">✕</button>`;
-  row.querySelector(".dlg-remove").addEventListener("click", () => row.remove());
+  row.querySelector(".dlg-remove").addEventListener("click", () => { row.remove(); });
+  const fontInput = row.querySelector(".dlg-font-input");
+  fontInput.addEventListener("input", () => {
+    row.querySelector(".dlg-font-val").textContent = parseFloat(fontInput.value).toFixed(1);
+    const card = row.closest(".panel-card");
+    if (card) applyFontLive(card);
+  });
+  fontInput.addEventListener("change", () => {
+    const card = row.closest(".panel-card");
+    if (card) persistDialogue(card);
+  });
+  const tailInput = row.querySelector(".dlg-tail-input");
+  tailInput.addEventListener("input", () => {
+    const card = row.closest(".panel-card");
+    if (card) refreshTails(card);
+  });
+  tailInput.addEventListener("change", () => {
+    const card = row.closest(".panel-card");
+    if (card) persistDialogue(card);
+  });
   container.appendChild(row);
 }
 
@@ -340,6 +373,13 @@ function collectDialogue(card) {
       };
       if (row.dataset.rect) try { d.rect = JSON.parse(row.dataset.rect); } catch (e) {}
       if (row.dataset.anchor) try { d.anchor = JSON.parse(row.dataset.anchor); } catch (e) {}
+      if (row.dataset.tailPoints) try { d.tail_points = JSON.parse(row.dataset.tailPoints); } catch (e) {}
+      const fi = row.querySelector(".dlg-font-input");
+      const fv = fi ? parseFloat(fi.value) : 1;
+      if (fv && Math.abs(fv - 1) > 0.001) d.font_size = fv;
+      const ti = row.querySelector(".dlg-tail-input");
+      const tv = ti ? parseFloat(ti.value) : 0.45;
+      if (tv && Math.abs(tv - 0.45) > 0.001) d.tail_width = tv;
       return d;
     })
     .filter((d) => d.text);
@@ -349,55 +389,70 @@ function bubbleInnerHtml(d) {
   return (d.speaker ? `<span class="bubble-speaker">${escapeHtml(d.speaker)}</span>` : "") + escapeHtml(d.text);
 }
 
-// בונה משולש זנב מקצה מלבן הבועה אל נקודת ה-anchor (כולן ביחידות רשת 12×6)
-function buildTail(rect, anchor) {
+// מחזיר את 3 קודקודי משולש הזנב (ביחידות רשת 12×6): שני בסיס על שפת הבועה + קצה ב-anchor
+// baseHalf — חצי רוחב בסיס הזנב (עובי). ניתן לעקוף לגמרי ע"י d.tail_points (3 קודקודים חופשיים)
+function tailTriangle(rect, anchor, baseHalf) {
   const bcx = rect.col + rect.w / 2;
   const bcy = rect.row + rect.h / 2;
   let dx = anchor.col - bcx, dy = anchor.row - bcy;
   const len = Math.hypot(dx, dy) || 1;
   dx /= len; dy /= len;
-  // נקודת המפגש עם שפת המלבן בכיוון ה-anchor
   const hw = rect.w / 2, hh = rect.h / 2;
   const sx = Math.abs(dx) < 1e-3 ? Infinity : hw / Math.abs(dx);
   const sy = Math.abs(dy) < 1e-3 ? Infinity : hh / Math.abs(dy);
   const s = Math.min(sx, sy);
   const ex = bcx + dx * s, ey = bcy + dy * s;
-  // בסיס הזנב — מאונך לכיוון
-  const baseHalf = 0.45;
   const px = -dy * baseHalf, py = dx * baseHalf;
-  const SC = 100; // קנה מידה ל-viewBox (1200×600)
-  const pts = [
-    [(ex + px) * SC, (ey + py) * SC],
-    [(ex - px) * SC, (ey - py) * SC],
-    [anchor.col * SC, anchor.row * SC],
+  return [
+    { col: ex + px, row: ey + py },
+    { col: ex - px, row: ey - py },
+    { col: anchor.col, row: anchor.row },
   ];
-  return pts.map((p) => p.map((n) => n.toFixed(1)).join(",")).join(" ");
+}
+// קודקודים → מחרוזת points ל-SVG (viewBox 1200×600)
+function pointsToAttr(pts) {
+  return pts.map((p) => (p.col * 100).toFixed(1) + "," + (p.row * 100).toFixed(1)).join(" ");
+}
+function buildTail(rect, anchor, baseHalf) {
+  return pointsToAttr(tailTriangle(rect, anchor, baseHalf));
 }
 
 // שכבת SVG אחת לכל זנבי הבועות בפאנל (viewBox יחסי לרשת)
 function renderTails(container, positioned) {
-  const withAnchor = positioned.filter((d) => d.rect && d.anchor);
+  const hasPts = (d) => d.tail_points && d.tail_points.length === 3;
+  const withAnchor = positioned.filter((d) => d.rect && (d.anchor || hasPts(d)));
   if (!withAnchor.length) return;
   const svg = document.createElementNS(SVG_NS, "svg");
   svg.setAttribute("class", "bubble-tails");
   svg.setAttribute("viewBox", `0 0 ${GRID_COLS * 100} ${GRID_ROWS * 100}`);
   svg.setAttribute("preserveAspectRatio", "none");
   withAnchor.forEach((d) => {
+    const tw = d.tail_width || 0.45;
+    if (d.kind !== "thought" && hasPts(d)) {
+      // זנב עם קודקודים חופשיים שנערכו ידנית
+      const poly = document.createElementNS(SVG_NS, "polygon");
+      poly.setAttribute("points", pointsToAttr(d.tail_points));
+      poly.setAttribute("class", "tail-shape");
+      svg.appendChild(poly);
+      return;
+    }
+    if (!d.anchor) return;
     if (d.kind === "thought") {
-      // שובל בועות-מחשבה: כמה עיגולים קטֵנים לכיוון הדובר
+      // שובל בועות-מחשבה: כמה עיגולים קטֵנים לכיוון הדובר (גודלם לפי עובי הזנב)
+      const scale = tw / 0.45;
       const bcx = d.rect.col + d.rect.w / 2, bcy = d.rect.row + d.rect.h / 2;
       for (let i = 1; i <= 3; i++) {
         const t = i / 3.2;
         const c = document.createElementNS(SVG_NS, "circle");
         c.setAttribute("cx", ((bcx + (d.anchor.col - bcx) * t) * 100).toFixed(1));
         c.setAttribute("cy", ((bcy + (d.anchor.row - bcy) * t) * 100).toFixed(1));
-        c.setAttribute("r", (16 - i * 3).toFixed(1));
+        c.setAttribute("r", ((16 - i * 3) * scale).toFixed(1));
         c.setAttribute("class", "tail-shape");
         svg.appendChild(c);
       }
     } else {
       const poly = document.createElementNS(SVG_NS, "polygon");
-      poly.setAttribute("points", buildTail(d.rect, d.anchor));
+      poly.setAttribute("points", buildTail(d.rect, d.anchor, tw));
       poly.setAttribute("class", "tail-shape");
       svg.appendChild(poly);
     }
@@ -408,8 +463,9 @@ function renderTails(container, positioned) {
 function renderBubbles(container, dialogue, caption, sfx) {
   container.innerHTML = "";
 
-  const positioned = (dialogue || []).filter((d) => d.text && d.rect);
-  const floating = (dialogue || []).filter((d) => d.text && !d.rect);
+  const meaningful = (d) => d.text && String(d.text).trim() && String(d.text).trim() !== "0";
+  const positioned = (dialogue || []).filter((d) => meaningful(d) && d.rect);
+  const floating = (dialogue || []).filter((d) => meaningful(d) && !d.rect);
 
   // זנבות (שכבה אחת מתחת לבועות)
   renderTails(container, positioned);
@@ -418,10 +474,12 @@ function renderBubbles(container, dialogue, caption, sfx) {
   positioned.forEach((d) => {
     const b = document.createElement("div");
     b.className = "comic-bubble positioned kind-" + (d.kind || "speech");
+    b.dataset.dlgIndex = (dialogue || []).indexOf(d);
     b.style.left = (d.rect.col / GRID_COLS * 100) + "%";
     b.style.top = (d.rect.row / GRID_ROWS * 100) + "%";
     b.style.width = (d.rect.w / GRID_COLS * 100) + "%";
     b.style.height = (d.rect.h / GRID_ROWS * 100) + "%";
+    if (d.font_size) b.style.fontSize = (1.0 * d.font_size).toFixed(3) + "em";
     b.innerHTML = bubbleInnerHtml(d);
     container.appendChild(b);
   });
@@ -440,6 +498,7 @@ function renderBubbles(container, dialogue, caption, sfx) {
   floating.forEach((d) => {
     const b = document.createElement("div");
     b.className = "comic-bubble kind-" + (d.kind || "speech");
+    if (d.font_size) b.style.fontSize = (1.24 * d.font_size).toFixed(3) + "em";
     b.innerHTML = bubbleInnerHtml(d);
     bottom.appendChild(b);
   });
@@ -459,6 +518,264 @@ function escapeHtml(s) {
   return (s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 }
 function escapeAttr(s) { return escapeHtml(s).replace(/'/g, "&#39;"); }
+
+// ---------- עריכה החלטית של בועות: לחיצה פותחת תפריט (הזזה/גודל/זנב) + ✓ לאישור ----------
+let activeEdit = null; // { b, card, overlay, row, snapshot, mode, popup, bubbleHandler }
+
+function enableBubbleEditing(card) {
+  const overlay = card.querySelector(".panel-bubbles");
+  if (!overlay) return;
+  $$(".comic-bubble.positioned", overlay).forEach((b) => {
+    b.classList.add("editable");
+    b.addEventListener("click", (e) => {
+      if (activeEdit && activeEdit.b === b) return; // כבר בעריכה
+      e.stopPropagation();
+      openBubbleEditor(b, overlay, card);
+    });
+  });
+}
+
+function snapshotRow(row) {
+  return {
+    rect: row.dataset.rect || "",
+    anchor: row.dataset.anchor || "",
+    tailPoints: row.dataset.tailPoints || "",
+  };
+}
+function restoreRow(row, snap) {
+  ["rect", "anchor", "tailPoints"].forEach((k) => {
+    if (snap[k]) row.dataset[k] = snap[k]; else delete row.dataset[k];
+  });
+}
+
+function openBubbleEditor(b, overlay, card) {
+  if (activeEdit) closeBubbleEditor("save");
+  const row = rowForBubble(card, b);
+  if (!row) return;
+  b.classList.add("editing");
+  const popup = document.createElement("div");
+  popup.className = "bubble-edit-menu";
+  popup.setAttribute("data-html2canvas-ignore", "true");
+  popup.innerHTML =
+    '<button data-mode="move" title="הזזה">✥</button>' +
+    '<button data-mode="size" title="שינוי גודל">⤢</button>' +
+    '<button data-mode="tail" title="עריכת זנב (קודקודים)">🪝</button>' +
+    '<button data-act="ok" class="ok" title="אישור">✓</button>' +
+    '<button data-act="cancel" class="cancel" title="ביטול">✕</button>';
+  popup.style.left = b.style.left;
+  popup.style.top = b.style.top;
+  overlay.appendChild(popup);
+  activeEdit = { b, card, overlay, row, snapshot: snapshotRow(row), mode: null, popup, bubbleHandler: null };
+  popup.querySelectorAll("button[data-mode]").forEach((btn) => {
+    btn.addEventListener("click", (e) => { e.stopPropagation(); setEditMode(btn.dataset.mode, btn); });
+  });
+  popup.querySelector('[data-act="ok"]').addEventListener("click", (e) => { e.stopPropagation(); closeBubbleEditor("save"); });
+  popup.querySelector('[data-act="cancel"]').addEventListener("click", (e) => { e.stopPropagation(); closeBubbleEditor("revert"); });
+}
+
+function clearEditMode() {
+  if (!activeEdit) return;
+  const { b, overlay } = activeEdit;
+  if (activeEdit.bubbleHandler) {
+    b.removeEventListener("pointerdown", activeEdit.bubbleHandler);
+    activeEdit.bubbleHandler = null;
+  }
+  b.classList.remove("mode-move", "mode-size");
+  overlay.querySelectorAll(".tail-vertex").forEach((v) => v.remove());
+}
+
+function setEditMode(mode, btn) {
+  if (!activeEdit) return;
+  clearEditMode();
+  activeEdit.mode = mode;
+  activeEdit.popup.querySelectorAll("button[data-mode]").forEach((x) => x.classList.remove("active"));
+  if (btn) btn.classList.add("active");
+  const { b } = activeEdit;
+  if (mode === "move" || mode === "size") {
+    activeEdit.bubbleHandler = (e) => startBubbleDrag(e, mode);
+    b.addEventListener("pointerdown", activeEdit.bubbleHandler);
+    b.classList.add("mode-" + mode);
+  } else if (mode === "tail") {
+    showTailVertices();
+  }
+}
+
+function closeBubbleEditor(action) {
+  if (!activeEdit) return;
+  const { b, card, row, snapshot, popup } = activeEdit;
+  clearEditMode();
+  if (popup) popup.remove();
+  b.classList.remove("editing");
+  activeEdit = null;
+  if (action === "revert") {
+    restoreRow(row, snapshot);
+    applyRectToBubble(b, row);
+    refreshTails(card);
+  } else if (action === "save") {
+    persistDialogue(card);
+  }
+}
+
+function bubbleGrid(b) {
+  return {
+    col: parseFloat(b.style.left) / 100 * GRID_COLS,
+    row: parseFloat(b.style.top) / 100 * GRID_ROWS,
+    w: parseFloat(b.style.width) / 100 * GRID_COLS,
+    h: parseFloat(b.style.height) / 100 * GRID_ROWS,
+  };
+}
+function applyRectToBubble(b, row) {
+  if (!row.dataset.rect) return;
+  try {
+    const r = JSON.parse(row.dataset.rect);
+    b.style.left = (r.col / GRID_COLS * 100) + "%";
+    b.style.top = (r.row / GRID_ROWS * 100) + "%";
+    b.style.width = (r.w / GRID_COLS * 100) + "%";
+    b.style.height = (r.h / GRID_ROWS * 100) + "%";
+  } catch (e) {}
+}
+
+// הזזה/שינוי-גודל של הבועה — פעיל רק לאחר בחירת מצב בתפריט
+function startBubbleDrag(e, mode) {
+  if (!activeEdit) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const { b, overlay, card, row, popup } = activeEdit;
+  const cl = (v, a, c) => Math.max(a, Math.min(c, v));
+  const box = overlay.getBoundingClientRect();
+  const start = bubbleGrid(b);
+  const sx = e.clientX, sy = e.clientY;
+  const onMove = (ev) => {
+    const dCol = (ev.clientX - sx) / box.width * GRID_COLS;
+    const dRow = (ev.clientY - sy) / box.height * GRID_ROWS;
+    const r = Object.assign({}, start);
+    if (mode === "move") {
+      r.col = cl(start.col + dCol, 0, GRID_COLS - start.w);
+      r.row = cl(start.row + dRow, 0, GRID_ROWS - start.h);
+    } else {
+      r.w = cl(start.w + dCol, 1, GRID_COLS - start.col);
+      r.h = cl(start.h + dRow, 1, GRID_ROWS - start.row);
+    }
+    b.style.left = (r.col / GRID_COLS * 100) + "%";
+    b.style.top = (r.row / GRID_ROWS * 100) + "%";
+    b.style.width = (r.w / GRID_COLS * 100) + "%";
+    b.style.height = (r.h / GRID_ROWS * 100) + "%";
+    row.dataset.rect = JSON.stringify({
+      col: Math.round(r.col), row: Math.round(r.row),
+      w: Math.max(1, Math.round(r.w)), h: Math.max(1, Math.round(r.h)),
+    });
+    if (popup) { popup.style.left = b.style.left; popup.style.top = b.style.top; }
+    refreshTails(card);
+  };
+  const onUp = () => {
+    document.removeEventListener("pointermove", onMove);
+    document.removeEventListener("pointerup", onUp);
+  };
+  document.addEventListener("pointermove", onMove);
+  document.addEventListener("pointerup", onUp);
+}
+
+// קודקודי הזנב — כל קודקוד נגרר בנפרד ואינו משפיע על האחרים
+function showTailVertices() {
+  if (!activeEdit) return;
+  const { overlay, card, row } = activeEdit;
+  let pts = null;
+  if (row.dataset.tailPoints) { try { pts = JSON.parse(row.dataset.tailPoints); } catch (e) {} }
+  if (!pts || pts.length !== 3) {
+    let rect;
+    try { rect = JSON.parse(row.dataset.rect); } catch (e) { return; }
+    let anchor = null;
+    if (row.dataset.anchor) { try { anchor = JSON.parse(row.dataset.anchor); } catch (e) {} }
+    anchor = anchor || { col: rect.col + rect.w / 2, row: rect.row + rect.h + 0.6 };
+    pts = tailTriangle(rect, anchor, 0.45);
+    row.dataset.tailPoints = JSON.stringify(pts);
+    refreshTails(card);
+  }
+  pts.forEach((p, i) => {
+    const dot = document.createElement("div");
+    dot.className = "tail-vertex";
+    dot.setAttribute("data-html2canvas-ignore", "true");
+    dot.style.left = (p.col / GRID_COLS * 100) + "%";
+    dot.style.top = (p.row / GRID_ROWS * 100) + "%";
+    overlay.appendChild(dot);
+    bindVertexDrag(dot, i);
+  });
+}
+
+function bindVertexDrag(dot, idx) {
+  const cl = (v, a, c) => Math.max(a, Math.min(c, v));
+  const onMove = (e) => {
+    if (!activeEdit) return;
+    const { overlay, card, row } = activeEdit;
+    const box = overlay.getBoundingClientRect();
+    const col = cl((e.clientX - box.left) / box.width * GRID_COLS, 0, GRID_COLS);
+    const rw = cl((e.clientY - box.top) / box.height * GRID_ROWS, 0, GRID_ROWS);
+    dot.style.left = (col / GRID_COLS * 100) + "%";
+    dot.style.top = (rw / GRID_ROWS * 100) + "%";
+    let pts;
+    try { pts = JSON.parse(row.dataset.tailPoints); } catch (e) { return; }
+    pts[idx] = { col: +col.toFixed(2), row: +rw.toFixed(2) };
+    row.dataset.tailPoints = JSON.stringify(pts);
+    refreshTails(card);
+  };
+  const onUp = () => {
+    document.removeEventListener("pointermove", onMove);
+    document.removeEventListener("pointerup", onUp);
+  };
+  dot.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  });
+}
+
+function rowForBubble(card, b) {
+  const idx = parseInt(b.dataset.dlgIndex, 10);
+  return $$(".dialogue-row", card)[idx] || null;
+}
+
+// מעדכן גודל גופן של הבועות החיות לפי הבקרות בשורות (תצוגה מיידית)
+function applyFontLive(card) {
+  const rows = $$(".dialogue-row", card);
+  $$(".comic-bubble.positioned", card).forEach((b) => {
+    const row = rows[parseInt(b.dataset.dlgIndex, 10)];
+    const inp = row && row.querySelector(".dlg-font-input");
+    if (inp) b.style.fontSize = (1.0 * parseFloat(inp.value)).toFixed(3) + "em";
+  });
+}
+
+// מרענן את שכבת זנבות הבועות לפי המצב הנוכחי של השורות
+function refreshTails(card) {
+  const overlay = card.querySelector(".panel-bubbles");
+  if (!overlay) return;
+  const old = overlay.querySelector(".bubble-tails");
+  if (old) old.remove();
+  const positioned = collectDialogue(card).filter((d) => d.text && d.rect);
+  renderTails(overlay, positioned);
+  const svg = overlay.querySelector(".bubble-tails");
+  if (svg) overlay.prepend(svg); // מתחת לבועות
+}
+
+// שומר את הדיאלוג (כולל rect/anchor/font_size) בלי רינדור-מחדש מלא
+async function persistDialogue(card) {
+  const sceneId = card.dataset.sceneId;
+  if (!sceneId) return;
+  const dialogue = collectDialogue(card);
+  const panel = getPanels().find((p) => p.scene_id === sceneId);
+  if (panel) panel.dialogue = dialogue;
+  renderPreviewSidebar();
+  try {
+    await api(`/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${sceneId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dialogue }),
+    });
+    setStatus("בועות עודכנו ✓", "ok");
+  } catch (e) {
+    setStatus("שגיאה: " + e.message, "err");
+  }
+}
 
 // ---------- פעולות פאנל ----------
 function panelPayload(card) {
@@ -700,6 +1017,18 @@ function bindEvents() {
   $("#downloadPdfBtn").addEventListener("click", downloadPdf);
   $("#downloadPngBtn").addEventListener("click", downloadPngs);
 
+  // שיפור עמוד ב-Gemini — פרומפט ברירת מחדל + החלפה לפי הבורר
+  const rp = $("#refinePrompt"), wt = $("#refineWithText");
+  if (rp) {
+    rp.value = REFINE_PROMPTS.notext;
+    rp.addEventListener("input", () => { refinePromptDirty = true; });
+  }
+  if (wt) {
+    wt.addEventListener("change", () => {
+      if (rp && !refinePromptDirty) rp.value = wt.checked ? REFINE_PROMPTS.withtext : REFINE_PROMPTS.notext;
+    });
+  }
+
   // סרגל תצוגה מקדימה
   $("#togglePreviewBtn").addEventListener("click", () => togglePreview(false));
   $("#showPreviewBtn").addEventListener("click", () => togglePreview(true));
@@ -817,6 +1146,12 @@ function buildPagesInto(container, emptyMsg) {
       num.textContent = pageIdx + 1;
       page.appendChild(num);
     }
+    const refineBtn = document.createElement("button");
+    refineBtn.className = "page-refine-btn";
+    refineBtn.textContent = "✨ שפר ב-Gemini";
+    refineBtn.setAttribute("data-html2canvas-ignore", "true");
+    refineBtn.addEventListener("click", () => refinePage(page, refineBtn));
+    page.appendChild(refineBtn);
     container.appendChild(page);
   });
 }
@@ -912,6 +1247,76 @@ async function downloadPngs() {
 
 function setExport(msg) {
   $("#exportStatus").textContent = msg || "";
+}
+
+// ---------- שיפור עמוד ב-Gemini ----------
+const GEOM_RULE = " חשוב ביותר: החזר תמונה בדיוק באותם ממדים ויחס-גובה-רוחב של התמונה שקיבלת, " +
+  "באותו מסגור מדויק — אל תחתוך, אל תקרב/תרחיק (zoom), אל תוסיף שוליים, מסגרת או ריפוד, " +
+  "ואל תזיז את גבולות הפאנלים. כל פיקסל צריך להישאר במקומו פרט לשיפורים שביקשתי.";
+const REFINE_PROMPTS = {
+  notext: "זהו עמוד קומיקס. שלב את בועות הדיבור והזנבות בצורה טבעית וחלקה בתוך הסצנה, " +
+    "ותקן פגמים קטנים באיור (אצבעות מיותרות, עיוותים, חיתוכים, ברים שחורים). " +
+    "הבועות ריקות בכוונה — שמור בדיוק על מיקומן, גודלן וצורתן ואל תוסיף שום טקסט. " +
+    "שמור על הפריסה, הצבעים והדמויות זהים לחלוטין." + GEOM_RULE,
+  withtext: "זהו עמוד קומיקס. שלב את בועות הדיבור והזנבות בצורה טבעית וחלקה בתוך הסצנה, " +
+    "ותקן פגמים קטנים באיור. שמור בדיוק על הטקסט בעברית כפי שהוא — אל תשנה, תזיז, " +
+    "תתרגם או תעוות אף אות. שמור על הפריסה, הצבעים והדמויות זהים לחלוטין." + GEOM_RULE,
+};
+let refinePromptDirty = false;
+
+async function refinePage(pageEl, btn) {
+  const withText = !!($("#refineWithText") && $("#refineWithText").checked);
+  const prompt = ($("#refinePrompt") && $("#refinePrompt").value.trim()) || REFINE_PROMPTS.notext;
+  if (btn) btn.disabled = true;
+  setExport("מכין עמוד לשליחה...");
+  let dataUrl;
+  if (!withText) pageEl.classList.add("hide-bubble-text");
+  try {
+    const canvas = await renderPageCanvas(pageEl);
+    dataUrl = canvas.toDataURL("image/png");
+  } catch (e) {
+    pageEl.classList.remove("hide-bubble-text");
+    if (btn) btn.disabled = false;
+    setExport("שגיאת לכידה: " + e.message);
+    return;
+  }
+  pageEl.classList.remove("hide-bubble-text");
+  setExport("שולח ל-Gemini לשיפור... (עשוי לקחת רגע)");
+  try {
+    const res = await api(`/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/page/refine`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: dataUrl, prompt }),
+    });
+    applyRefinedToPage(pageEl, res.image, withText);
+    setExport("העמוד שופר ✓");
+  } catch (e) {
+    setExport("שגיאה: " + e.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+// מציג את תמונת Gemini כרקע העמוד; במצב 'ללא טקסט' משאיר את הטקסט שלנו מעל (שקוף)
+function applyRefinedToPage(pageEl, dataUrl, withText) {
+  pageEl.querySelectorAll(".refined-bg, .refined-revert").forEach((e) => e.remove());
+  const img = document.createElement("img");
+  img.className = "refined-bg";
+  img.src = dataUrl;
+  pageEl.prepend(img);
+  pageEl.classList.add("refined");
+  pageEl.classList.toggle("refined-notext", withText);   // עם טקסט בתמונה → להסתיר בועות
+  pageEl.classList.toggle("refined-text", !withText);     // בלי טקסט → להלביש טקסט מעל
+  const revert = document.createElement("button");
+  revert.className = "refined-revert small-btn";
+  revert.textContent = "↩︎ בטל שיפור";
+  revert.setAttribute("data-html2canvas-ignore", "true");
+  revert.addEventListener("click", () => {
+    img.remove();
+    revert.remove();
+    pageEl.classList.remove("refined", "refined-text", "refined-notext");
+  });
+  pageEl.appendChild(revert);
 }
 
 async function init() {

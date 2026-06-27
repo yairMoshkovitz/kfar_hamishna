@@ -290,6 +290,29 @@ def update_scene(mishna_id: str, minute_id: str, scene_id: str, body: SlotUpdate
     project_store.save_project(project)
     return scene
 
+
+class PageRefine(BaseModel):
+    image: str   # data URL (base64) של העמוד שנלכד ב-html2canvas
+    prompt: str  # הוראת השיפור ל-Gemini
+
+
+@app.post("/api/project/{mishna_id}/minute/{minute_id}/page/refine")
+def refine_page(mishna_id: str, minute_id: str, body: PageRefine):
+    """שולח תמונת עמוד קומיקס ל-Gemini לשיפור (בועות/זנבות/פגמים) ומחזיר תמונה משופרת."""
+    import base64
+    raw = body.image.split(",", 1)[-1] if "," in body.image else body.image
+    try:
+        img = base64.b64decode(raw)
+    except Exception:
+        raise HTTPException(status_code=400, detail="תמונה לא תקינה (base64)")
+    try:
+        out = gemini_images.refine_image(img, body.prompt)
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=502, detail=f"שגיאת Gemini: {e}")
+    return {"image": "data:image/png;base64," + base64.b64encode(out).decode("ascii")}
+
+
 @app.post("/api/project/{mishna_id}/minute/{minute_id}/scene/{scene_id}/add-{position}")
 def add_scene(mishna_id: str, minute_id: str, scene_id: str, position: str):
     if position not in ("before", "after"):

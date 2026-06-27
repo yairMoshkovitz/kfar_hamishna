@@ -141,6 +141,30 @@ def generate_image(prompt: str, references: list, out_path: Path, scene_type: st
     return out_path
 
 
+def refine_image(image_bytes: bytes, instruction: str, mime_type: str = "image/png") -> bytes:
+    """שולח תמונת עמוד קיימת ל-Gemini עם הוראת שיפור, ומחזיר תמונה משופרת.
+
+    משמש למצב 'שפר עמוד' של הקומיקס — Gemini משפר את שילוב הבועות/זנבות באיור.
+    """
+    print(f"[Gemini] refine: {instruction[:80]}...")
+    contents = [
+        instruction,
+        types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
+    ]
+    try:
+        client = _client()
+        response = client.models.generate_content(model=MODEL, contents=contents)
+    except Exception as e:
+        print(f"[Gemini ERROR] refine נכשל: {type(e).__name__}: {e}")
+        raise
+    out = _extract_image_bytes(response)
+    if out is None:
+        print(f"[Gemini] raw response: {response}")
+        raise RuntimeError("Gemini לא החזיר תמונה משופרת")
+    print(f"[Gemini] תמונה משופרת התקבלה, גודל: {len(out)} bytes")
+    return out
+
+
 def _extract_image_bytes(response) -> bytes | None:
     candidates = getattr(response, "candidates", None) or []
     for cand in candidates:

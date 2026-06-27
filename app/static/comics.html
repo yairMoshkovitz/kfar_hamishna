@@ -60,7 +60,12 @@
         <div class="pages-toolbar">
           <button id="downloadPdfBtn" class="accent">⬇️ הורד PDF</button>
           <button id="downloadPngBtn" class="accent">⬇️ הורד PNG (לעמוד)</button>
+          <label class="refine-toggle" title="האם לשלוח את הטקסט בתוך התמונה ל-Gemini">
+            <input type="checkbox" id="refineWithText" /> כלול טקסט בשליחה
+          </label>
           <span id="exportStatus" class="export-status"></span>
+          <textarea id="refinePrompt" class="refine-prompt" rows="2"
+            title="הוראת השיפור ל-Gemini (ניתנת לעריכה)"></textarea>
         </div>
         <div id="pagesContainer" class="pages-container"></div>
       </section>

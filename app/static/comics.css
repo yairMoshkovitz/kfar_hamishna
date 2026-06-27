@@ -43,6 +43,8 @@
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
+  /* container — כדי שגודל הגופן של הבועות (cqw) ייגזר מרוחב הפאנל, זהה לעמוד הסופי */
+  container-type: inline-size;
   /* ללא border/clip כאן — שכבת .panel-clip מטפלת בצורה, הבועות נשארות מעליה ללא חיתוך */
 }
 
@@ -111,7 +113,7 @@
   border-radius: 0.9em;
   padding: 0.18em 0.4em;
   font-family: var(--comic-font);
-  font-size: 0.62em;
+  font-size: 1.24em;
   font-weight: 600;
   line-height: 1.12;
   max-width: 60%;          /* טקסט ארוך יתפתל ל-2-3 שורות במקום שורה אחת ארוכה */
@@ -130,10 +132,66 @@
   text-align: center;
   flex-direction: column;
   overflow: hidden;
-  font-size: 0.5em;
+  font-size: 1em;
   box-sizing: border-box;
   z-index: 2;
 }
+
+/* עריכה אינטראקטיבית של בועות (רק בכרטיס העריכה) */
+.comic-bubble.positioned.editable {
+  pointer-events: auto;
+  cursor: move;
+}
+.comic-bubble.positioned.editable:hover {
+  outline: 2px dashed #2980b9;
+  outline-offset: 1px;
+}
+/* תפריט עריכה צף שנפתח בלחיצה על בועה */
+.comic-bubble.positioned.editing { outline: 2px solid #2980b9; }
+.comic-bubble.positioned.mode-move { cursor: move; }
+.comic-bubble.positioned.mode-size { cursor: nwse-resize; }
+.bubble-edit-menu {
+  position: absolute;
+  transform: translateY(-115%);
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: #222;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+  z-index: 30;
+}
+.bubble-edit-menu button {
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 5px;
+  background: #555;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+.bubble-edit-menu button.active { background: #2980b9; }
+.bubble-edit-menu button.ok { background: #27ae60; }
+.bubble-edit-menu button.cancel { background: #c0392b; }
+
+/* קודקוד זנב נגרר (כל אחד בנפרד) */
+.tail-vertex {
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  margin: -7.5px 0 0 -7.5px;
+  background: #e67e22;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.6);
+  cursor: grab;
+  pointer-events: auto;
+  z-index: 31;
+}
+.tail-vertex:active { cursor: grabbing; }
 
 .comic-bubble .bubble-speaker {
   display: block;
@@ -199,7 +257,7 @@
   background: rgba(255, 243, 205, 0.92);
   border: 0.1em solid #111;
   font-family: var(--comic-font);
-  font-size: 0.6em;
+  font-size: 1.2em;
   font-weight: 600;
   padding: 0.16em 0.36em;
   align-self: flex-start;
@@ -215,6 +273,8 @@
 /* עורך הדיאלוג */
 .dialogue-row {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
   margin-bottom: 5px;
 }
@@ -231,6 +291,41 @@
 .dialogue-row .dlg-remove {
   flex-shrink: 0;
   cursor: pointer;
+}
+
+.dialogue-row .dlg-font {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.dialogue-row .dlg-font-ico {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--muted, #888);
+}
+.dialogue-row .dlg-font-input {
+  width: 70px;
+}
+.dialogue-row .dlg-font-val {
+  width: 22px;
+  font-size: 11px;
+  color: var(--muted, #888);
+  text-align: center;
+}
+
+.dialogue-row .dlg-tail {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.dialogue-row .dlg-tail-ico {
+  font-size: 12px;
+  color: var(--muted, #888);
+}
+.dialogue-row .dlg-tail-input {
+  width: 60px;
 }
 
 .image-controls {
@@ -431,6 +526,70 @@ a.button:hover { background: #f0ece2; }
 }
 
 .comic-page { position: relative; }
+
+/* ----- שיפור עמוד ב-Gemini ----- */
+.pages-toolbar { flex-wrap: wrap; align-items: center; }
+.refine-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+}
+.refine-prompt {
+  flex: 1 1 100%;
+  font-size: 12px;
+  min-height: 40px;
+  resize: vertical;
+  font-family: inherit;
+  direction: rtl;
+}
+.page-refine-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 20;
+  font-size: 12px;
+  padding: 4px 9px;
+  cursor: pointer;
+  background: #8e44ad;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+}
+.page-refine-btn:disabled { opacity: 0.5; cursor: wait; }
+.refined-revert {
+  position: absolute;
+  top: 38px;
+  right: 6px;
+  z-index: 20;
+  cursor: pointer;
+}
+.refined-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  z-index: 0;
+}
+.comic-page.refined .page-panel .panel-clip { visibility: hidden; }
+.comic-page.refined .bubble-tails { display: none; }
+.comic-page.refined .comic-sfx { display: none; }
+/* מצב 'בלי טקסט': הבועות שקופות, הטקסט מולבש מעל תמונת Gemini */
+.comic-page.refined.refined-text .comic-bubble,
+.comic-page.refined.refined-text .comic-caption {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+/* מצב 'עם טקסט': הטקסט כבר בתמונה — מסתירים את הבועות שלנו */
+.comic-page.refined.refined-notext .comic-bubble,
+.comic-page.refined.refined-notext .comic-caption { display: none; }
+/* לכידה ללא טקסט: הטקסט שקוף אך צורת הבועה נשמרת */
+.comic-page.hide-bubble-text .comic-bubble,
+.comic-page.hide-bubble-text .comic-bubble .bubble-speaker,
+.comic-page.hide-bubble-text .comic-caption { color: transparent !important; }
+
 .comic-page-number {
   position: absolute;
   bottom: 6px;
@@ -447,6 +606,7 @@ a.button:hover { background: #f0ece2; }
   position: relative;
   min-height: 0;
   min-width: 0;
+  container-type: inline-size; /* בסיס cqw לגופן הבועות — זהה לעורך */
 }
 
 .comic-page .page-panel .panel-clip {

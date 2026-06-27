@@ -294,11 +294,13 @@ def update_scene(mishna_id: str, minute_id: str, scene_id: str, body: SlotUpdate
 class PageRefine(BaseModel):
     image: str   # data URL (base64) של העמוד שנלכד ב-html2canvas
     prompt: str  # הוראת השיפור ל-Gemini
+    page_index: int = 0
+    with_text: bool = False
 
 
 @app.post("/api/project/{mishna_id}/minute/{minute_id}/page/refine")
 def refine_page(mishna_id: str, minute_id: str, body: PageRefine):
-    """שולח תמונת עמוד קומיקס ל-Gemini לשיפור (בועות/זנבות/פגמים) ומחזיר תמונה משופרת."""
+    """שולח תמונת עמוד קומיקס ל-Gemini לשיפור, שומר את הגרסה האחרונה לעמוד, ומחזיר אותה."""
     import base64
     raw = body.image.split(",", 1)[-1] if "," in body.image else body.image
     try:
@@ -310,7 +312,38 @@ def refine_page(mishna_id: str, minute_id: str, body: PageRefine):
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=502, detail=f"שגיאת Gemini: {e}")
+
+    # שמירת הגרסה האחרונה של העמוד המשופר + תיעוד במשבצת
+    project = project_store.load_or_init_project(mishna_id)
+    slot = project_store.get_slot(project, minute_id)
+    if slot is not None:
+        filename = f"{minute_id}_refined_page_{body.page_index}.png"
+        out_path = project_store.studio_dir(mishna_id) / filename
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_bytes(out)
+        slot.setdefault("refined_pages", {})[str(body.page_index)] = {
+            "file": filename,
+            "with_text": body.with_text,
+        }
+        project_store.save_project(project)
+
     return {"image": "data:image/png;base64," + base64.b64encode(out).decode("ascii")}
+
+
+@app.get("/api/project/{mishna_id}/minute/{minute_id}/page/{page_index}/image")
+def get_refined_page_image(mishna_id: str, minute_id: str, page_index: int):
+    """מגיש את תמונת העמוד המשופר האחרונה ששמורה לעמוד."""
+    project = project_store.load_or_init_project(mishna_id)
+    slot = project_store.get_slot(project, minute_id)
+    if slot is None:
+        raise HTTPException(status_code=404, detail="משבצת דקה לא נמצאה")
+    entry = (slot.get("refined_pages") or {}).get(str(page_index))
+    if not entry:
+        raise HTTPException(status_code=404, detail="אין עמוד משופר")
+    p = project_store.studio_dir(mishna_id) / entry["file"]
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="קובץ העמוד המשופר לא נמצא")
+    return FileResponse(str(p))
 
 
 @app.post("/api/project/{mishna_id}/minute/{minute_id}/scene/{scene_id}/add-{position}")

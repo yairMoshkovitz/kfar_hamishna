@@ -557,7 +557,7 @@ a.button:hover { background: #f0ece2; }
   border-radius: 6px;
 }
 .page-refine-btn:disabled { opacity: 0.5; cursor: wait; }
-.refined-revert {
+.refined-toggle-btn {
   position: absolute;
   top: 38px;
   right: 6px;

@@ -14,6 +14,7 @@ let currentComic = null;   // mishna_id
 let project = null;
 let references = [];
 let refModalSceneId = null;
+let refinedPages = {};     // pageIdx -> { image, withText } — עמודים משופרים ע"י Gemini (לשמירה בין תצוגות)
 
 function setStatus(msg, kind = "") {
   const el = $("#status");
@@ -158,6 +159,17 @@ async function loadComic(id) {
   if (!id) { project = null; renderPanels(); return; }
   currentComic = id;
   project = await api(`/api/project/${encodeURIComponent(id)}`);
+  // שחזור עמודים משופרים ששמורים בשרת
+  refinedPages = {};
+  const slot = (project.slots || []).find((s) => s.id === COMIC_SLOT_ID);
+  if (slot && slot.refined_pages) {
+    for (const [idx, e] of Object.entries(slot.refined_pages)) {
+      refinedPages[idx] = {
+        image: `/api/project/${encodeURIComponent(id)}/minute/${COMIC_SLOT_ID}/page/${idx}/image?t=${Date.now()}`,
+        withText: !!e.with_text,
+      };
+    }
+  }
   renderPanels();
 }
 
@@ -1161,8 +1173,9 @@ function buildPagesInto(container, emptyMsg) {
     refineBtn.className = "page-refine-btn";
     refineBtn.textContent = "✨ שפר ב-Gemini";
     refineBtn.setAttribute("data-html2canvas-ignore", "true");
-    refineBtn.addEventListener("click", () => refinePage(page, refineBtn));
+    refineBtn.addEventListener("click", () => refinePage(page, refineBtn, pageIdx));
     page.appendChild(refineBtn);
+    if (refinedPages[pageIdx]) showRefined(page, pageIdx); // שחזור עמוד משופר שנשמר
     container.appendChild(page);
   });
 }
@@ -1275,7 +1288,7 @@ const REFINE_PROMPTS = {
 };
 let refinePromptDirty = false;
 
-async function refinePage(pageEl, btn) {
+async function refinePage(pageEl, btn, pageIdx) {
   const withText = !!($("#refineWithText") && $("#refineWithText").checked);
   const prompt = ($("#refinePrompt") && $("#refinePrompt").value.trim()) || REFINE_PROMPTS.notext;
   if (btn) btn.disabled = true;
@@ -1297,9 +1310,11 @@ async function refinePage(pageEl, btn) {
     const res = await api(`/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/page/refine`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ image: dataUrl, prompt }),
+      body: JSON.stringify({ image: dataUrl, prompt, page_index: pageIdx, with_text: withText }),
     });
-    applyRefinedToPage(pageEl, res.image, withText);
+    // שמירה (כדי שישרוד מעבר בין תצוגות + רענון) + הצגה
+    refinedPages[pageIdx] = { image: res.image, withText };
+    showRefined(pageEl, pageIdx);
     setExport("העמוד שופר ✓");
   } catch (e) {
     setExport("שגיאה: " + e.message);
@@ -1308,26 +1323,41 @@ async function refinePage(pageEl, btn) {
   }
 }
 
-// מציג את תמונת Gemini כרקע העמוד; במצב 'ללא טקסט' משאיר את הטקסט שלנו מעל (שקוף)
-function applyRefinedToPage(pageEl, dataUrl, withText) {
-  pageEl.querySelectorAll(".refined-bg, .refined-revert").forEach((e) => e.remove());
+// מציג את תמונת Gemini השמורה כרקע העמוד; במצב 'ללא טקסט' הטקסט שלנו נשאר מעל (שקוף)
+function showRefined(pageEl, pageIdx) {
+  const stored = refinedPages[pageIdx];
+  if (!stored) return;
+  pageEl.querySelectorAll(".refined-bg").forEach((e) => e.remove());
   const img = document.createElement("img");
   img.className = "refined-bg";
-  img.src = dataUrl;
+  img.src = stored.image;
   pageEl.prepend(img);
   pageEl.classList.add("refined");
-  pageEl.classList.toggle("refined-notext", withText);   // עם טקסט בתמונה → להסתיר בועות
-  pageEl.classList.toggle("refined-text", !withText);     // בלי טקסט → להלביש טקסט מעל
-  const revert = document.createElement("button");
-  revert.className = "refined-revert small-btn";
-  revert.textContent = "↩︎ בטל שיפור";
-  revert.setAttribute("data-html2canvas-ignore", "true");
-  revert.addEventListener("click", () => {
-    img.remove();
-    revert.remove();
-    pageEl.classList.remove("refined", "refined-text", "refined-notext");
-  });
-  pageEl.appendChild(revert);
+  pageEl.classList.toggle("refined-notext", stored.withText); // עם טקסט בתמונה → להסתיר בועות
+  pageEl.classList.toggle("refined-text", !stored.withText);  // בלי טקסט → להלביש טקסט מעל
+  ensureRefineToggle(pageEl, pageIdx);
+}
+
+function hideRefined(pageEl, pageIdx) {
+  pageEl.querySelectorAll(".refined-bg").forEach((e) => e.remove());
+  pageEl.classList.remove("refined", "refined-text", "refined-notext");
+  ensureRefineToggle(pageEl, pageIdx);
+}
+
+// כפתור החלפה: מקור ⇄ משופר (העמוד המשופר נשמר ב-refinedPages ולא נמחק)
+function ensureRefineToggle(pageEl, pageIdx) {
+  let btn = pageEl.querySelector(".refined-toggle-btn");
+  if (!btn) {
+    btn = document.createElement("button");
+    btn.className = "refined-toggle-btn small-btn";
+    btn.setAttribute("data-html2canvas-ignore", "true");
+    btn.addEventListener("click", () => {
+      if (pageEl.classList.contains("refined")) hideRefined(pageEl, pageIdx);
+      else showRefined(pageEl, pageIdx);
+    });
+    pageEl.appendChild(btn);
+  }
+  btn.textContent = pageEl.classList.contains("refined") ? "🖼 הצג מקור" : "✨ הצג משופר";
 }
 
 async function init() {

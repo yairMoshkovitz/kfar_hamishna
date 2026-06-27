@@ -232,13 +232,18 @@ function renderPanelsInner() {
 
     // תמונה + בועות
     const preview = node.querySelector(".panel-image-preview");
+    // יחס-ממדים אמיתי של הפאנל (כמו בעמוד הסופי) — WYSIWYG למיקומי הבועות
+    const dims = panelDims(panel.size);
+    preview.style.aspectRatio = dims.w + " / " + dims.h;
     node.querySelector(".panel-clip").classList.add("shape-" + (panel.shape || "rect"));
     const img = node.querySelector(".panel-image");
     if (panel.image_path) {
       preview.classList.add("has-image");
       img.src = `/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${panel.scene_id}/image?t=${Date.now()}`;
     }
-    renderBubbles(node.querySelector(".panel-bubbles"), panel.dialogue || [], panel.caption || "", panel.sfx || "");
+    const bubblesEl = node.querySelector(".panel-bubbles");
+    bubblesEl.style.fontSize = bubbleFontFor(panel.size); // גופן יחסי לרוחב הפאנל — זהה לעמוד
+    renderBubbles(bubblesEl, panel.dialogue || [], panel.caption || "", panel.sfx || "");
 
     // שינוי גודל/צורה — שמירה אוטומטית ורענון תצוגה מקדימה
     node.querySelector(".panel-size").addEventListener("change", () => savePanelLayout(panel.scene_id, card));
@@ -1053,6 +1058,11 @@ const SIZE_DIMS = {
 };
 const DEFAULT_DIM = SIZE_DIMS.half;
 
+// יחס-ממדים של פאנל לפי size, וגופן בועות יחסי לרוחב הפאנל (cqw) — זהה בעורך ובעמוד.
+// 600/52 = 11.538: משחזר את בסיס הגופן של העמוד (page-w/52) יחסית לרוחב הפאנל.
+function panelDims(size) { return SIZE_DIMS[size] || DEFAULT_DIM; }
+function bubbleFontFor(size) { return (11.538 / panelDims(size).w).toFixed(3) + "cqw"; }
+
 function paginate(panels) {
   const pages = [];
   let grid = null;
@@ -1135,6 +1145,7 @@ function buildPagesInto(container, emptyMsg) {
 
       const bubbles = document.createElement("div");
       bubbles.className = "panel-bubbles";
+      bubbles.style.fontSize = bubbleFontFor(panel.size);
       renderBubbles(bubbles, panel.dialogue || [], panel.caption || "", panel.sfx || "");
       cell.appendChild(bubbles);
 

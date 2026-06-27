@@ -575,12 +575,20 @@ a.button:hover { background: #f0ece2; }
 .comic-page.refined .page-panel .panel-clip { visibility: hidden; }
 .comic-page.refined .bubble-tails { display: none; }
 .comic-page.refined .comic-sfx { display: none; }
-/* מצב 'בלי טקסט': הבועות שקופות, הטקסט מולבש מעל תמונת Gemini */
+/* התאים (וכל הטקסט שבהם) חייבים להישאר מעל רקע תמונת Gemini */
+.comic-page.refined .refined-bg { z-index: 0; }
+.comic-page.refined .page-panel { z-index: 1; }
+/* מצב 'בלי טקסט': הבועות שקופות, הטקסט שקיים מולבש מעל תמונת Gemini */
 .comic-page.refined.refined-text .comic-bubble,
 .comic-page.refined.refined-text .comic-caption {
   background: transparent;
   border-color: transparent;
   box-shadow: none;
+}
+/* קריאוּת הטקסט מעל האיור (הבועה עצמה כבר מצוירת בתמונה) */
+.comic-page.refined.refined-text .comic-bubble,
+.comic-page.refined.refined-text .comic-caption {
+  text-shadow: 0 0 2px #fff, 0 0 3px #fff;
 }
 /* מצב 'עם טקסט': הטקסט כבר בתמונה — מסתירים את הבועות שלנו */
 .comic-page.refined.refined-notext .comic-bubble,

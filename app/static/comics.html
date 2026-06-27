@@ -76,7 +76,7 @@
       <label>תיאור הקומיקס (מפורט ככל האפשר):
         <textarea id="ncDesc" rows="8" placeholder="תאר את העלילה, הדמויות, המקומות והרגעים המרכזיים..."></textarea>
       </label>
-      <label>מספר פאנלים משוער: <input type="number" id="ncPanels" value="6" min="1" max="60"></label>
+      <label>מספר עמודים: <input type="number" id="ncPages" value="1" min="1" max="20"></label>
       <div class="modal-actions">
         <button id="ncSave" class="primary">צור</button>
         <button id="ncCancel">ביטול</button>
@@ -97,7 +97,7 @@
       <label>תיאור סגנון ויזואלי:
         <textarea id="ecStyle" rows="4"></textarea>
       </label>
-      <label>מספר פאנלים משוער: <input type="number" id="ecPanels" min="1" max="60"></label>
+      <label>מספר עמודים: <input type="number" id="ecPages" min="1" max="20"></label>
       <div class="modal-actions">
         <button id="ecSave" class="primary">שמור</button>
         <button id="ecCancel">ביטול</button>
@@ -206,6 +206,10 @@
       <div class="scene-section">
         <label class="section-label">📝 כיתוב קריינות</label>
         <input class="caption-text" type="text" placeholder="תיבת קריינות (אופציונלי)..." />
+      </div>
+      <div class="scene-section">
+        <label class="section-label">💥 אפקט קול (SFX)</label>
+        <input class="sfx-text" type="text" placeholder="למשל: בום!, קְרַאש! (אופציונלי)..." />
       </div>
       <div class="scene-controls">
         <button class="save-scene-btn primary small-btn" title="שמור">💾 שמור פאנל</button>

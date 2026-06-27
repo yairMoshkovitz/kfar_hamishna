@@ -280,7 +280,8 @@ COMIC_SLOT_ID = "comic-slot"
 
 
 def create_comics_project(mishna_id: str, title: str, description: str,
-                          panels_target: int = 6, style_description: str = "") -> dict:
+                          panels_target: int = 6, style_description: str = "",
+                          pages_target: int | None = None) -> dict:
     """יוצר פרויקט קומיקס חדש (mode='comics') עם משבצת פאנלים יחידה וריקה."""
     d = studio_dir(mishna_id)
     if (d / "project.json").exists():
@@ -300,6 +301,7 @@ def create_comics_project(mishna_id: str, title: str, description: str,
         "mode": "comics",
         "description": description,
         "panels_target": panels_target,
+        "pages_target": pages_target,
         "director_instructions": "",
         "style_description": style_description or DEFAULT_STYLE_DESCRIPTION,
         "style_references": [default_ref_id] if default_ref_id else [],

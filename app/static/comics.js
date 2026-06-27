@@ -5,6 +5,11 @@ const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
 const COMIC_SLOT_ID = "comic-slot";
 
+// רשת המיקום בתוך הפאנל — חייב להיות זהה ל-comics_brain.GRID_COLS/ROWS וב-main.py
+const GRID_COLS = 12;
+const GRID_ROWS = 6;
+const SVG_NS = "http://www.w3.org/2000/svg";
+
 let currentComic = null;   // mishna_id
 let project = null;
 let references = [];
@@ -217,6 +222,7 @@ function renderPanelsInner() {
     node.querySelector(".location-text").value = panel.location || "";
     node.querySelector(".prompt-text").value = panel.prompt || "";
     node.querySelector(".caption-text").value = panel.caption || "";
+    node.querySelector(".sfx-text").value = panel.sfx || "";
     node.querySelector(".panel-size").value = panel.size || "regular";
     node.querySelector(".panel-shape").value = panel.shape || "rect";
 
@@ -232,7 +238,7 @@ function renderPanelsInner() {
       preview.classList.add("has-image");
       img.src = `/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${panel.scene_id}/image?t=${Date.now()}`;
     }
-    renderBubbles(node.querySelector(".panel-bubbles"), panel.dialogue || [], panel.caption || "");
+    renderBubbles(node.querySelector(".panel-bubbles"), panel.dialogue || [], panel.caption || "", panel.sfx || "");
 
     // שינוי גודל/צורה — שמירה אוטומטית ורענון תצוגה מקדימה
     node.querySelector(".panel-size").addEventListener("change", () => savePanelLayout(panel.scene_id, card));
@@ -245,7 +251,7 @@ function renderPanelsInner() {
     node.querySelector(".delete-scene-btn").addEventListener("click", () => deletePanel(panel.scene_id));
     node.querySelector(".edit-refs-btn").addEventListener("click", () => openRefModal(panel.scene_id));
     node.querySelector(".add-dialogue-btn").addEventListener("click", () => {
-      addDialogueRow(card.querySelector(".dialogue-list"), "", "");
+      addDialogueRow(card.querySelector(".dialogue-list"), {});
     });
 
     root.appendChild(node);
@@ -293,17 +299,32 @@ function renderRefChips(container, refs) {
   });
 }
 
+const BUBBLE_KINDS = [
+  ["speech", "💬 דיבור"],
+  ["thought", "💭 מחשבה"],
+  ["shout", "❗ צעקה"],
+  ["whisper", "🤫 לחישה"],
+];
+
 function renderDialogueEditor(container, dialogue) {
   container.innerHTML = "";
-  dialogue.forEach((d) => addDialogueRow(container, d.speaker || "", d.text || ""));
+  (dialogue || []).forEach((d) => addDialogueRow(container, d));
 }
 
-function addDialogueRow(container, speaker, text) {
+function addDialogueRow(container, d) {
+  d = d || {};
   const row = document.createElement("div");
   row.className = "dialogue-row";
+  // שדות מיקום (rect/anchor) שנקבעו ע"י Claude נשמרים ולא הולכים לאיבוד בשמירה ידנית
+  if (d.rect) row.dataset.rect = JSON.stringify(d.rect);
+  if (d.anchor) row.dataset.anchor = JSON.stringify(d.anchor);
+  const opts = BUBBLE_KINDS
+    .map(([v, label]) => `<option value="${v}"${(d.kind || "speech") === v ? " selected" : ""}>${label}</option>`)
+    .join("");
   row.innerHTML = `
-    <input class="dlg-speaker" placeholder="דובר" value="${escapeAttr(speaker)}" />
-    <input class="dlg-text" placeholder="טקסט הבועה" value="${escapeAttr(text)}" />
+    <input class="dlg-speaker" placeholder="דובר" value="${escapeAttr(d.speaker || "")}" />
+    <input class="dlg-text" placeholder="טקסט הבועה" value="${escapeAttr(d.text || "")}" />
+    <select class="dlg-kind" title="סוג בועה">${opts}</select>
     <button class="dlg-remove danger small-btn">✕</button>`;
   row.querySelector(".dlg-remove").addEventListener("click", () => row.remove());
   container.appendChild(row);
@@ -311,37 +332,127 @@ function addDialogueRow(container, speaker, text) {
 
 function collectDialogue(card) {
   return $$(".dialogue-row", card)
-    .map((row) => ({
-      speaker: row.querySelector(".dlg-speaker").value.trim(),
-      text: row.querySelector(".dlg-text").value.trim(),
-    }))
+    .map((row) => {
+      const d = {
+        speaker: row.querySelector(".dlg-speaker").value.trim(),
+        text: row.querySelector(".dlg-text").value.trim(),
+        kind: row.querySelector(".dlg-kind").value,
+      };
+      if (row.dataset.rect) try { d.rect = JSON.parse(row.dataset.rect); } catch (e) {}
+      if (row.dataset.anchor) try { d.anchor = JSON.parse(row.dataset.anchor); } catch (e) {}
+      return d;
+    })
     .filter((d) => d.text);
 }
 
-function renderBubbles(container, dialogue, caption) {
+function bubbleInnerHtml(d) {
+  return (d.speaker ? `<span class="bubble-speaker">${escapeHtml(d.speaker)}</span>` : "") + escapeHtml(d.text);
+}
+
+// בונה משולש זנב מקצה מלבן הבועה אל נקודת ה-anchor (כולן ביחידות רשת 12×6)
+function buildTail(rect, anchor) {
+  const bcx = rect.col + rect.w / 2;
+  const bcy = rect.row + rect.h / 2;
+  let dx = anchor.col - bcx, dy = anchor.row - bcy;
+  const len = Math.hypot(dx, dy) || 1;
+  dx /= len; dy /= len;
+  // נקודת המפגש עם שפת המלבן בכיוון ה-anchor
+  const hw = rect.w / 2, hh = rect.h / 2;
+  const sx = Math.abs(dx) < 1e-3 ? Infinity : hw / Math.abs(dx);
+  const sy = Math.abs(dy) < 1e-3 ? Infinity : hh / Math.abs(dy);
+  const s = Math.min(sx, sy);
+  const ex = bcx + dx * s, ey = bcy + dy * s;
+  // בסיס הזנב — מאונך לכיוון
+  const baseHalf = 0.45;
+  const px = -dy * baseHalf, py = dx * baseHalf;
+  const SC = 100; // קנה מידה ל-viewBox (1200×600)
+  const pts = [
+    [(ex + px) * SC, (ey + py) * SC],
+    [(ex - px) * SC, (ey - py) * SC],
+    [anchor.col * SC, anchor.row * SC],
+  ];
+  return pts.map((p) => p.map((n) => n.toFixed(1)).join(",")).join(" ");
+}
+
+// שכבת SVG אחת לכל זנבי הבועות בפאנל (viewBox יחסי לרשת)
+function renderTails(container, positioned) {
+  const withAnchor = positioned.filter((d) => d.rect && d.anchor);
+  if (!withAnchor.length) return;
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("class", "bubble-tails");
+  svg.setAttribute("viewBox", `0 0 ${GRID_COLS * 100} ${GRID_ROWS * 100}`);
+  svg.setAttribute("preserveAspectRatio", "none");
+  withAnchor.forEach((d) => {
+    if (d.kind === "thought") {
+      // שובל בועות-מחשבה: כמה עיגולים קטֵנים לכיוון הדובר
+      const bcx = d.rect.col + d.rect.w / 2, bcy = d.rect.row + d.rect.h / 2;
+      for (let i = 1; i <= 3; i++) {
+        const t = i / 3.2;
+        const c = document.createElementNS(SVG_NS, "circle");
+        c.setAttribute("cx", ((bcx + (d.anchor.col - bcx) * t) * 100).toFixed(1));
+        c.setAttribute("cy", ((bcy + (d.anchor.row - bcy) * t) * 100).toFixed(1));
+        c.setAttribute("r", (16 - i * 3).toFixed(1));
+        c.setAttribute("class", "tail-shape");
+        svg.appendChild(c);
+      }
+    } else {
+      const poly = document.createElementNS(SVG_NS, "polygon");
+      poly.setAttribute("points", buildTail(d.rect, d.anchor));
+      poly.setAttribute("class", "tail-shape");
+      svg.appendChild(poly);
+    }
+  });
+  container.appendChild(svg);
+}
+
+function renderBubbles(container, dialogue, caption, sfx) {
   container.innerHTML = "";
-  // קריינות תמיד למעלה, בועות דיבור למטה
+
+  const positioned = (dialogue || []).filter((d) => d.text && d.rect);
+  const floating = (dialogue || []).filter((d) => d.text && !d.rect);
+
+  // זנבות (שכבה אחת מתחת לבועות)
+  renderTails(container, positioned);
+
+  // בועות ממוקמות לפי מלבן הרשת
+  positioned.forEach((d) => {
+    const b = document.createElement("div");
+    b.className = "comic-bubble positioned kind-" + (d.kind || "speech");
+    b.style.left = (d.rect.col / GRID_COLS * 100) + "%";
+    b.style.top = (d.rect.row / GRID_ROWS * 100) + "%";
+    b.style.width = (d.rect.w / GRID_COLS * 100) + "%";
+    b.style.height = (d.rect.h / GRID_ROWS * 100) + "%";
+    b.innerHTML = bubbleInnerHtml(d);
+    container.appendChild(b);
+  });
+
+  // קריינות למעלה + בועות ללא מיקום (תאימות לאחור) נערמות למטה
   const top = document.createElement("div");
   top.className = "bubbles-top";
   const bottom = document.createElement("div");
   bottom.className = "bubbles-bottom";
-
   if (caption) {
     const cap = document.createElement("div");
     cap.className = "comic-caption";
     cap.textContent = caption;
     top.appendChild(cap);
   }
-  dialogue.forEach((d) => {
-    if (!d.text) return;
+  floating.forEach((d) => {
     const b = document.createElement("div");
-    b.className = "comic-bubble";
-    b.innerHTML = (d.speaker ? `<span class="bubble-speaker">${escapeHtml(d.speaker)}</span>` : "") + escapeHtml(d.text);
+    b.className = "comic-bubble kind-" + (d.kind || "speech");
+    b.innerHTML = bubbleInnerHtml(d);
     bottom.appendChild(b);
   });
-
   container.appendChild(top);
   container.appendChild(bottom);
+
+  // אפקט קול
+  if (sfx) {
+    const fx = document.createElement("div");
+    fx.className = "comic-sfx";
+    fx.textContent = sfx;
+    container.appendChild(fx);
+  }
 }
 
 function escapeHtml(s) {
@@ -356,6 +467,7 @@ function panelPayload(card) {
     location: card.querySelector(".location-text").value,
     prompt: card.querySelector(".prompt-text").value,
     caption: card.querySelector(".caption-text").value,
+    sfx: card.querySelector(".sfx-text").value,
     size: card.querySelector(".panel-size").value,
     shape: card.querySelector(".panel-shape").value,
     dialogue: collectDialogue(card),
@@ -512,7 +624,7 @@ function bindEvents() {
       comic_id: $("#ncId").value.trim(),
       title: $("#ncTitle").value.trim(),
       description: $("#ncDesc").value.trim(),
-      panels_target: parseInt($("#ncPanels").value) || 6,
+      pages_target: parseInt($("#ncPages").value) || 1,
     };
     if (!body.comic_id || !body.description) { alert("נא למלא מזהה ותיאור"); return; }
     try {
@@ -538,7 +650,7 @@ function bindEvents() {
     $("#ecDesc").value = project.description || "";
     $("#ecDirector").value = project.director_instructions || "";
     $("#ecStyle").value = project.style_description || "";
-    $("#ecPanels").value = project.panels_target || 6;
+    $("#ecPages").value = project.pages_target || 1;
     $("#editComicModal").classList.remove("hidden");
   });
   $("#ecCancel").addEventListener("click", () => $("#editComicModal").classList.add("hidden"));
@@ -550,7 +662,7 @@ function bindEvents() {
         description: $("#ecDesc").value,
         director_instructions: $("#ecDirector").value,
         style_description: $("#ecStyle").value,
-        panels_target: parseInt($("#ecPanels").value) || 6,
+        pages_target: parseInt($("#ecPages").value) || 1,
       }),
     });
     $("#editComicModal").classList.add("hidden");
@@ -640,8 +752,14 @@ function paginate(panels) {
   };
 
   newPage();
+  let curPage = null; // מספר העמוד (page) של הפאנל הקודם — לכיבוד חלוקת Claude
   panels.forEach((panel) => {
     const { w, h } = SIZE_DIMS[panel.size] || DEFAULT_DIM;
+    // אם Claude שייך את הפאנל לעמוד חדש — מתחילים עמוד פיזי חדש
+    if (panel.page != null) {
+      if (curPage != null && panel.page !== curPage && placements.length) newPage();
+      curPage = panel.page;
+    }
     let spot = findSpot(w, h);
     if (!spot) {
       newPage();
@@ -662,7 +780,7 @@ function buildPagesInto(container, emptyMsg) {
     return;
   }
   const pages = paginate(panels);
-  pages.forEach((placements) => {
+  pages.forEach((placements, pageIdx) => {
     const page = document.createElement("div");
     page.className = "comic-page";
     placements.forEach(({ panel, row, col, w, h }) => {
@@ -688,11 +806,17 @@ function buildPagesInto(container, emptyMsg) {
 
       const bubbles = document.createElement("div");
       bubbles.className = "panel-bubbles";
-      renderBubbles(bubbles, panel.dialogue || [], panel.caption || "");
+      renderBubbles(bubbles, panel.dialogue || [], panel.caption || "", panel.sfx || "");
       cell.appendChild(bubbles);
 
       page.appendChild(cell);
     });
+    if (pages.length > 1) {
+      const num = document.createElement("div");
+      num.className = "comic-page-number";
+      num.textContent = pageIdx + 1;
+      page.appendChild(num);
+    }
     container.appendChild(page);
   });
 }

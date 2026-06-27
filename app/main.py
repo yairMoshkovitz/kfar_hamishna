@@ -58,8 +58,11 @@ class SlotUpdate(BaseModel):
     dialogue: list[dict] | None = None
     caption: str | None = None
     description: str | None = None
+    page: int | None = None
     size: str | None = None
     shape: str | None = None
+    characters: list[dict] | None = None
+    sfx: str | None = None
 
 # ---------- עזרי קבצים ----------
 class RepromptBody(BaseModel):
@@ -105,6 +108,45 @@ _CATEGORY_LABEL = {
     "style": "מקום/סגנון",
     "scene": "סצנה",
 }
+
+# רשת המיקום בתוך הפאנל (חייב להיות זהה ל-comics_brain.GRID_COLS/ROWS ול-comics.js)
+_GRID_COLS = 12
+_GRID_ROWS = 6
+
+
+def _region_he(rect: dict) -> str:
+    """ממיר מלבן ברשת 12×6 לתיאור אזור מילולי בעברית (למשל 'בחלק הימני-העליון')."""
+    if not rect:
+        return ""
+    cx = rect.get("col", 0) + rect.get("w", 1) / 2
+    cy = rect.get("row", 0) + rect.get("h", 1) / 2
+    horiz = "השמאלי" if cx < _GRID_COLS / 3 else ("הימני" if cx > 2 * _GRID_COLS / 3 else "המרכזי")
+    vert = "העליון" if cy < _GRID_ROWS / 3 else ("התחתון" if cy > 2 * _GRID_ROWS / 3 else "האמצעי")
+    return f"בחלק {horiz}-{vert}"
+
+
+def _layout_directions(scene: dict) -> str:
+    """בונה הוראות-במאי ל-Gemini מתוך layout הפאנל: מיקום דמויות ואזורים פנויים לבועות."""
+    lines = []
+    for ch in scene.get("characters") or []:
+        region = _region_he(ch.get("rect") or {})
+        name = (ch.get("ref") or "").split("|")[-1].strip()
+        if name and region:
+            lines.append(f"מקם את {name} {region} של הקומפוזיציה.")
+    empty_regions = []
+    for d in scene.get("dialogue") or []:
+        region = _region_he(d.get("rect") or {})
+        if region:
+            empty_regions.append(region)
+    # ייחוד תוך שמירת סדר
+    seen = set()
+    empty_regions = [r for r in empty_regions if not (r in seen or seen.add(r))]
+    if empty_regions:
+        lines.append(
+            "השאר את האזורים הבאים פתוחים ופשוטים (שמיים/רקע אחיד, ללא פרטים חשובים) "
+            "כדי שיהיה מקום לבועות דיבור: " + ", ".join(empty_regions) + "."
+        )
+    return " ".join(lines)
 
 
 def _ref_label(meta: dict) -> str:
@@ -157,6 +199,15 @@ def generate_scene(mishna_id: str, minute_id: str, scene_id: str, body: Generate
             if meta:
                 labeled_refs.append({"path": meta["path"], "label": _ref_label(meta)})
 
+    # במצב קומיקס: צרף את רפרנס/י הסגנון של הפרויקט לכל פאנל, לנעילת מראה אחיד
+    if project.get("mode") == "comics":
+        existing_paths = {str(r["path"]) for r in labeled_refs}
+        for s_id in project.get("style_references") or []:
+            meta = project_store.reference_meta(s_id, project=project)
+            if meta and str(meta["path"]) not in existing_paths:
+                labeled_refs.append({"path": meta["path"], "label": "רפרנס סגנון אחיד לכל הקומיקס (שמור על אותו סגנון ציור, קו וצבעוניות)"})
+                existing_paths.add(str(meta["path"]))
+
     out = project_store.studio_dir(mishna_id) / f"{minute_id}_{scene_id}.png"
     try:
         if body and body.is_full_prompt and body.prompt:
@@ -166,12 +217,23 @@ def generate_scene(mishna_id: str, minute_id: str, scene_id: str, body: Generate
             scene["prompt"] = body.prompt
         else:
             prompt = scene.get("prompt", "")
+            # סגנון בית אחיד לכל פאנלי הקומיקס — לעקביות ויזואלית בין הפאנלים
+            if project.get("mode") == "comics":
+                style_desc = (project.get("style_description") or "").strip()
+                if style_desc:
+                    prompt = (
+                        f"סגנון אמנותי אחיד לכל הקומיקס (שמור עליו זהה בכל פאנל — אותו קו, "
+                        f"פלטת צבעים ורמת פירוט): {style_desc}\n\n{prompt}"
+                    )
             aspect = _SIZE_ASPECT_HINT.get(scene.get("size"))
             if aspect:
                 prompt = f"{prompt}\n\n{aspect}"
             shape_name = _SHAPE_NAMES_HE.get(scene.get("shape"))
             if shape_name:
                 prompt = f"{prompt}{_NON_RECT_HINT.format(shape=shape_name)}"
+            directions = _layout_directions(scene)
+            if directions:
+                prompt = f"{prompt}\n\n{directions}"
             gemini_images.generate_image(prompt, labeled_refs, out)
     except Exception as e:
         traceback.print_exc()
@@ -192,7 +254,7 @@ def update_scene(mishna_id: str, minute_id: str, scene_id: str, body: SlotUpdate
     if scene is None:
         raise HTTPException(status_code=404, detail="סצנה לא נמצאה")
     
-    for field in ("mishna_text", "prompt", "references", "duration", "status", "start", "end", "effect", "intensity", "location", "dialogue", "caption", "description", "size", "shape"):
+    for field in ("mishna_text", "prompt", "references", "duration", "status", "start", "end", "effect", "intensity", "location", "dialogue", "caption", "description", "page", "size", "shape", "characters", "sfx"):
         val = getattr(body, field, None)
         if val is not None:
             scene[field] = val
@@ -489,12 +551,14 @@ class CreateComicsBody(BaseModel):
     title: str | None = None
     description: str
     panels_target: int = 6
+    pages_target: int | None = None
     style_description: str | None = None
 
 
 class ComicsProposeBody(BaseModel):
     description: str | None = None
     panels_target: int | None = None
+    pages_target: int | None = None
     director_instructions: str | None = None
     style_description: str | None = None
     custom_prompt: str | None = None
@@ -509,6 +573,7 @@ def create_comics(body: CreateComicsBody):
             body.description,
             body.panels_target,
             body.style_description or "",
+            body.pages_target,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -524,6 +589,8 @@ def update_comics(mishna_id: str, body: ComicsProposeBody):
         project["description"] = body.description
     if body.panels_target is not None:
         project["panels_target"] = body.panels_target
+    if body.pages_target is not None:
+        project["pages_target"] = body.pages_target
     if body.director_instructions is not None:
         project["director_instructions"] = body.director_instructions
     if body.style_description is not None:
@@ -542,6 +609,7 @@ def comics_prompt_preview(mishna_id: str):
         style_description=project.get("style_description", ""),
         director_instructions=project.get("director_instructions", ""),
         panels_target=project.get("panels_target"),
+        pages_target=project.get("pages_target"),
     )
     return {"prompt": prompt_text}
 
@@ -555,6 +623,8 @@ def comics_propose(mishna_id: str, body: ComicsProposeBody):
         project["description"] = body.description
     if body.panels_target is not None:
         project["panels_target"] = body.panels_target
+    if body.pages_target is not None:
+        project["pages_target"] = body.pages_target
     if body.director_instructions is not None:
         project["director_instructions"] = body.director_instructions
     if body.style_description is not None:
@@ -568,6 +638,7 @@ def comics_propose(mishna_id: str, body: ComicsProposeBody):
             style_description=project.get("style_description", ""),
             director_instructions=project.get("director_instructions", ""),
             panels_target=project.get("panels_target"),
+            pages_target=project.get("pages_target"),
             custom_prompt=body.custom_prompt,
         )
     except Exception as e:

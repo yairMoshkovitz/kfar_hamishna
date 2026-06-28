@@ -141,6 +141,32 @@ def generate_image(prompt: str, references: list, out_path: Path, scene_type: st
     return out_path
 
 
+def generate_character_sheet(single_image_path: Path, out_path: Path, description: str = "") -> Path:
+    """יוצר 'גיליון דמות' (character sheet) רב-זוויות מתוך תמונה בודדת קיימת.
+
+    שולח את התמונה הבודדת כרפרנס ל-Gemini כדי שה-sheet יציג *אותה דמות בדיוק*
+    בכמה זוויות והבעות על רקע ניטרלי. משמש להעלאת עקביות הדמות בפאנלים.
+    מחזיר את נתיב ה-sheet שנשמר.
+    """
+    desc_note = f" הדמות: {description}." if (description or "").strip() else ""
+    sheet_prompt = (
+        "צור גיליון דמות (character model sheet) של דמות אחת ויחידה." + desc_note +
+        " הצג את אותה דמות בדיוק — אותם תווי פנים, צבעים, שיער, לבוש ופרופורציות — "
+        "במספר תנוחות וזוויות בתוך תמונה אחת: חזית מלאה, פרופיל צד, ושלושת-רבעי, "
+        "וכן שתי הבעות פנים שונות (למשל ניטרלי ומחייך). "
+        "רקע אחיד ניטרלי (אפור/לבן בהיר), ללא טקסט, ללא מסגרות, ללא תוויות. "
+        "פריסה מסודרת של הדמויות זו לצד זו."
+    )
+    # מיחזור generate_image: התמונה הבודדת היא הרפרנס היחיד, scene_type=character
+    return generate_image(
+        sheet_prompt,
+        references=[single_image_path],
+        out_path=out_path,
+        scene_type="character",
+        is_full_prompt=True,
+    )
+
+
 def refine_image(image_bytes: bytes, instruction: str, mime_type: str = "image/png") -> bytes:
     """שולח תמונת עמוד קיימת ל-Gemini עם הוראת שיפור, ומחזיר תמונה משופרת.
 

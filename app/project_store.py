@@ -354,12 +354,19 @@ def reference_meta(ref_value: str, version_index: int = -1, project: dict | None
         if not match and name_to_find:
             match = (name_to_find in (rid, rname, rfile))
         if match:
-            return {
+            meta = {
                 "path": path,
                 "name": r.get("name", "") or "",
                 "description": r.get("description", "") or "",
                 "category": r.get("category", "") or "",
             }
+            # נתיב גיליון-הדמות (sheet) אם קיים — לבחירת וריאנט ביצירת פאנל
+            sheet_file = r.get("sheet_file")
+            if sheet_file:
+                sheet_path = ROOT / refs.get("base_dir", "data/images") / sheet_file
+                if sheet_path.exists():
+                    meta["sheet_path"] = sheet_path
+            return meta
 
     # נמצא נתיב אך לא רשומה (קובץ ישיר) — נחזיר שם מהקובץ
     return {"path": path, "name": name_to_find or id_to_find or path.stem, "description": "", "category": ""}
@@ -432,7 +439,40 @@ def reference_file_path(ref_value: str, version_index: int = -1, project: dict |
         
     return None
 
-def add_reference(filename: str, content: bytes, name: str, description: str, category: str) -> dict:
+def reference_sheet_path(ref_value: str, project: dict | None = None) -> Path | None:
+    """מחזיר את נתיב גיליון-הדמות (sheet) של רפרנס אם קיים, אחרת None.
+
+    מקבילה ל-reference_file_path אך עבור שדה sheet_file (תמונת רב-זוויות).
+    """
+    if not ref_value or ref_value.startswith("scene:"):
+        return None
+
+    id_to_find = ref_value
+    name_to_find = None
+    if "|" in ref_value:
+        parts = [p.strip() for p in ref_value.split("|")]
+        id_to_find = parts[0]
+        if len(parts) > 1:
+            name_to_find = parts[1]
+
+    refs = load_references()
+    base = ROOT / refs.get("base_dir", "data/images")
+    for r in refs.get("references", []):
+        rid, rname, rfile = r.get("id"), r.get("name"), r.get("file")
+        match = (id_to_find in (rid, rname, rfile))
+        if not match and name_to_find:
+            match = (name_to_find in (rid, rname, rfile))
+        if match:
+            sheet_file = r.get("sheet_file")
+            if sheet_file:
+                p = base / sheet_file
+                return p if p.exists() else None
+            return None
+    return None
+
+
+def add_reference(filename: str, content: bytes, name: str, description: str, category: str,
+                  sheet_file: str | None = None) -> dict:
     refs = load_references()
     
     # בדיקה שאין רפרנס עם אותו שם בדיוק (למניעת בלבול)
@@ -458,7 +498,8 @@ def add_reference(filename: str, content: bytes, name: str, description: str, ca
         "height": None,
         "items": [],
         "dormant": False,
-        "versions": []
+        "versions": [],
+        "sheet_file": sheet_file,
     }
     
     refs.setdefault("references", []).append(new_ref)

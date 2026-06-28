@@ -46,6 +46,7 @@ class SlotUpdate(BaseModel):
     mishna_text: str | None = None
     prompt: str | None = None
     references: list[str] | None = None
+    ref_variants: list[dict] | None = None
     duration: float | None = None
     type: str | None = None
     status: str | None = None
@@ -170,6 +171,58 @@ def _get_previous_scene(project: dict, current_minute_id: str, current_scene_id:
             prev_scene = s
     return None
 
+
+def _build_labeled_refs(project: dict, scene: dict, mishna_id: str, minute_id: str, scene_id: str) -> list[dict]:
+    """בונה את רשימת התמונות+תוויות שיישלחו ל-Gemini עבור פאנל/סצנה.
+
+    מכבד את בחירת הווריאנט של Claude לכל דמות (ref_variants: single/sheet/both),
+    ומצרף את התמונה הבודדת ו/או גיליון-הזוויות (sheet) בהתאם.
+    """
+    refs_to_use = list(scene.get("references", [])) or ["scene:previous"]
+
+    # מיפוי ref-id -> variant (single/sheet/both) שבחר Claude לכל דמות בפאנל
+    variant_by_ref = {}
+    for rv in scene.get("ref_variants", []) or []:
+        ref_id = (rv.get("ref") or "").split("|")[0].strip()
+        if ref_id:
+            variant_by_ref[ref_id] = rv.get("variant", "single")
+
+    labeled_refs = []
+    for r in refs_to_use:
+        if r == "scene:previous":
+            prev = _get_previous_scene(project, minute_id, scene_id)
+            if prev and prev.get("image_path"):
+                p = project_store.studio_dir(mishna_id) / prev["image_path"]
+                if p.exists():
+                    labeled_refs.append({"path": p, "label": "הסצנה הקודמת (לשמירת רצף ויזואלי וסגנון)"})
+            continue
+        meta = project_store.reference_meta(r, project=project)
+        if not meta:
+            continue
+        variant = variant_by_ref.get((r or "").split("|")[0].strip(), "single")
+        sheet_path = meta.get("sheet_path")
+        label = _ref_label(meta)
+        if variant == "sheet" and sheet_path:
+            labeled_refs.append({"path": sheet_path, "label": f"{label} (גיליון זוויות — שמור על אותה דמות מכל זווית)"})
+        elif variant == "both" and sheet_path:
+            labeled_refs.append({"path": meta["path"], "label": label})
+            labeled_refs.append({"path": sheet_path, "label": f"{label} (גיליון זוויות נוסף — אותה דמות מזוויות שונות)"})
+        else:
+            # single, או אין sheet זמין — נופלים לתמונה הבודדת
+            labeled_refs.append({"path": meta["path"], "label": label})
+
+    # במצב קומיקס: צרף את רפרנס/י הסגנון של הפרויקט לכל פאנל, לנעילת מראה אחיד
+    if project.get("mode") == "comics":
+        existing_paths = {str(r["path"]) for r in labeled_refs}
+        for s_id in project.get("style_references") or []:
+            meta = project_store.reference_meta(s_id, project=project)
+            if meta and str(meta["path"]) not in existing_paths:
+                labeled_refs.append({"path": meta["path"], "label": "רפרנס סגנון אחיד לכל הקומיקס (שמור על אותו סגנון ציור, קו וצבעוניות)"})
+                existing_paths.add(str(meta["path"]))
+
+    return labeled_refs
+
+
 @app.post("/api/project/{mishna_id}/minute/{minute_id}/scene/{scene_id}/generate")
 def generate_scene(mishna_id: str, minute_id: str, scene_id: str, body: GenerateWithPromptBody | None = None):
     project = project_store.load_or_init_project(mishna_id)
@@ -181,32 +234,7 @@ def generate_scene(mishna_id: str, minute_id: str, scene_id: str, body: Generate
     if scene is None:
         raise HTTPException(status_code=404, detail="סצנה לא נמצאה")
 
-    # התנהגות ברירת מחדל: אם אין רפרנסים, נסה להשתמש בסצנה קודמת
-    refs_to_use = list(scene.get("references", []))
-    if not refs_to_use:
-        refs_to_use = ["scene:previous"]
-
-    labeled_refs = []
-    for r in refs_to_use:
-        if r == "scene:previous":
-            prev = _get_previous_scene(project, minute_id, scene_id)
-            if prev and prev.get("image_path"):
-                p = project_store.studio_dir(mishna_id) / prev["image_path"]
-                if p.exists():
-                    labeled_refs.append({"path": p, "label": "הסצנה הקודמת (לשמירת רצף ויזואלי וסגנון)"})
-        else:
-            meta = project_store.reference_meta(r, project=project)
-            if meta:
-                labeled_refs.append({"path": meta["path"], "label": _ref_label(meta)})
-
-    # במצב קומיקס: צרף את רפרנס/י הסגנון של הפרויקט לכל פאנל, לנעילת מראה אחיד
-    if project.get("mode") == "comics":
-        existing_paths = {str(r["path"]) for r in labeled_refs}
-        for s_id in project.get("style_references") or []:
-            meta = project_store.reference_meta(s_id, project=project)
-            if meta and str(meta["path"]) not in existing_paths:
-                labeled_refs.append({"path": meta["path"], "label": "רפרנס סגנון אחיד לכל הקומיקס (שמור על אותו סגנון ציור, קו וצבעוניות)"})
-                existing_paths.add(str(meta["path"]))
+    labeled_refs = _build_labeled_refs(project, scene, mishna_id, minute_id, scene_id)
 
     out = project_store.studio_dir(mishna_id) / f"{minute_id}_{scene_id}.png"
     try:
@@ -254,7 +282,7 @@ def update_scene(mishna_id: str, minute_id: str, scene_id: str, body: SlotUpdate
     if scene is None:
         raise HTTPException(status_code=404, detail="סצנה לא נמצאה")
     
-    for field in ("mishna_text", "prompt", "references", "duration", "status", "start", "end", "effect", "intensity", "location", "dialogue", "caption", "description", "page", "size", "shape", "characters", "sfx"):
+    for field in ("mishna_text", "prompt", "references", "ref_variants", "duration", "status", "start", "end", "effect", "intensity", "location", "dialogue", "caption", "description", "page", "size", "shape", "characters", "sfx"):
         val = getattr(body, field, None)
         if val is not None:
             scene[field] = val
@@ -843,22 +871,7 @@ def get_scene_gemini_prompt(mishna_id: str, minute_id: str, scene_id: str):
     if scene is None:
         raise HTTPException(status_code=404, detail="סצנה לא נמצאה")
 
-    refs_to_use = list(scene.get("references", []))
-    if not refs_to_use:
-        refs_to_use = ["scene:previous"]
-
-    labeled_refs = []
-    for r in refs_to_use:
-        if r == "scene:previous":
-            prev = _get_previous_scene(project, minute_id, scene_id)
-            if prev and prev.get("image_path"):
-                p = project_store.studio_dir(mishna_id) / prev["image_path"]
-                if p.exists():
-                    labeled_refs.append({"path": p, "label": "הסצנה הקודמת (לשמירת רצף ויזואלי וסגנון)"})
-        else:
-            meta = project_store.reference_meta(r, project=project)
-            if meta:
-                labeled_refs.append({"path": meta["path"], "label": _ref_label(meta)})
+    labeled_refs = _build_labeled_refs(project, scene, mishna_id, minute_id, scene_id)
 
     full_prompt = gemini_images.get_full_prompt(scene.get("prompt", ""), labeled_refs)
     return {"full_prompt": full_prompt, "style_description": project.get("style_description", "")}
@@ -1016,9 +1029,23 @@ async def create_reference_image(mishna_id: str, body: ReferenceUpdate):
     # Add to global references
     with open(out, "rb") as f:
         content = f.read()
-        
+
+    # רפרנס דמות — מייצרים אוטומטית גם 'גיליון דמות' (sheet) רב-זוויות, נגזר מהתמונה הבודדת.
+    # כשל ביצירת ה-sheet לא מפיל את הבקשה — ממשיכים עם תמונה בודדת בלבד.
+    category = body.category or "characters"
+    sheet_file = None
+    if category == "characters":
+        sheet_file = f"sheet_{uuid.uuid4().hex[:8]}.png"
+        sheet_out = project_store.ROOT / "data" / "images" / sheet_file
+        try:
+            gemini_images.generate_character_sheet(out, sheet_out, body.description)
+        except Exception as e:
+            print(f"[Reference] יצירת sheet נכשלה, ממשיכים עם תמונה בודדת: {e}")
+            sheet_file = None
+
     new_ref = project_store.add_reference(
-        filename, content, body.name or "New Reference", body.description, body.category or "characters"
+        filename, content, body.name or "New Reference", body.description, category,
+        sheet_file=sheet_file
     )
     
     # Update extra fields

@@ -93,6 +93,21 @@ class DialogueLine(BaseModel):
     anchor_row: float = Field(default=-1.0, description="שורת יעד הזנב (0–6, אפשר עשרוני; ‎-1 אם אין)")
 
 
+VALID_REF_VARIANTS = ("single", "sheet", "both")
+
+
+class RefVariant(BaseModel):
+    """בחירת וריאנט התמונה של רפרנס לשימוש בפאנל זה."""
+    ref: str = Field(description="מזהה הרפרנס בפורמט 'ID|שם' (כמו ב-references)")
+    variant: str = Field(description=(
+        "איזו תמונה של הרפרנס לצרף ליצירת הפאנל: "
+        "single (התמונה הבודדת הנקייה — לתקריב/הבעה/זווית חזיתית), "
+        "sheet (גיליון רב-זוויות — כשהפאנל דורש פרופיל, גוף מלא, זווית לא-שגרתית או תנועה), "
+        "both (שתי התמונות יחד — סצנה מורכבת שבה הדמות מרכזית ובזווית לא טריוויאלית). "
+        "חובה לבחור במפורש לכל דמות."
+    ))
+
+
 class ComicPanel(BaseModel):
     """פאנל בודד בקומיקס (תמונה אחת)."""
     panel_number: int = Field(description="מספר הפאנל לפי סדר הקריאה, החל מ-1")
@@ -104,6 +119,10 @@ class ComicPanel(BaseModel):
     description: str = Field(description="תיאור קצר בעברית של מה קורה בפאנל (לתצוגה לבמאי)")
     prompt: str = Field(description="פרומפט ויזואלי מפורט בעברית ליצירת תמונת הפאנל ב-Gemini")
     references: list[str] = Field(default_factory=list, description="רשימת מזהי רפרנס מהאינדקס בפורמט 'ID|Name'")
+    ref_variants: list[RefVariant] = Field(default_factory=list, description=(
+        "לכל רפרנס דמות שמופיע ב-references — בחירה מפורשת איזו תמונה לצרף "
+        "(single / sheet / both). מלא ערך אחד לכל דמות שמופיעה בפאנל."
+    ))
     location: str = Field(default="", description="שם המקום הפיזי שבו מתרחש הפאנל")
     dialogue: list[DialogueLine] = Field(default_factory=list, description="בועות דיבור בפאנל (יכול להיות ריק)")
     caption: str = Field(default="", description="כיתוב קריינות/תיבת טקסט לפאנל (יכול להיות ריק)")
@@ -174,7 +193,17 @@ SYSTEM_PROMPT = (
     "8. page + size — מספר העמוד וגודל הפאנל ברשת העמוד (ראה 'פריסת העמוד' למטה).\n"
     "9. shape — צורת מסגרת הפאנל (rect ברוב המקרים; צורה מיוחדת רק לרגע דרמטי).\n"
     "10. characters — מיקום כל דמות מרכזית/מדברת בפאנל ברשת 12×6 (ראה למטה).\n"
-    "11. sfx — אפקט קול קצר אם יש רגע קולני/דרמטי (אחרת ריק).\n\n"
+    "11. sfx — אפקט קול קצר אם יש רגע קולני/דרמטי (אחרת ריק).\n"
+    "12. ref_variants — בחירת וריאנט התמונה לכל דמות (ראה 'וריאנט תמונת הרפרנס' למטה).\n\n"
+    "וריאנט תמונת הרפרנס (חשוב!):\n"
+    "לכל דמות יש שתי תמונות רפרנס זמינות: (א) תמונה בודדת נקייה, (ב) 'גיליון דמות' (sheet) "
+    "שמראה את הדמות בכמה זוויות והבעות. עבור כל דמות שמופיעה ב-references של הפאנל, הוסף "
+    "ל-ref_variants רשומה {ref, variant} ובחר במפורש:\n"
+    "  - single: תקריב, הבעת פנים, או זווית חזיתית פשוטה.\n"
+    "  - sheet: כשהפאנל מראה את הדמות בפרופיל, גוף מלא, זווית לא-שגרתית, או בתנועה — "
+    "כאן הזוויות המרובות שומרות על עקביות.\n"
+    "  - both: סצנה מורכבת שבה הדמות מרכזית ובזווית לא טריוויאלית.\n"
+    "התאם את ה-prompt לזווית שבחרת. חובה לבחור variant לכל דמות (אל תשאיר ריק).\n\n"
     "מיקום מדויק של בועות (חשוב מאוד!):\n"
     "כל פאנל מחולק פנימית לרשת עדינה של 12 עמודות (col 0–11, 0=שמאל) × 6 שורות (row 0–5, 0=למעלה).\n"
     "עבור כל דמות מרכזית מלא ב-characters את מלבן אזור-הראש/פנים שלה (ref בפורמט 'ID|שם' + rect).\n"
@@ -314,6 +343,10 @@ def propose_panels(description: str, references: dict, style_description: str = 
             "description": panel.description,
             "prompt": panel.prompt,
             "references": panel.references,
+            "ref_variants": [
+                {"ref": rv.ref, "variant": rv.variant if rv.variant in VALID_REF_VARIANTS else "single"}
+                for rv in panel.ref_variants
+            ],
             "location": panel.location,
             "dialogue": [_serialize_dialogue(d) for d in panel.dialogue],
             "caption": panel.caption,

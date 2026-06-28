@@ -3,6 +3,7 @@
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
+let currentWorkspace = null; // {id, name}
 let currentMishna = null;
 let project = null;
 let references = [];
@@ -45,7 +46,7 @@ function parseSrtToObjects(srtText) {
 async function fetchCues() {
     if (allCues.length > 0) return;
     try {
-        const res = await fetch(`/api/project/${encodeURIComponent(currentMishna)}/srt-content`);
+        const res = await fetch(`/api/project/${encodeURIComponent(currentMishna)}/srt-content${wsParam()}`);
         if (res.ok) {
             const data = await res.json();
             // data.content contains the raw SRT string
@@ -431,7 +432,7 @@ function renderRefsTable() {
                 dormant: $(".ref-edit-dormant", tr)?.checked
             };
             try {
-                await api(`/api/references/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(body) });
+                await api(`/api/references/${encodeURIComponent(id)}${wsParam()}`, { method: "PUT", body: JSON.stringify(body) });
                 const ref = references.find(x => x.id === id);
                 if (ref) Object.assign(ref, body);
                 setStatus("רפרנס עודכן ✓", "ok");
@@ -450,7 +451,7 @@ function renderRefsTable() {
                 fd.append("file", input.files[0]);
                 setStatus(`מעלה תמונה חדשה לרפרנס ${id}...`);
                 try {
-                    const res = await fetch(`/api/references/${encodeURIComponent(id)}/image`, { method: "POST", body: fd });
+                    const res = await fetch(`/api/references/${encodeURIComponent(id)}/image${wsParam()}`, { method: "POST", body: fd });
                     const updatedRef = await res.json();
                     const idx = references.findIndex(r => r.id === id);
                     if (idx >= 0) references[idx] = updatedRef;
@@ -469,7 +470,7 @@ function renderRefsTable() {
             setStatus(`מייצר גרסת V2 לרפרנס ${id}...`);
             btn.disabled = true;
             try {
-                const res = await api(`/api/references/${encodeURIComponent(id)}/v2?mishna_id=${encodeURIComponent(currentMishna)}`, { method: "POST" });
+                const res = await api(`/api/references/${encodeURIComponent(id)}/v2${wsQuery("mishna_id=" + encodeURIComponent(currentMishna))}`, { method: "POST" });
                 const idx = references.findIndex(r => r.id === id);
                 if (idx >= 0) references[idx] = res;
                 renderRefsTable();
@@ -497,7 +498,7 @@ function renderRefsTable() {
             setStatus(`מייצר רפרנס ל-${nr.name}...`);
             btn.disabled = true;
             try {
-                const res = await api(`/api/project/${encodeURIComponent(currentMishna)}/create-reference-image`, { method: "POST", body: JSON.stringify(nr) });
+                const res = await api(`/api/project/${encodeURIComponent(currentMishna)}/create-reference-image${wsParam()}`, { method: "POST", body: JSON.stringify(nr) });
                 references.push(res);
                 project.slots.forEach(slot => { if (slot.new_references) slot.new_references = slot.new_references.filter(x => x.id !== tempId); });
                 renderGlobalRefs();
@@ -518,9 +519,44 @@ function renderRefsTable() {
     });
 }
 
+function wsParam() {
+  return currentWorkspace ? `?ws_id=${encodeURIComponent(currentWorkspace.id)}` : "";
+}
+
+function wsQuery(extra = "") {
+  const base = currentWorkspace ? `ws_id=${encodeURIComponent(currentWorkspace.id)}` : "";
+  return base ? (extra ? `?${base}&${extra}` : `?${base}`) : (extra ? `?${extra}` : "");
+}
+
+async function loadWorkspacesList() {
+  const list = await api("/api/workspaces");
+  const sel = $("#workspaceSelect");
+  if (!sel) return;
+  sel.innerHTML = "";
+  list.forEach(ws => {
+    const opt = document.createElement("option");
+    opt.value = ws.id;
+    opt.textContent = ws.name;
+    sel.appendChild(opt);
+  });
+  // שחזר workspace אחרון מ-localStorage
+  const savedId = localStorage.getItem("lastWorkspaceId");
+  if (savedId && list.find(w => w.id === savedId)) {
+    sel.value = savedId;
+  }
+  const chosen = list.find(w => w.id === sel.value) || list[0];
+  if (chosen) {
+    currentWorkspace = chosen;
+    sel.value = chosen.id;
+    localStorage.setItem("lastWorkspaceId", chosen.id);
+  }
+}
+
 async function init() {
   try {
-    const refsData = await api("/api/references");
+    await loadWorkspacesList();
+    bindWorkspaceEvents();
+    const refsData = await api(`/api/references${wsParam()}`);
     references = (refsData && refsData.references) || [];
     renderGlobalRefs();
     await loadMishnayotList();
@@ -528,7 +564,7 @@ async function init() {
 }
 
 async function loadMishnayotList(selectId = null) {
-  const list = await api("/api/mishnayot");
+  const list = await api(`/api/mishnayot${wsParam()}`);
   const sel = $("#mishnaSelect");
   if (!sel) return;
   sel.innerHTML = "";
@@ -548,7 +584,7 @@ async function loadProject() {
   if (!currentMishna) return;
   setStatus("טוען...");
   try {
-    project = await api(`/api/project/${encodeURIComponent(currentMishna)}`);
+    project = await api(`/api/project/${encodeURIComponent(currentMishna)}${wsParam()}`);
     if ($("#ipm")) $("#ipm").value = project.images_per_minute || 4;
     const audioContainer = $("#audioUploadContainer");
     if (!project.audio_path) {
@@ -1128,6 +1164,51 @@ $("#addPrevSceneRefBtn").onclick = () => {
     }
 };
 
+// ---------- Workspace UI ----------
+function bindWorkspaceEvents() {
+  const workspaceSelect = $("#workspaceSelect");
+  if (workspaceSelect) {
+    workspaceSelect.onchange = async () => {
+      const list = await api("/api/workspaces");
+      const chosen = list.find(w => w.id === workspaceSelect.value);
+      if (!chosen) return;
+      currentWorkspace = chosen;
+      localStorage.setItem("lastWorkspaceId", chosen.id);
+      currentMishna = null;
+      project = null;
+      allCues = [];
+      const refsData = await api(`/api/references${wsParam()}`);
+      references = (refsData && refsData.references) || [];
+      renderGlobalRefs();
+      await loadMishnayotList();
+    };
+  }
+
+  $("#newWorkspaceBtn").onclick = () => $("#newWorkspaceModal").classList.remove("hidden");
+  $("#wsCancel").onclick = () => $("#newWorkspaceModal").classList.add("hidden");
+  $("#wsSave").onclick = async () => {
+    const name = $("#wsName").value.trim();
+    if (!name) return alert("יש להזין שם למרחב העבודה");
+    const desc = $("#wsDesc").value.trim();
+    try {
+      const newWs = await api("/api/workspaces", { method: "POST", body: JSON.stringify({ name, description: desc }) });
+      currentWorkspace = { id: newWs.id, name: newWs.name };
+      localStorage.setItem("lastWorkspaceId", newWs.id);
+      await loadWorkspacesList();
+      $("#workspaceSelect").value = newWs.id;
+      currentMishna = null;
+      project = null;
+      references = [];
+      renderGlobalRefs();
+      await loadMishnayotList();
+      $("#newWorkspaceModal").classList.add("hidden");
+      $("#wsName").value = "";
+      $("#wsDesc").value = "";
+      setStatus(`מרחב "${name}" נוצר ✓`, "ok");
+    } catch(e) { setStatus("שגיאה ביצירת מרחב: " + e.message, "err"); }
+  };
+}
+
 $("#mishnaSelect").onchange = loadProject;
 
 $("#uploadAudioBtn").onclick = async () => {
@@ -1137,7 +1218,7 @@ $("#uploadAudioBtn").onclick = async () => {
     fd.append("file", fileInput.files[0]);
     setStatus("מעלה אודיו...");
     try {
-      const res = await fetch(`/api/project/${encodeURIComponent(currentMishna)}/audio`, { method: "POST", body: fd });
+      const res = await fetch(`/api/project/${encodeURIComponent(currentMishna)}/audio${wsParam()}`, { method: "POST", body: fd });
       const data = await res.json();
       project.audio_path = data.audio_path;
       $("#audioUploadContainer").classList.remove("missing-audio");
@@ -1154,7 +1235,7 @@ $("#uploadSrtBtn").onclick = async () => {
     fd.append("file", fileInput.files[0]);
     setStatus("מעלה SRT...");
     try {
-      const res = await fetch(`/api/project/${encodeURIComponent(currentMishna)}/srt`, { method: "POST", body: fd });
+      const res = await fetch(`/api/project/${encodeURIComponent(currentMishna)}/srt${wsParam()}`, { method: "POST", body: fd });
       const data = await res.json();
       project.srt_path = data.srt_path;
       $("#srtUploadContainer").classList.remove("missing-audio");
@@ -1169,7 +1250,7 @@ $("#dirCancel").onclick = () => $("#directorModal").classList.add("hidden");
 $("#dirSave").onclick = async () => {
   const txt = $("#directorInstructionsText").value.trim();
   try {
-    await api(`/api/project/${encodeURIComponent(currentMishna)}`, { method: "PUT", body: JSON.stringify({ director_instructions: txt }) });
+    await api(`/api/project/${encodeURIComponent(currentMishna)}${wsParam()}`, { method: "PUT", body: JSON.stringify({ director_instructions: txt }) });
     project.director_instructions = txt;
     $("#directorModal").classList.add("hidden");
     setStatus("הוראות נשמרו ✓", "ok");
@@ -1205,7 +1286,7 @@ $("#styleSave").onclick = async () => {
 
 $("#showPromptBtn").onclick = async () => {
   try {
-    const res = await api(`/api/project/${encodeURIComponent(currentMishna)}/prompt-preview`);
+    const res = await api(`/api/project/${encodeURIComponent(currentMishna)}/prompt-preview${wsParam()}`);
     $("#previewPromptText").value = res.prompt;
     $("#showPromptModal").classList.remove("hidden");
   } catch(e) { setStatus("שגיאה: " + e.message, "err"); }
@@ -1281,7 +1362,7 @@ $("#urSave").onclick = async () => {
   };
 
   try {
-    const res = await fetch("/api/references", { method: "POST", body: fd });
+    const res = await fetch(`/api/references${wsParam()}`, { method: "POST", body: fd });
     const newRef = await res.json();
     
     await api(`/api/references/${encodeURIComponent(newRef.id)}`, { method: "PUT", body: JSON.stringify(body) });
@@ -1300,7 +1381,7 @@ async function runProposeStream(customPrompt = null) {
   const ipm = parseFloat($("#ipm").value) || 4;
   const mode = $("#workMode").value;
   setStatus("Claude ממלא סצנות...");
-  const res = await fetch(`/api/project/${encodeURIComponent(currentMishna)}/propose-stream`, {
+  const res = await fetch(`/api/project/${encodeURIComponent(currentMishna)}/propose-stream${wsParam()}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ 
@@ -1363,7 +1444,7 @@ async function createPendingReferences() {
         })
       });
     }
-    const refsData = await api("/api/references");
+    const refsData = await api(`/api/references${wsParam()}`);
     references = (refsData && refsData.references) || [];
     renderGlobalRefs();
     project.slots.forEach(s => {
@@ -1405,7 +1486,7 @@ async function runBuild() {
   if (!project.audio_path) return alert("חובה להעלות אודיו!");
   $("#videoPanel").classList.remove("hidden");
   $("#buildLogs").innerHTML = "מתחיל הרכבה...\n";
-  const res = await fetch(`/api/project/${encodeURIComponent(currentMishna)}/build`, { method: "POST" });
+  const res = await fetch(`/api/project/${encodeURIComponent(currentMishna)}/build${wsParam()}`, { method: "POST" });
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   while (true) {

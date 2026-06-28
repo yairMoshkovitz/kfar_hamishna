@@ -14,6 +14,10 @@
     <h1>📚 מצב קומיקס</h1>
     <div class="controls">
       <a href="/" class="button secondary" title="חזרה למצב סטודיו">🎬 מצב סטודיו</a>
+      <div class="workspace-controls">
+        <select id="workspaceSelect" title="בחר מרחב עבודה"></select>
+        <button id="newWorkspaceBtn" class="secondary icon-btn" title="מרחב עבודה חדש">＋</button>
+      </div>
       <button id="newComicBtn" class="primary">קומיקס חדש</button>
       <select id="comicSelect" title="בחר קומיקס"></select>
       <button id="editComicBtn" class="secondary">ערוך תיאור / סגנון</button>
@@ -69,6 +73,19 @@
         </div>
         <div id="pagesContainer" class="pages-container"></div>
       </section>
+    </div>
+  </div>
+
+  <!-- מודאל מרחב עבודה חדש -->
+  <div id="newWorkspaceModal" class="modal hidden">
+    <div class="modal-box">
+      <h3>מרחב עבודה חדש</h3>
+      <label>שם המרחב: <input type="text" id="wsName" placeholder="למשל: ילדים, פסח, עבודה..."></label>
+      <label>תיאור (אופציונלי): <input type="text" id="wsDesc"></label>
+      <div class="modal-actions">
+        <button id="wsSave" class="primary">צור</button>
+        <button id="wsCancel">ביטול</button>
+      </div>
     </div>
   </div>
 

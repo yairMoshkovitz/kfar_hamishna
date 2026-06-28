@@ -10,6 +10,7 @@ const GRID_COLS = 12;
 const GRID_ROWS = 6;
 const SVG_NS = "http://www.w3.org/2000/svg";
 
+let currentWorkspace = null; // {id, name}
 let currentComic = null;   // mishna_id
 let project = null;
 let references = [];
@@ -71,7 +72,7 @@ function buildProposedRefCard(ref) {
       <span class="scene-status-badge">${existing ? "קיים באינדקס" : "מוצע"}</span>
     </div>
     <div class="panel-image-preview ${existing ? "has-image" : ""}">
-      ${existing ? `<img src="/api/reference-image/${encodeURIComponent(existing.id)}" alt="" />` : ""}
+      ${existing ? `<img src="/api/reference-image/${encodeURIComponent(existing.id)}${wsParam()}" alt="" />` : ""}
       <div class="no-image-placeholder"><span>🖼️</span></div>
     </div>
     <div class="scene-section">
@@ -90,7 +91,7 @@ function buildProposedRefCard(ref) {
   card.querySelector(".pr-generate").addEventListener("click", async () => {
     setStatus(`מייצר רפרנס: ${card.querySelector(".pr-name").value}...`);
     try {
-      const res = await api(`/api/project/${encodeURIComponent(currentComic)}/create-reference-image`, {
+      const res = await api(`/api/project/${encodeURIComponent(currentComic)}/create-reference-image${wsParam()}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -130,9 +131,43 @@ function categoryLabel(cat) {
   return { characters: "דמות חדשה", style: "מקום חדש", items: "חפץ חדש" }[cat] || "רפרנס חדש";
 }
 
+function wsParam() {
+  return currentWorkspace ? `?ws_id=${encodeURIComponent(currentWorkspace.id)}` : "";
+}
+
+function wsAmp() {
+  return currentWorkspace ? `&ws_id=${encodeURIComponent(currentWorkspace.id)}` : "";
+}
+
+function wsQuery(extra = "") {
+  const base = currentWorkspace ? `ws_id=${encodeURIComponent(currentWorkspace.id)}` : "";
+  return base ? (extra ? `?${base}&${extra}` : `?${base}`) : (extra ? `?${extra}` : "");
+}
+
+async function loadWorkspacesList() {
+  const list = await api("/api/workspaces");
+  const sel = $("#workspaceSelect");
+  if (!sel) return;
+  sel.innerHTML = "";
+  list.forEach(ws => {
+    const opt = document.createElement("option");
+    opt.value = ws.id;
+    opt.textContent = ws.name;
+    sel.appendChild(opt);
+  });
+  const savedId = localStorage.getItem("lastWorkspaceId");
+  if (savedId && list.find(w => w.id === savedId)) sel.value = savedId;
+  const chosen = list.find(w => w.id === sel.value) || list[0];
+  if (chosen) {
+    currentWorkspace = chosen;
+    sel.value = chosen.id;
+    localStorage.setItem("lastWorkspaceId", chosen.id);
+  }
+}
+
 // ---------- רשימת קומיקסים ----------
 async function loadComicsList() {
-  const all = await api("/api/mishnayot");
+  const all = await api(`/api/mishnayot${wsParam()}`);
   const comics = all.filter((m) => m.mode === "comics");
   const sel = $("#comicSelect");
   sel.innerHTML = "";
@@ -158,14 +193,14 @@ async function loadComicsList() {
 async function loadComic(id) {
   if (!id) { project = null; renderPanels(); return; }
   currentComic = id;
-  project = await api(`/api/project/${encodeURIComponent(id)}`);
+  project = await api(`/api/project/${encodeURIComponent(id)}${wsParam()}`);
   // שחזור עמודים משופרים ששמורים בשרת
   refinedPages = {};
   const slot = (project.slots || []).find((s) => s.id === COMIC_SLOT_ID);
   if (slot && slot.refined_pages) {
     for (const [idx, e] of Object.entries(slot.refined_pages)) {
       refinedPages[idx] = {
-        image: `/api/project/${encodeURIComponent(id)}/minute/${COMIC_SLOT_ID}/page/${idx}/image?t=${Date.now()}`,
+        image: `/api/project/${encodeURIComponent(id)}/minute/${COMIC_SLOT_ID}/page/${idx}/image?t=${Date.now()}${wsAmp()}`,
         withText: !!e.with_text,
       };
     }
@@ -175,7 +210,7 @@ async function loadComic(id) {
 
 // ---------- רפרנסים ----------
 async function loadReferences() {
-  const data = await api("/api/references");
+  const data = await api(`/api/references${wsParam()}`);
   references = data.references || [];
   renderGlobalRefs();
 }
@@ -188,7 +223,7 @@ function renderGlobalRefs() {
     const div = document.createElement("div");
     div.className = "ref-item";
     div.innerHTML = `
-      <img src="/api/reference-image/${encodeURIComponent(r.id)}" alt="" loading="lazy" />
+      <img src="/api/reference-image/${encodeURIComponent(r.id)}${wsParam()}" alt="" loading="lazy" />
       <span>${r.name || r.id}</span>`;
     container.appendChild(div);
   }
@@ -251,7 +286,7 @@ function renderPanelsInner() {
     const img = node.querySelector(".panel-image");
     if (panel.image_path) {
       preview.classList.add("has-image");
-      img.src = `/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${panel.scene_id}/image?t=${Date.now()}`;
+      img.src = `/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${panel.scene_id}/image?t=${Date.now()}${wsAmp()}`;
     }
     const bubblesEl = node.querySelector(".panel-bubbles");
     bubblesEl.style.fontSize = bubbleFontFor(panel.size); // גופן יחסי לרוחב הפאנל — זהה לעמוד
@@ -783,7 +818,7 @@ async function persistDialogue(card) {
   if (panel) panel.dialogue = dialogue;
   renderPreviewSidebar();
   try {
-    await api(`/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${sceneId}`, {
+    await api(`/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${sceneId}${wsParam()}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ dialogue }),
@@ -810,7 +845,7 @@ function panelPayload(card) {
 
 async function savePanel(sceneId, card) {
   setStatus("שומר פאנל...");
-  await api(`/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${sceneId}`, {
+  await api(`/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${sceneId}${wsParam()}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(panelPayload(card)),
@@ -830,7 +865,7 @@ async function savePanelLayout(sceneId, card) {
   clip.className = clip.className.replace(/shape-\S+/g, "").trim() + " shape-" + shape;
   renderPreviewSidebar();
   try {
-    await api(`/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${sceneId}`, {
+    await api(`/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${sceneId}${wsParam()}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ size, shape }),
@@ -843,14 +878,14 @@ async function savePanelLayout(sceneId, card) {
 
 async function generatePanel(sceneId, card) {
   // שומרים קודם כדי שהפרומפט המעודכן יישלח
-  await api(`/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${sceneId}`, {
+  await api(`/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${sceneId}${wsParam()}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(panelPayload(card)),
   });
   setStatus("יוצר תמונה לפאנל...");
   try {
-    await api(`/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${sceneId}/generate`, {
+    await api(`/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${sceneId}/generate${wsParam()}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({}),
@@ -863,14 +898,14 @@ async function generatePanel(sceneId, card) {
 }
 
 async function approvePanel(sceneId) {
-  await api(`/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${sceneId}/approve`, { method: "POST" });
+  await api(`/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${sceneId}/approve${wsParam()}`, { method: "POST" });
   await loadComic(currentComic);
   setStatus("אושר ✓", "ok");
 }
 
 async function deletePanel(sceneId) {
   if (!confirm("למחוק את הפאנל?")) return;
-  await api(`/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${sceneId}`, { method: "DELETE" });
+  await api(`/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${sceneId}${wsParam()}`, { method: "DELETE" });
   await loadComic(currentComic);
   setStatus("נמחק", "ok");
 }
@@ -879,7 +914,7 @@ async function deletePanel(sceneId) {
 async function proposePanels(customPrompt) {
   setStatus("Claude מפרק לפאנלים... (עשוי לקחת זמן)");
   try {
-    project = await api(`/api/comics/${encodeURIComponent(currentComic)}/propose`, {
+    project = await api(`/api/comics/${encodeURIComponent(currentComic)}/propose${wsParam()}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(customPrompt ? { custom_prompt: customPrompt } : {}),
@@ -894,16 +929,52 @@ async function proposePanels(customPrompt) {
 }
 
 async function generateAll() {
+  // שלב 1: ייצר רפרנסים חדשים שטרם נוצרו
+  const newRefs = getNewRefs();
+  for (const ref of newRefs) {
+    const existing = references.find((r) => r.name === ref.name);
+    if (existing) { removeNewRef(ref.id); continue; }
+    setStatus(`מייצר רפרנס: ${ref.name}...`);
+    try {
+      const res = await api(`/api/project/${encodeURIComponent(currentComic)}/create-reference-image${wsParam()}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: ref.name,
+          description: ref.description,
+          category: ref.category || "characters",
+          age: ref.age,
+          height: ref.height,
+        }),
+      });
+      references.push(res);
+      removeNewRef(ref.id);
+      setStatus(`רפרנס "${res.name}" נוצר ✓`, "ok");
+    } catch (e) {
+      setStatus(`שגיאה ביצירת רפרנס "${ref.name}": ${e.message}`, "err");
+    }
+  }
+
+  // שלב 2: ייצר תמונות לפאנלים
   const panels = getPanels();
   for (const p of panels) {
     if (p.image_path) continue;
     setStatus(`יוצר תמונה לפאנל ${p.panel_number}...`);
     try {
-      await api(`/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${p.scene_id}/generate`, {
+      await api(`/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${p.scene_id}/generate${wsParam()}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });
+      // הצג את התמונה מיד אחרי שנוצרה
+      const card = document.querySelector(`[data-scene-id="${p.scene_id}"]`);
+      if (card) {
+        const preview = card.querySelector(".panel-image-preview");
+        const img = card.querySelector(".panel-image-preview img") || document.createElement("img");
+        img.src = `/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${p.scene_id}/image?t=${Date.now()}${wsAmp()}`;
+        if (!preview.contains(img)) preview.prepend(img);
+        preview.classList.add("has-image");
+      }
     } catch (e) {
       setStatus(`שגיאה בפאנל ${p.panel_number}: ${e.message}`, "err");
     }
@@ -926,7 +997,7 @@ function openRefModal(sceneId) {
     const div = document.createElement("div");
     div.className = "ref-grid-item" + (isSel ? " selected" : "");
     div.innerHTML = `
-      <img src="/api/reference-image/${encodeURIComponent(r.id)}" alt="" />
+      <img src="/api/reference-image/${encodeURIComponent(r.id)}${wsParam()}" alt="" />
       <span>${r.name || r.id}</span>`;
     div.dataset.value = value;
     div.addEventListener("click", () => div.classList.toggle("selected"));
@@ -937,7 +1008,7 @@ function openRefModal(sceneId) {
 
 async function saveRefModal() {
   const selected = $$(".ref-grid-item.selected", $("#refGrid")).map((d) => d.dataset.value);
-  await api(`/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${refModalSceneId}`, {
+  await api(`/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${refModalSceneId}${wsParam()}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ references: selected }),
@@ -948,6 +1019,47 @@ async function saveRefModal() {
 
 // ---------- אירועים גלובליים ----------
 function bindEvents() {
+  // Workspace events
+  const workspaceSelect = $("#workspaceSelect");
+  if (workspaceSelect) {
+    workspaceSelect.addEventListener("change", async () => {
+      const list = await api("/api/workspaces");
+      const chosen = list.find(w => w.id === workspaceSelect.value);
+      if (!chosen) return;
+      currentWorkspace = chosen;
+      localStorage.setItem("lastWorkspaceId", chosen.id);
+      currentComic = null;
+      project = null;
+      await loadReferences();
+      await loadComicsList();
+      if (currentComic) await loadComic(currentComic);
+    });
+  }
+  const newWsBtn = $("#newWorkspaceBtn");
+  if (newWsBtn) newWsBtn.addEventListener("click", () => $("#newWorkspaceModal").classList.remove("hidden"));
+  const wsCancel = $("#wsCancel");
+  if (wsCancel) wsCancel.addEventListener("click", () => $("#newWorkspaceModal").classList.add("hidden"));
+  const wsSave = $("#wsSave");
+  if (wsSave) wsSave.addEventListener("click", async () => {
+    const name = $("#wsName").value.trim();
+    if (!name) return alert("יש להזין שם למרחב העבודה");
+    const desc = $("#wsDesc").value.trim();
+    try {
+      const newWs = await api("/api/workspaces", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ name, description: desc }) });
+      currentWorkspace = { id: newWs.id, name: newWs.name };
+      localStorage.setItem("lastWorkspaceId", newWs.id);
+      await loadWorkspacesList();
+      $("#workspaceSelect").value = newWs.id;
+      currentComic = null; project = null; references = [];
+      renderGlobalRefs();
+      await loadComicsList();
+      renderPanels();
+      $("#newWorkspaceModal").classList.add("hidden");
+      $("#wsName").value = ""; $("#wsDesc").value = "";
+      setStatus(`מרחב "${name}" נוצר ✓`, "ok");
+    } catch(e) { setStatus("שגיאה: " + e.message, "err"); }
+  });
+
   $("#comicSelect").addEventListener("change", (e) => loadComic(e.target.value));
 
   // קומיקס חדש
@@ -962,7 +1074,7 @@ function bindEvents() {
     };
     if (!body.comic_id || !body.description) { alert("נא למלא מזהה ותיאור"); return; }
     try {
-      const proj = await api("/api/comics/create", {
+      const proj = await api(`/api/comics/create${wsParam()}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -989,7 +1101,7 @@ function bindEvents() {
   });
   $("#ecCancel").addEventListener("click", () => $("#editComicModal").classList.add("hidden"));
   $("#ecSave").addEventListener("click", async () => {
-    project = await api(`/api/comics/${encodeURIComponent(currentComic)}`, {
+    project = await api(`/api/comics/${encodeURIComponent(currentComic)}${wsParam()}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -1014,7 +1126,7 @@ function bindEvents() {
   // צפייה בפרומפט
   $("#showPromptBtn").addEventListener("click", async () => {
     if (!currentComic) return;
-    const data = await api(`/api/comics/${encodeURIComponent(currentComic)}/prompt-preview`);
+    const data = await api(`/api/comics/${encodeURIComponent(currentComic)}/prompt-preview${wsParam()}`);
     $("#previewPromptText").value = data.prompt;
     $("#showPromptModal").classList.remove("hidden");
   });
@@ -1145,7 +1257,7 @@ function buildPagesInto(container, emptyMsg) {
       if (panel.image_path) {
         const img = document.createElement("img");
         img.crossOrigin = "anonymous";
-        img.src = `/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${panel.scene_id}/image?t=${Date.now()}`;
+        img.src = `/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/scene/${panel.scene_id}/image?t=${Date.now()}${wsAmp()}`;
         clip.appendChild(img);
       } else {
         const ph = document.createElement("div");
@@ -1307,7 +1419,7 @@ async function refinePage(pageEl, btn, pageIdx) {
   pageEl.classList.remove("hide-bubble-text");
   setExport("שולח ל-Gemini לשיפור... (עשוי לקחת רגע)");
   try {
-    const res = await api(`/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/page/refine`, {
+    const res = await api(`/api/project/${encodeURIComponent(currentComic)}/minute/${COMIC_SLOT_ID}/page/refine${wsParam()}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ image: dataUrl, prompt, page_index: pageIdx, with_text: withText }),
@@ -1361,6 +1473,7 @@ function ensureRefineToggle(pageEl, pageIdx) {
 }
 
 async function init() {
+  await loadWorkspacesList();
   bindEvents();
   await loadReferences();
   await loadComicsList();

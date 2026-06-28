@@ -14,6 +14,10 @@
     <h1>🎬 כפר המשנה — Studio V2</h1>
     <div class="controls">
       <a href="/comics.html" class="button secondary" title="עבור למצב קומיקס">📚 מצב קומיקס</a>
+      <div class="workspace-controls">
+        <select id="workspaceSelect" title="בחר מרחב עבודה"></select>
+        <button id="newWorkspaceBtn" class="secondary icon-btn" title="מרחב עבודה חדש">＋</button>
+      </div>
       <button id="newProjectBtn" class="primary">פרויקט חדש</button>
       <select id="mishnaSelect" title="בחר משנה"></select>
       <label>תמונות לדקה
@@ -70,6 +74,19 @@
       </nav>
 
       <main id="timeline" class="timeline"></main>
+    </div>
+  </div>
+
+  <!-- מודאל מרחב עבודה חדש -->
+  <div id="newWorkspaceModal" class="modal hidden">
+    <div class="modal-box">
+      <h3>מרחב עבודה חדש</h3>
+      <label>שם המרחב: <input type="text" id="wsName" placeholder="למשל: ילדים, פסח, עבודה..."></label>
+      <label>תיאור (אופציונלי): <input type="text" id="wsDesc"></label>
+      <div class="modal-actions">
+        <button id="wsSave" class="primary">צור</button>
+        <button id="wsCancel">ביטול</button>
+      </div>
     </div>
   </div>
 

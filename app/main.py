@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 # טעינת .env לפני ייבוא מודולים שקוראים מפתחות
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -192,7 +192,7 @@ def _build_labeled_refs(project: dict, scene: dict, mishna_id: str, minute_id: s
         if r == "scene:previous":
             prev = _get_previous_scene(project, minute_id, scene_id)
             if prev and prev.get("image_path"):
-                p = project_store.studio_dir(mishna_id) / prev["image_path"]
+                p = project_store.studio_dir(mishna_id, project.get("ws_id", project_store.DEFAULT_WORKSPACE_ID)) / prev["image_path"]
                 if p.exists():
                     labeled_refs.append({"path": p, "label": "הסצנה הקודמת (לשמירת רצף ויזואלי וסגנון)"})
             continue
@@ -224,8 +224,8 @@ def _build_labeled_refs(project: dict, scene: dict, mishna_id: str, minute_id: s
 
 
 @app.post("/api/project/{mishna_id}/minute/{minute_id}/scene/{scene_id}/generate")
-def generate_scene(mishna_id: str, minute_id: str, scene_id: str, body: GenerateWithPromptBody | None = None):
-    project = project_store.load_or_init_project(mishna_id)
+def generate_scene(mishna_id: str, minute_id: str, scene_id: str, body: GenerateWithPromptBody | None = None, ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
+    project = project_store.load_or_init_project(mishna_id, ws_id)
     minute_slot = project_store.get_slot(project, minute_id)
     if minute_slot is None:
         raise HTTPException(status_code=404, detail="משבצת דקה לא נמצאה")
@@ -236,7 +236,7 @@ def generate_scene(mishna_id: str, minute_id: str, scene_id: str, body: Generate
 
     labeled_refs = _build_labeled_refs(project, scene, mishna_id, minute_id, scene_id)
 
-    out = project_store.studio_dir(mishna_id) / f"{minute_id}_{scene_id}.png"
+    out = project_store.studio_dir(mishna_id, project.get("ws_id", project_store.DEFAULT_WORKSPACE_ID)) / f"{minute_id}_{scene_id}.png"
     try:
         if body and body.is_full_prompt and body.prompt:
             # שימוש בפרומפט מלא כפי שהמשתמש ערך, מבלי להרכיב אותו מחדש
@@ -272,8 +272,8 @@ def generate_scene(mishna_id: str, minute_id: str, scene_id: str, body: Generate
     project_store.save_project(project)
     return scene
 @app.put("/api/project/{mishna_id}/minute/{minute_id}/scene/{scene_id}")
-def update_scene(mishna_id: str, minute_id: str, scene_id: str, body: SlotUpdate):
-    project = project_store.load_or_init_project(mishna_id)
+def update_scene(mishna_id: str, minute_id: str, scene_id: str, body: SlotUpdate, ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
+    project = project_store.load_or_init_project(mishna_id, ws_id)
     minute_slot = project_store.get_slot(project, minute_id)
     if minute_slot is None:
         raise HTTPException(status_code=404, detail="משבצת דקה לא נמצאה")
@@ -327,7 +327,7 @@ class PageRefine(BaseModel):
 
 
 @app.post("/api/project/{mishna_id}/minute/{minute_id}/page/refine")
-def refine_page(mishna_id: str, minute_id: str, body: PageRefine):
+def refine_page(mishna_id: str, minute_id: str, body: PageRefine, ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
     """שולח תמונת עמוד קומיקס ל-Gemini לשיפור, שומר את הגרסה האחרונה לעמוד, ומחזיר אותה."""
     import base64
     raw = body.image.split(",", 1)[-1] if "," in body.image else body.image
@@ -342,11 +342,11 @@ def refine_page(mishna_id: str, minute_id: str, body: PageRefine):
         raise HTTPException(status_code=502, detail=f"שגיאת Gemini: {e}")
 
     # שמירת הגרסה האחרונה של העמוד המשופר + תיעוד במשבצת
-    project = project_store.load_or_init_project(mishna_id)
+    project = project_store.load_or_init_project(mishna_id, ws_id)
     slot = project_store.get_slot(project, minute_id)
     if slot is not None:
         filename = f"{minute_id}_refined_page_{body.page_index}.png"
-        out_path = project_store.studio_dir(mishna_id) / filename
+        out_path = project_store.studio_dir(mishna_id, project.get("ws_id", project_store.DEFAULT_WORKSPACE_ID)) / filename
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_bytes(out)
         slot.setdefault("refined_pages", {})[str(body.page_index)] = {
@@ -359,27 +359,30 @@ def refine_page(mishna_id: str, minute_id: str, body: PageRefine):
 
 
 @app.get("/api/project/{mishna_id}/minute/{minute_id}/page/{page_index}/image")
-def get_refined_page_image(mishna_id: str, minute_id: str, page_index: int):
+def get_refined_page_image(mishna_id: str, minute_id: str, page_index: int, ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
     """מגיש את תמונת העמוד המשופר האחרונה ששמורה לעמוד."""
-    project = project_store.load_or_init_project(mishna_id)
+    try:
+        project = project_store.load_or_init_project(mishna_id, ws_id)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     slot = project_store.get_slot(project, minute_id)
     if slot is None:
         raise HTTPException(status_code=404, detail="משבצת דקה לא נמצאה")
     entry = (slot.get("refined_pages") or {}).get(str(page_index))
     if not entry:
         raise HTTPException(status_code=404, detail="אין עמוד משופר")
-    p = project_store.studio_dir(mishna_id) / entry["file"]
+    p = project_store.studio_dir(mishna_id, project.get("ws_id", project_store.DEFAULT_WORKSPACE_ID)) / entry["file"]
     if not p.exists():
         raise HTTPException(status_code=404, detail="קובץ העמוד המשופר לא נמצא")
     return FileResponse(str(p))
 
 
 @app.post("/api/project/{mishna_id}/minute/{minute_id}/scene/{scene_id}/add-{position}")
-def add_scene(mishna_id: str, minute_id: str, scene_id: str, position: str):
+def add_scene(mishna_id: str, minute_id: str, scene_id: str, position: str, ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
     if position not in ("before", "after"):
         raise HTTPException(status_code=400, detail="Position must be 'before' or 'after'")
         
-    project = project_store.load_or_init_project(mishna_id)
+    project = project_store.load_or_init_project(mishna_id, ws_id)
     minute_slot = project_store.get_slot(project, minute_id)
     if minute_slot is None:
         raise HTTPException(status_code=404, detail="משבצת דקה לא נמצאה")
@@ -449,18 +452,52 @@ def _abs(rel_path: str) -> Path:
 from fastapi import UploadFile, Form
 
 # ---------- API: גילוי וטעינה ----------
+# ---------- API: Workspaces ----------
+class WorkspaceBody(BaseModel):
+    name: str
+    description: str = ""
+
+
+@app.get("/api/workspaces")
+def list_workspaces():
+    return project_store.list_workspaces()
+
+
+@app.post("/api/workspaces")
+def create_workspace(body: WorkspaceBody):
+    return project_store.create_workspace(body.name, body.description)
+
+
+@app.put("/api/workspaces/{ws_id}")
+def update_workspace(ws_id: str, body: WorkspaceBody):
+    try:
+        return project_store.update_workspace(ws_id, name=body.name, description=body.description)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.delete("/api/workspaces/{ws_id}")
+def delete_workspace(ws_id: str):
+    try:
+        project_store.delete_workspace(ws_id)
+        return {"status": "ok"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @app.get("/api/mishnayot")
-def list_mishnayot():
-    return project_store.discover_mishnayot()
+def list_mishnayot(ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
+    return project_store.discover_mishnayot(ws_id)
 
 
 @app.get("/api/references")
-def get_references():
-    return project_store.load_references()
+def get_references(ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
+    return project_store.load_references(ws_id)
 
 @app.put("/api/references/{ref_id}")
-def update_reference(ref_id: str, body: ReferenceUpdate):
-    refs = project_store.load_references()
+def update_reference(ref_id: str, body: ReferenceUpdate,
+                     ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
+    refs = project_store.load_references(ws_id)
     found = False
     for r in refs.get("references", []):
         if r["id"] == ref_id:
@@ -470,9 +507,7 @@ def update_reference(ref_id: str, body: ReferenceUpdate):
             break
     if not found:
         raise HTTPException(status_code=404, detail="רפרנס לא נמצא")
-    
-    with open(project_store.REFERENCES_INDEX, "w", encoding="utf-8") as f:
-        json.dump(refs, f, ensure_ascii=False, indent=2)
+    project_store._save_references(ws_id, refs)
     return {"status": "ok"}
 
 @app.post("/api/references")
@@ -480,82 +515,78 @@ async def add_reference(
     file: UploadFile,
     name: str = Form(...),
     description: str = Form(...),
-    category: str = Form(...)
+    category: str = Form(...),
+    ws_id: str = Form(default=project_store.DEFAULT_WORKSPACE_ID),
 ):
     try:
         content = await file.read()
-        return project_store.add_reference(file.filename, content, name, description, category)
+        return project_store.add_reference(file.filename, content, name, description, category, ws_id=ws_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/references/{ref_id}/image")
-async def upload_reference_image(ref_id: str, file: UploadFile):
-    refs = project_store.load_references()
+async def upload_reference_image(ref_id: str, file: UploadFile,
+                                  ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
+    refs = project_store.load_references(ws_id)
     found_ref = None
     for r in refs.get("references", []):
         if r["id"] == ref_id:
             found_ref = r
             break
-    
+
     if not found_ref:
         raise HTTPException(status_code=404, detail="Reference not found")
-        
+
     try:
         content = await file.read()
-        base = project_store.ROOT / refs.get("base_dir", "data/images")
-        
-        # Save new image and move old to versions if not already there
+        base = project_store.ROOT / refs.get("base_dir", f"data/workspaces/{ws_id}/images")
+
         import uuid
         import datetime
-        
+
         new_filename = f"ref_{uuid.uuid4().hex[:8]}_{file.filename}"
         with open(base / new_filename, "wb") as f:
             f.write(content)
-            
-        # Add current to versions
+
         if "versions" not in found_ref:
             found_ref["versions"] = []
-            
+
         found_ref["versions"].append({
             "file": found_ref["file"],
             "timestamp": datetime.datetime.now().isoformat()
         })
-        
+
         found_ref["file"] = new_filename
-        
-        with open(project_store.REFERENCES_INDEX, "w", encoding="utf-8") as f:
-            json.dump(refs, f, ensure_ascii=False, indent=2)
-            
+        project_store._save_references(ws_id, refs)
         return found_ref
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/references/{ref_id}/v2")
-async def generate_reference_v2(ref_id: str, mishna_id: str):
-    refs = project_store.load_references()
+async def generate_reference_v2(ref_id: str, mishna_id: str,
+                                 ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
+    refs = project_store.load_references(ws_id)
     found_ref = None
     for r in refs.get("references", []):
         if r["id"] == ref_id:
             found_ref = r
             break
-    
+
     if not found_ref:
         raise HTTPException(status_code=404, detail="Reference not found")
-        
-    project = project_store.load_or_init_project(mishna_id)
+
+    project = project_store.load_or_init_project(mishna_id, ws_id)
     style_desc = project.get("style_description", "")
     style_refs = project.get("style_references", [])
-    
-    # Use current image as a reference for V2
-    current_ref_path = project_store.reference_file_path(ref_id)
+
+    current_ref_path = project_store.reference_file_path(ref_id, project=project)
     ref_paths = [current_ref_path] if current_ref_path else []
-    
-    # Add style references
+
     for s_id in style_refs:
-        p = project_store.reference_file_path(s_id)
+        p = project_store.reference_file_path(s_id, project=project)
         if p:
             ref_paths.append(p)
-            
+
     full_prompt = found_ref["description"]
     if style_desc:
         full_prompt = f"Style: {style_desc}\n\nSubject: {found_ref['description']}. This is a second version (V2) of the character, keep the same features but in a slightly different pose or lighting."
@@ -563,47 +594,45 @@ async def generate_reference_v2(ref_id: str, mishna_id: str):
     import uuid
     import datetime
     filename = f"ref_v2_{uuid.uuid4().hex[:8]}.png"
-    out = project_store.ROOT / "data" / "images" / filename
-    
+    out = project_store._ws_images_dir(ws_id) / filename
+
     try:
         gemini_images.generate_image(full_prompt, ref_paths, out)
-        
-        # Add current to versions
+
         if "versions" not in found_ref:
             found_ref["versions"] = []
-            
+
         found_ref["versions"].append({
             "file": found_ref["file"],
             "timestamp": datetime.datetime.now().isoformat()
         })
-        
+
         found_ref["file"] = filename
-        
-        with open(project_store.REFERENCES_INDEX, "w", encoding="utf-8") as f:
-            json.dump(refs, f, ensure_ascii=False, indent=2)
-            
+        project_store._save_references(ws_id, refs)
         return found_ref
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Gemini error: {e}")
 
 
 @app.post("/api/project/create")
-def create_project(body: CreateProjectBody):
+def create_project(body: CreateProjectBody,
+                   ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
     try:
         return project_store.create_custom_project(
-            body.mishna_id, body.plot, body.srt_text, body.images_per_minute
+            body.mishna_id, body.plot, body.srt_text, body.images_per_minute, ws_id=ws_id
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.get("/api/project/{mishna_id}/prompt-preview")
-def get_prompt_preview(mishna_id: str):
-    project = project_store.load_or_init_project(mishna_id)
+def get_prompt_preview(mishna_id: str,
+                       ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
+    project = project_store.load_or_init_project(mishna_id, ws_id)
     if not project.get("srt_path"):
         raise HTTPException(status_code=400, detail="אין קובץ SRT למשנה זו")
-        
-    refs = project_store.load_references()
+
+    refs = project_store.load_references(project.get("ws_id", ws_id))
     plot_path = project.get("plot_path")
     
     try:
@@ -622,9 +651,10 @@ def get_prompt_preview(mishna_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/project/{mishna_id}")
-def get_project(mishna_id: str):
+def get_project(mishna_id: str,
+                ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
     try:
-        return project_store.load_or_init_project(mishna_id)
+        return project_store.load_or_init_project(mishna_id, ws_id)
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -649,7 +679,8 @@ class ComicsProposeBody(BaseModel):
 
 
 @app.post("/api/comics/create")
-def create_comics(body: CreateComicsBody):
+def create_comics(body: CreateComicsBody,
+                  ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
     try:
         return project_store.create_comics_project(
             project_store._slugify(body.comic_id),
@@ -658,6 +689,7 @@ def create_comics(body: CreateComicsBody):
             body.panels_target,
             body.style_description or "",
             body.pages_target,
+            ws_id=ws_id,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -666,9 +698,9 @@ def create_comics(body: CreateComicsBody):
 
 
 @app.put("/api/comics/{mishna_id}")
-def update_comics(mishna_id: str, body: ComicsProposeBody):
+def update_comics(mishna_id: str, body: ComicsProposeBody, ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
     """שומר תיאור/סגנון/הוראות במאי של קומיקס ללא הרצת Claude."""
-    project = project_store.load_or_init_project(mishna_id)
+    project = project_store.load_or_init_project(mishna_id, ws_id)
     if body.description is not None:
         project["description"] = body.description
     if body.panels_target is not None:
@@ -684,9 +716,9 @@ def update_comics(mishna_id: str, body: ComicsProposeBody):
 
 
 @app.get("/api/comics/{mishna_id}/prompt-preview")
-def comics_prompt_preview(mishna_id: str):
-    project = project_store.load_or_init_project(mishna_id)
-    refs = project_store.load_references()
+def comics_prompt_preview(mishna_id: str, ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
+    project = project_store.load_or_init_project(mishna_id, ws_id)
+    refs = project_store.load_references(project.get("ws_id", project_store.DEFAULT_WORKSPACE_ID))
     prompt_text = comics_brain.preview_prompt(
         description=project.get("description", ""),
         references=refs,
@@ -699,9 +731,9 @@ def comics_prompt_preview(mishna_id: str):
 
 
 @app.post("/api/comics/{mishna_id}/propose")
-def comics_propose(mishna_id: str, body: ComicsProposeBody):
+def comics_propose(mishna_id: str, body: ComicsProposeBody, ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
     """מציע פאנלים לקומיקס באמצעות Claude ושומר אותם בפרויקט."""
-    project = project_store.load_or_init_project(mishna_id)
+    project = project_store.load_or_init_project(mishna_id, ws_id)
 
     if body.description is not None:
         project["description"] = body.description
@@ -714,7 +746,7 @@ def comics_propose(mishna_id: str, body: ComicsProposeBody):
     if body.style_description is not None:
         project["style_description"] = body.style_description
 
-    refs = project_store.load_references()
+    refs = project_store.load_references(project.get("ws_id", project_store.DEFAULT_WORKSPACE_ID))
     try:
         result = comics_brain.propose_panels(
             description=project.get("description", ""),
@@ -741,16 +773,16 @@ def comics_propose(mishna_id: str, body: ComicsProposeBody):
 
 # ---------- API: הצעת Claude ----------
 @app.post("/api/project/{mishna_id}/propose-stream")
-def propose_stream(mishna_id: str, body: ProposeBody):
+def propose_stream(mishna_id: str, body: ProposeBody, ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
     """מציע משבצות לכל הפרויקט."""
-    project = project_store.load_or_init_project(mishna_id)
+    project = project_store.load_or_init_project(mishna_id, ws_id)
     if not project.get("srt_path"):
         raise HTTPException(status_code=400, detail="אין קובץ SRT למשנה זו")
     if body.images_per_minute is not None:
         project["images_per_minute"] = body.images_per_minute
         project_store.save_project(project)
 
-    refs = project_store.load_references()
+    refs = project_store.load_references(project.get("ws_id", project_store.DEFAULT_WORKSPACE_ID))
     
     try:
         plot_path = project.get("plot_path")
@@ -781,8 +813,8 @@ def propose_stream(mishna_id: str, body: ProposeBody):
 
 
 @app.post("/api/project/{mishna_id}/minute/{minute_id}/scene/{scene_id}/repropose")
-def repropose_scene(mishna_id: str, minute_id: str, scene_id: str, body: RepromptBody):
-    project = project_store.load_or_init_project(mishna_id)
+def repropose_scene(mishna_id: str, minute_id: str, scene_id: str, body: RepromptBody, ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
+    project = project_store.load_or_init_project(mishna_id, ws_id)
     minute_slot = project_store.get_slot(project, minute_id)
     if minute_slot is None:
         raise HTTPException(status_code=404, detail="משבצת דקה לא נמצאה")
@@ -791,7 +823,7 @@ def repropose_scene(mishna_id: str, minute_id: str, scene_id: str, body: Repromp
     if scene is None:
         raise HTTPException(status_code=404, detail="סצנה לא נמצאה")
         
-    refs = project_store.load_references()
+    refs = project_store.load_references(project.get("ws_id", project_store.DEFAULT_WORKSPACE_ID))
     try:
         scene_context = {
             "start": scene.get("start"),
@@ -813,8 +845,8 @@ def repropose_scene(mishna_id: str, minute_id: str, scene_id: str, body: Repromp
 
 # ---------- API: עריכת במאי ----------
 @app.put("/api/project/{mishna_id}/slot/{slot_id}")
-def update_slot(mishna_id: str, slot_id: str, body: SlotUpdate):
-    project = project_store.load_or_init_project(mishna_id)
+def update_slot(mishna_id: str, slot_id: str, body: SlotUpdate, ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
+    project = project_store.load_or_init_project(mishna_id, ws_id)
     slot = project_store.get_slot(project, slot_id)
     if slot is None:
         raise HTTPException(status_code=404, detail="משבצת לא נמצאה")
@@ -827,8 +859,8 @@ def update_slot(mishna_id: str, slot_id: str, body: SlotUpdate):
 
 
 @app.put("/api/project/{mishna_id}")
-def update_project(mishna_id: str, body: ProposeBody):
-    project = project_store.load_or_init_project(mishna_id)
+def update_project(mishna_id: str, body: ProposeBody, ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
+    project = project_store.load_or_init_project(mishna_id, ws_id)
     if body.images_per_minute is not None:
         project["images_per_minute"] = body.images_per_minute
     if body.director_instructions is not None:
@@ -845,8 +877,8 @@ def update_project(mishna_id: str, body: ProposeBody):
 
 
 @app.post("/api/project/{mishna_id}/minute/{minute_id}/scene/{scene_id}/approve")
-def approve_scene(mishna_id: str, minute_id: str, scene_id: str):
-    project = project_store.load_or_init_project(mishna_id)
+def approve_scene(mishna_id: str, minute_id: str, scene_id: str, ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
+    project = project_store.load_or_init_project(mishna_id, ws_id)
     minute_slot = project_store.get_slot(project, minute_id)
     if minute_slot is None:
         raise HTTPException(status_code=404, detail="משבצת דקה לא נמצאה")
@@ -861,8 +893,8 @@ def approve_scene(mishna_id: str, minute_id: str, scene_id: str):
 
 
 @app.get("/api/project/{mishna_id}/minute/{minute_id}/scene/{scene_id}/gemini-prompt")
-def get_scene_gemini_prompt(mishna_id: str, minute_id: str, scene_id: str):
-    project = project_store.load_or_init_project(mishna_id)
+def get_scene_gemini_prompt(mishna_id: str, minute_id: str, scene_id: str, ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
+    project = project_store.load_or_init_project(mishna_id, ws_id)
     minute_slot = project_store.get_slot(project, minute_id)
     if minute_slot is None:
         raise HTTPException(status_code=404, detail="משבצת דקה לא נמצאה")
@@ -878,8 +910,8 @@ def get_scene_gemini_prompt(mishna_id: str, minute_id: str, scene_id: str):
 
 
 @app.delete("/api/project/{mishna_id}/minute/{minute_id}/scene/{scene_id}")
-def delete_scene(mishna_id: str, minute_id: str, scene_id: str):
-    project = project_store.load_or_init_project(mishna_id)
+def delete_scene(mishna_id: str, minute_id: str, scene_id: str, ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
+    project = project_store.load_or_init_project(mishna_id, ws_id)
     minute_slot = project_store.get_slot(project, minute_id)
     if minute_slot is None:
         raise HTTPException(status_code=404, detail="משבצת דקה לא נמצאה")
@@ -917,8 +949,8 @@ def delete_scene(mishna_id: str, minute_id: str, scene_id: str):
 
 # ---------- API: מדיה ----------
 @app.get("/api/project/{mishna_id}/audio")
-def get_audio(mishna_id: str):
-    project = project_store.load_or_init_project(mishna_id)
+def get_audio(mishna_id: str, ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
+    project = project_store.load_or_init_project(mishna_id, ws_id)
     if not project.get("audio_path"):
         raise HTTPException(status_code=404, detail="קובץ אודיו לא נמצא")
     audio = _abs(project["audio_path"])
@@ -927,9 +959,9 @@ def get_audio(mishna_id: str):
     return FileResponse(str(audio), media_type="audio/mpeg")
 
 @app.post("/api/project/{mishna_id}/audio")
-async def upload_audio(mishna_id: str, file: UploadFile):
-    project = project_store.load_or_init_project(mishna_id)
-    d = project_store.studio_dir(mishna_id)
+async def upload_audio(mishna_id: str, file: UploadFile, ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
+    project = project_store.load_or_init_project(mishna_id, ws_id)
+    d = project_store.studio_dir(mishna_id, project.get("ws_id", project_store.DEFAULT_WORKSPACE_ID))
     audio_path = d / file.filename
     content = await file.read()
     with open(audio_path, "wb") as f:
@@ -941,9 +973,9 @@ async def upload_audio(mishna_id: str, file: UploadFile):
 
 
 @app.post("/api/project/{mishna_id}/srt")
-async def upload_srt(mishna_id: str, file: UploadFile):
-    project = project_store.load_or_init_project(mishna_id)
-    d = project_store.studio_dir(mishna_id)
+async def upload_srt(mishna_id: str, file: UploadFile, ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
+    project = project_store.load_or_init_project(mishna_id, ws_id)
+    d = project_store.studio_dir(mishna_id, project.get("ws_id", project_store.DEFAULT_WORKSPACE_ID))
     srt_path = d / file.filename
     content = await file.read()
     with open(srt_path, "wb") as f:
@@ -964,8 +996,8 @@ async def upload_srt(mishna_id: str, file: UploadFile):
 
 
 @app.get("/api/project/{mishna_id}/srt-content")
-def get_srt_content(mishna_id: str):
-    project = project_store.load_or_init_project(mishna_id)
+def get_srt_content(mishna_id: str, ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
+    project = project_store.load_or_init_project(mishna_id, ws_id)
     srt_path = project.get("srt_path")
     if not srt_path:
         raise HTTPException(status_code=404, detail="No SRT file for this project")
@@ -979,8 +1011,11 @@ def get_srt_content(mishna_id: str):
 
 
 @app.get("/api/project/{mishna_id}/minute/{minute_id}/scene/{scene_id}/image")
-def get_scene_image(mishna_id: str, minute_id: str, scene_id: str):
-    project = project_store.load_or_init_project(mishna_id)
+def get_scene_image(mishna_id: str, minute_id: str, scene_id: str, ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
+    try:
+        project = project_store.load_or_init_project(mishna_id, ws_id)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     minute_slot = project_store.get_slot(project, minute_id)
     if minute_slot is None:
         raise HTTPException(status_code=404, detail="משבצת דקה לא נמצאה")
@@ -989,54 +1024,50 @@ def get_scene_image(mishna_id: str, minute_id: str, scene_id: str):
     if scene is None or not scene.get("image_path"):
         raise HTTPException(status_code=404, detail="אין תמונה לסצנה")
     
-    img = project_store.studio_dir(mishna_id) / Path(scene["image_path"]).name
+    img = project_store.studio_dir(mishna_id, project.get("ws_id", project_store.DEFAULT_WORKSPACE_ID)) / Path(scene["image_path"]).name
     if not img.exists():
         raise HTTPException(status_code=404, detail="קובץ התמונה לא נמצא")
     return FileResponse(str(img))
 
 
 @app.post("/api/project/{mishna_id}/create-reference-image")
-async def create_reference_image(mishna_id: str, body: ReferenceUpdate):
+async def create_reference_image(mishna_id: str, body: ReferenceUpdate,
+                                  ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
     if not body.description:
         raise HTTPException(status_code=400, detail="Description is required")
-    
-    project = project_store.load_or_init_project(mishna_id)
+
+    project = project_store.load_or_init_project(mishna_id, ws_id)
+    ws_id = project.get("ws_id", ws_id)
     style_desc = project.get("style_description", "")
     style_refs = project.get("style_references", [])
-    
-    # בניית פרומפט משולב עם הסגנון
+
     full_prompt = body.description
     if style_desc:
         full_prompt = f"Style: {style_desc}\n\nSubject: {body.description}"
-    
-    # איסוף נתיבי תמונות האווירה
+
     ref_paths = []
     for r_id in style_refs:
-        p = project_store.reference_file_path(r_id)
+        p = project_store.reference_file_path(r_id, project=project)
         if p:
             ref_paths.append(p)
 
-    # Generate image for reference
     import uuid
     filename = f"ref_{uuid.uuid4().hex[:8]}.png"
-    out = project_store.ROOT / "data" / "images" / filename
-    
+    out = project_store._ws_images_dir(ws_id) / filename
+
     try:
         gemini_images.generate_image(full_prompt, ref_paths, out)
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Gemini error: {e}")
-        
-    # Add to global references
+
     with open(out, "rb") as f:
         content = f.read()
 
-    # רפרנס דמות — מייצרים אוטומטית גם 'גיליון דמות' (sheet) רב-זוויות, נגזר מהתמונה הבודדת.
-    # כשל ביצירת ה-sheet לא מפיל את הבקשה — ממשיכים עם תמונה בודדת בלבד.
     category = body.category or "characters"
     sheet_file = None
     if category == "characters":
         sheet_file = f"sheet_{uuid.uuid4().hex[:8]}.png"
-        sheet_out = project_store.ROOT / "data" / "images" / sheet_file
+        sheet_out = project_store._ws_images_dir(ws_id) / sheet_file
         try:
             gemini_images.generate_character_sheet(out, sheet_out, body.description)
         except Exception as e:
@@ -1045,26 +1076,26 @@ async def create_reference_image(mishna_id: str, body: ReferenceUpdate):
 
     new_ref = project_store.add_reference(
         filename, content, body.name or "New Reference", body.description, category,
-        sheet_file=sheet_file
+        sheet_file=sheet_file, ws_id=ws_id
     )
-    
+
     # Update extra fields
-    refs = project_store.load_references()
+    refs = project_store.load_references(ws_id)
     for r in refs.get("references", []):
         if r["id"] == new_ref["id"]:
             r["age"] = body.age
             r["height"] = body.height
             break
-            
-    with open(project_store.REFERENCES_INDEX, "w", encoding="utf-8") as f:
-        json.dump(refs, f, ensure_ascii=False, indent=2)
+    project_store._save_references(ws_id, refs)
         
     return new_ref
 
 
 @app.get("/api/reference-image/{ref_id}")
-def get_reference_image(ref_id: str):
-    p = project_store.reference_file_path(ref_id)
+def get_reference_image(ref_id: str,
+                        ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
+    fake_project = {"ws_id": ws_id}
+    p = project_store.reference_file_path(ref_id, project=fake_project)
     if not p or not p.exists():
         raise HTTPException(status_code=404, detail="רפרנס לא נמצא")
     return FileResponse(str(p))
@@ -1072,13 +1103,14 @@ def get_reference_image(ref_id: str):
 
 # ---------- API: הרכבת וידאו ----------
 @app.post("/api/project/{mishna_id}/build")
-def build(mishna_id: str):
-    project = project_store.load_or_init_project(mishna_id)
+def build(mishna_id: str,
+          ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
+    project = project_store.load_or_init_project(mishna_id, ws_id)
     if not project.get("audio_path"):
         raise HTTPException(status_code=400, detail="חסר קובץ אודיו להרכבת הוידאו")
     
     audio = _abs(project["audio_path"])
-    out = project_store.studio_dir(mishna_id) / "output.mp4"
+    out = project_store.studio_dir(mishna_id, project.get("ws_id", project_store.DEFAULT_WORKSPACE_ID)) / "output.mp4"
     
     def generate_build_logs():
         try:
@@ -1091,8 +1123,10 @@ def build(mishna_id: str):
 
 
 @app.get("/api/project/{mishna_id}/video")
-def get_video(mishna_id: str):
-    out = project_store.studio_dir(mishna_id) / "output.mp4"
+def get_video(mishna_id: str,
+              ws_id: str = Query(default=project_store.DEFAULT_WORKSPACE_ID)):
+    project = project_store.load_or_init_project(mishna_id, ws_id)
+    out = project_store.studio_dir(mishna_id, project.get("ws_id", ws_id)) / "output.mp4"
     if not out.exists():
         raise HTTPException(status_code=404, detail="עדיין לא הורכב וידאו")
     return FileResponse(str(out), media_type="video/mp4")

@@ -19,7 +19,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import claude_brain, gemini_images, project_store, video_builder
+from . import claude_brain, gemini_images, project_store, video_builder, book_store
 
 ROOT = project_store.ROOT
 app = FastAPI(title="כפר המשנה — Studio")
@@ -737,6 +737,151 @@ def get_video(mishna_id: str):
     if not out.exists():
         raise HTTPException(status_code=404, detail="עדיין לא הורכב וידאו")
     return FileResponse(str(out), media_type="video/mp4")
+
+
+# ---------- API: סטודיו ספרים ----------
+class CreateBookBody(BaseModel):
+    title: str
+    import_mishna_id: str | None = None
+
+class SaveBookBody(BaseModel):
+    title: str
+    style_description: str
+    pages: list[dict]
+
+class RewriteBookTextBody(BaseModel):
+    original_text: str
+    prompt_context: str | None = None
+
+@app.get("/api/books")
+def list_books():
+    return book_store.list_books()
+
+@app.get("/api/book/{book_id}")
+def get_book(book_id: str):
+    try:
+        return book_store.load_book(book_id)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@app.post("/api/book/create")
+def create_book(body: CreateBookBody):
+    try:
+        if body.import_mishna_id:
+            return book_store.create_book_from_project(body.title, body.import_mishna_id)
+        else:
+            return book_store.create_empty_book(body.title)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.put("/api/book/{book_id}")
+def update_book(book_id: str, body: SaveBookBody):
+    try:
+        book_data = book_store.load_book(book_id)
+        book_data["title"] = body.title
+        book_data["style_description"] = body.style_description
+        book_data["pages"] = body.pages
+        book_store.save_book(book_id, book_data)
+        return book_data
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/book/{book_id}/page/{page_id}/rewrite-text")
+def rewrite_page_text(book_id: str, page_id: str, body: RewriteBookTextBody):
+    try:
+        story_text = claude_brain.rewrite_to_story_text(body.original_text, body.prompt_context)
+        return {"story_text": story_text}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"שגיאת Claude: {e}")
+
+@app.post("/api/book/{book_id}/page/{page_id}/generate-image")
+def generate_page_image(book_id: str, page_id: str, prompt: str):
+    try:
+        book_data = book_store.load_book(book_id)
+        style_desc = book_data.get("style_description", "")
+        
+        # Build prompt with style description
+        full_prompt = prompt
+        if style_desc:
+            full_prompt = f"Style: {style_desc}\n\nSubject: {prompt}"
+            
+        import uuid
+        filename = f"generated_{uuid.uuid4().hex[:8]}.png"
+        out_path = book_store.get_book_dir(book_id) / "images" / filename
+        
+        # Style references from existing project if created_from_mishna
+        ref_paths = []
+        mishna_id = book_data.get("created_from_mishna")
+        if mishna_id:
+            project = project_store.load_or_init_project(mishna_id)
+            style_refs = project.get("style_references", [])
+            for s_id in style_refs:
+                p = project_store.reference_file_path(s_id)
+                if p:
+                    ref_paths.append(p)
+                    
+        gemini_images.generate_image(full_prompt, ref_paths, out_path)
+        
+        # Update page in book JSON
+        page_found = False
+        for page in book_data.get("pages", []):
+            if page.get("page_id") == page_id:
+                page["image_path"] = f"images/{filename}"
+                page["prompt"] = prompt
+                page["status"] = "image_ready"
+                page_found = True
+                break
+                
+        if not page_found:
+            raise HTTPException(status_code=404, detail="העמוד לא נמצא")
+            
+        book_store.save_book(book_id, book_data)
+        return book_data
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=502, detail=f"שגיאת Gemini: {e}")
+
+@app.get("/api/book/{book_id}/page/{page_id}/image")
+def get_page_image_file(book_id: str, page_id: str):
+    try:
+        book_data = book_store.load_book(book_id)
+        for page in book_data.get("pages", []):
+            if page.get("page_id") == page_id:
+                img_path = page.get("image_path")
+                if not img_path:
+                    raise HTTPException(status_code=404, detail="אין תמונה לעמוד זה")
+                p = book_store.get_book_dir(book_id) / img_path
+                if not p.exists():
+                    raise HTTPException(status_code=404, detail="קובץ התמונה לא נמצא")
+                return FileResponse(str(p))
+        raise HTTPException(status_code=404, detail="העמוד לא נמצא")
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@app.post("/api/book/{book_id}/page/{page_id}/upload-image")
+async def upload_page_image(book_id: str, page_id: str, file: UploadFile):
+    try:
+        book_data = book_store.load_book(book_id)
+        content = await file.read()
+        
+        import uuid
+        filename = f"uploaded_{uuid.uuid4().hex[:8]}_{file.filename}"
+        dest_path = book_store.get_book_dir(book_id) / "images" / filename
+        
+        with open(dest_path, "wb") as f:
+            f.write(content)
+            
+        for page in book_data.get("pages", []):
+            if page.get("page_id") == page_id:
+                page["image_path"] = f"images/{filename}"
+                page["status"] = "uploaded"
+                break
+                
+        book_store.save_book(book_id, book_data)
+        return book_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ---------- הגשת קבצי דאטה ----------

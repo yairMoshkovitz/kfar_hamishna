@@ -335,3 +335,33 @@ def repropose_prompt(slot: dict, references: dict, instruction: str | None = Non
     if result is None:
         raise RuntimeError("Claude לא החזיר פלט ולידי")
     return {"prompt": result.prompt, "references": result.references}
+
+
+def rewrite_to_story_text(original_text: str, prompt_context: str | None = None) -> str:
+    """משתמש ב-Claude כדי להפוך טקסט מדובר או תיאור פרומפט לטקסט ספרותי מעובד ומנוקד (אם ניתן) לספר ילדים."""
+    user_msg = (
+        "אתה סופר ילדים מוערך ומומחה בכתיבת סיפורי ילדים בעלי מסר חינוכי ויהודי. "
+        "תפקידך לקחת קטע טקסט מקורי (שיכול להיות תמלול פודקאסט, טקסט משנה, או תיאור סצנה) "
+        "ולשכתב אותו לטקסט ספרותי, קולח, קסום ומזמין עבור דף אחד של ספר ילדים (בערך 1-3 משפטים בעברית).\n\n"
+        f"הטקסט המקורי:\n{original_text}\n\n"
+    )
+    if prompt_context:
+        user_msg += f"הקשר ויזואלי (מה רואים בתמונה של הדף הזה):\n{prompt_context}\n\n"
+    
+    user_msg += (
+        "הנחיות חשובות:\n"
+        "1. הטקסט חייב להיות מעניין, עשיר וציורי, מתאים לגילאי 5-10.\n"
+        "2. הימנע לחלוטין מביטויי פודקאסט, מילות קישור של דיבור ('אז חברים', 'היום נלמד', 'ברוכים הבאים') או שמות של מנחים.\n"
+        "3. כתוב אך ורק את הטקסט הסופי של הסיפור (ללא הקדמות או הסברים של 'הנה השכתוב שלך').\n"
+        "4. מומלץ מאוד להוסיף ניקוד תקני במידת האפשר, אך הדבר החשוב ביותר הוא הזרימה הסיפורית."
+    )
+
+    resp = _client().messages.create(
+        model=MODEL,
+        max_tokens=1000,
+        system="אתה סופר ילדים מומחה המנסח דפי סיפור קסומים המבוססים על מסורת ישראל וסיפורי חז\"ל.",
+        messages=[{"role": "user", "content": user_msg}],
+    )
+    # Extract the response text
+    content_text = resp.content[0].text
+    return content_text.strip()

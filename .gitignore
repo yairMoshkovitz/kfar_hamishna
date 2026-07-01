@@ -3,3 +3,4 @@ app/__pycache__*
 data/studio*
 data/workspaces*
 data/workspaces.json
+.venv*

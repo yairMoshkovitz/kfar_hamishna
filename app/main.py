@@ -19,7 +19,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import claude_brain, comics_brain, gemini_images, project_store, video_builder
+from . import claude_brain, comics_brain, gemini_images, project_store, video_builder, book_store
 
 ROOT = project_store.ROOT
 app = FastAPI(title="כפר המשנה — Studio")
